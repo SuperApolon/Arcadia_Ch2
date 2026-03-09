@@ -89,7 +89,8 @@ const INITIAL_BATTLE_DEFS = {
     name:"Simuluu ─ 覚醒体", em:"🦌",
     maxHp:2000, atk:[18,30], elk:500, exp:500, lv:10,
     bg:["#050210","#0f0528","#1a0a50"], isBoss:true, isFloating:false, isGround:true,
-    pattern:["atk","counter","unavoidable","atk","dodge","unavoidable","counter","unavoidable"],
+    // atk_all = 全体攻撃、enrage = 怒り状態付与（3ターン攻撃×2）
+    pattern:["atk","counter","unavoidable","atk_all","enrage","dodge","unavoidable","counter","atk_all","unavoidable"],
     unavoidableAtk:[35,50],
     // 1ターンごとに循環する属性リスト
     elementCycle:["fire","ice","thunder","earth","none"],
@@ -244,13 +245,16 @@ function resolveBgmId(phase, sceneLoc, enemyType) {
   return null;
 }
 
+const SIMULUU_IMG_URL = "https://superapolon.github.io/Arcadia_Assets/enemies/simuluu.webp";
+
 const ENEMY_IMG_MAP = {
   seagull:       "enemies/seagull",
   koza:          "enemies/koza",
   shamerlot:     "enemies/shamelot",
   shamerlot_lv3: "enemies/shamelot",
   shamerlot_lv5: "enemies/shamelot",
-  simuluu:       "enemies/simuluu",
+  simuluu:       null, // 直URL使用
+  simuluu_ch2:   null, // 直URL使用
 };
 
 const SPRITE_MAP = {
@@ -537,6 +541,18 @@ export default function ArcadiaCh2() {
   // ── SPDデバフ管理 ──────────────────────────────────────────────────────
   // 大地斬を使ったターンの次ターン、敵SPDを-5する残りターン数
   const [enemySpdDebuff, setEnemySpdDebuff] = useState(0); // 残りターン数（1以上で有効）
+
+  // ── 怒り状態管理（敵） ─────────────────────────────────────────────────
+  // enrageCount > 0 のとき、敵の全攻撃ダメージ×2（氷結斬で即時解除）
+  const [enrageCount, setEnrageCount] = useState(0);
+
+  // ── 敵ATKデバフ管理（火炎斬効果） ─────────────────────────────────────
+  // enemyAtkDebuff > 0 のとき、敵の攻撃力を半減する残りターン数
+  const [enemyAtkDebuff, setEnemyAtkDebuff] = useState(0);
+
+  // ── パーティSPDバフ管理（雷神斬効果） ─────────────────────────────────
+  // partySpdBuff > 0 のとき、全味方のSPDを+3する残りターン数
+  const [partySpdBuff, setPartySpdBuff] = useState(0);
 
   const typeTimerRef = useRef(null);
   const notifTimerRef = useRef(null);
@@ -948,6 +964,10 @@ export default function ArcadiaCh2() {
       setPendingCommands({});
       setCmdInputIdx(0);
       setEnemySpdDebuff(0);
+      // 怒り状態・ATKデバフ・SPDバフリセット
+      setEnrageCount(0);
+      setEnemyAtkDebuff(0);
+      setPartySpdBuff(0);
       setPhase("battle");
       return;
     }
@@ -1001,6 +1021,8 @@ export default function ArcadiaCh2() {
     dodge:            { icon:"💨", text:"回避" },
     unavoidable:      { icon:"💥", text:"回避不能攻撃！" },
     unavoidable_lite: { icon:"⚡", text:"強化攻撃！" },
+    atk_all:          { icon:"🌊", text:"全体攻撃！" },
+    enrage:           { icon:"🔴", text:"怒り状態！" },
   };
 
   // ─── コマンド登録（コマンドフェーズ専用） ───────────────────────────────
@@ -1053,10 +1075,10 @@ export default function ArcadiaCh2() {
     // ── SPD順ソート ───────────────────────────────────────────────────────
     // 敵SPD（デバフ考慮）
     const effectiveEnemySpd = Math.max(1, ENEMY_BASE_SPD - (enemySpdDebuff > 0 ? 5 : 0));
-    // 各メンバーのSPDを取得し、敵を含めてソート（降順 = 高SPDが先）
-    // 同値の場合: パーティー優先（味方を先に処理）
+    // パーティSPDバフ（雷神斬効果）
+    const spdBuff = partySpdBuff > 0 ? 3 : 0;
     const actors = [
-      ...PARTY_DEFS.map(m => ({ type:"player", id:m.id, name:m.name, icon:m.icon, spd:m.spd, skill:cmds[m.id] })),
+      ...PARTY_DEFS.map(m => ({ type:"player", id:m.id, name:m.name, icon:m.icon, spd:m.spd + spdBuff, skill:cmds[m.id] })),
       { type:"enemy", id:"enemy", name:ed.name, icon:ed.em, spd:effectiveEnemySpd, skill:eAction },
     ].sort((a, b) => {
       if (b.spd !== a.spd) return b.spd - a.spd;
@@ -1079,17 +1101,25 @@ export default function ArcadiaCh2() {
     let newElemAccum = elemDmgAccum;
     // 大地斬使用フラグ（次ターン敵SPDデバフ付与用）
     let earthSlashUsed = false;
+    // 氷結斬使用フラグ（怒り状態解除）
+    let iceSlashUsed = false;
+    // 雷神斬使用フラグ（パーティSPDバフ）
+    let thunderSlashUsed = false;
+    // 火炎斬使用フラグ（敵ATKデバフ）
+    let fireSlashUsed = false;
     // このターンで敵行動が割り込んだ後の全メンバーの被弾フラグ
-    // { eltz, swift, linz, chopper } → ダメージを受けたらtrue
     const memberHit = { eltz:false, swift:false, linz:false, chopper:false };
 
+    // ── 現在有効なバフ・デバフ表示 ──────────────────────────────────────
     logs.push(`─ ターン ${turn + 1} ─ SPD順：${actors.map(a => `${a.icon}${a.spd}`).join(" > ")}`);
     if (enemySpdDebuff > 0) logs.push(`⬇️ ${ed.name} SPD -5 デバフ中（残${enemySpdDebuff}T）`);
+    if (enrageCount > 0)    logs.push(`🔴 ${ed.name} 怒り状態！ 攻撃力×2（残${enrageCount}T）-- 氷結斬で解除可能`);
+    if (enemyAtkDebuff > 0) logs.push(`🔥 ${ed.name} ATK半減中（残${enemyAtkDebuff}T）`);
+    if (partySpdBuff > 0)   logs.push(`⚡ パーティ SPD +3 バフ中（残${partySpdBuff}T）`);
 
     for (const actor of actors) {
       // 敵が既に倒されていたら敵行動はスキップ
       if (actor.type === "enemy" && curEnemyHp <= 0) continue;
-      // 全メンバーが死亡していたら処理終了（通常は起きない簡易判定）
 
       if (actor.type === "player") {
         const skillId = actor.skill;
@@ -1132,10 +1162,29 @@ export default function ArcadiaCh2() {
             curEnemyHp = Math.max(0, curEnemyHp - dmg);
             logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}（属性不一致・蓄積なし） → ${dmg} ダメージ`);
           }
-          // 大地斬: 次ターン敵SPD-5
+
+          // ── 属性スキル追加効果 ──────────────────────────────────────────
           if (skillId === "elem_earth") {
+            // 大地斬: 次ターン敵SPD-5
             earthSlashUsed = true;
             logs.push(`🌿 大地斬効果：次ターン ${ed.name} SPD -5！`);
+          }
+          if (skillId === "elem_ice") {
+            // 氷結斬: 怒り状態を即時解除
+            iceSlashUsed = true;
+            if (enrageCount > 0) {
+              logs.push(`❄️ 氷結斬！ ${ed.name}の怒り状態を解除した！`);
+            }
+          }
+          if (skillId === "elem_thunder") {
+            // 雷神斬: 味方全員のSPD+3（3ターン）
+            thunderSlashUsed = true;
+            logs.push(`⚡ 雷神斬効果：味方全員 SPD +3（3ターン）！`);
+          }
+          if (skillId === "elem_fire") {
+            // 火炎斬: 敵攻撃力半減（3ターン）
+            fireSlashUsed = true;
+            logs.push(`🔥 火炎斬効果：${ed.name}の攻撃力を半減させた（3ターン）！`);
           }
         } else if (baseSk) {
           // ── 通常スキル ──────────────────────────────────────────────────
@@ -1173,28 +1222,57 @@ export default function ArcadiaCh2() {
       } else {
         // ── 敵行動 ────────────────────────────────────────────────────────
         if (elemBreakTriggered) {
-          logs.push(`${ed.em} ${ed.name}の攻撃は属性破壊で無効化された！`);
+          logs.push(`${ed.em} ${ed.name}の行動は属性破壊で無効化された！`);
           continue;
         }
 
-        // 敵の攻撃が「割り込む」位置: 各パーティーメンバーのskillで判定
-        // 敵行動は全メンバーに同時に当たる（AOE想定）
-        if (eAction === "unavoidable" || eAction === "unavoidable_lite") {
+        // 怒り状態を使用後に氷結斬で解除する場合、怒り状態は無効
+        const isEnraged = enrageCount > 0 && !iceSlashUsed;
+        // 敵ATKデバフ（火炎斬効果）
+        const atkHalf = enemyAtkDebuff > 0;
+
+        // 基礎ダメージ倍率
+        const rageMult = isEnraged ? 2.0 : 1.0;
+        const halfMult = atkHalf ? 0.5 : 1.0;
+        const totalMult = rageMult * halfMult;
+
+        if (eAction === "enrage") {
+          // ── 怒り状態付与（攻撃なし） ──────────────────────────────────
+          logs.push(`${ed.em} 🔴 ${ed.name}が怒り状態に！ 3ターン攻撃力×2！`);
+          // enrageCountはターン後にセットする（フラグで管理）
+        } else if (eAction === "atk_all") {
+          // ── 全体攻撃 ──────────────────────────────────────────────────
+          const baseRaw = randInt(ed.atk[0], ed.atk[1]);
+          const rawWithMods = Math.max(1, Math.floor(baseRaw * totalMult));
+          const dmgPerMember = Math.max(1, rawWithMods - defBonus);
+          const atkAllLabel = isEnraged ? "🔴🌊 怒り全体攻撃！" : "🌊 全体攻撃！";
+          const halfLabel = atkHalf ? "（ATK半減中）" : "";
+          logs.push(`${ed.em} ${atkAllLabel}${halfLabel} 全員に ${dmgPerMember} ダメージ！`);
+          curHp = Math.max(0, curHp - dmgPerMember);
+          memberHit["eltz"] = true;
+          for (const key of ["swift","linz","chopper"]) {
+            curPartyHp[key] = Math.max(0, (curPartyHp[key] ?? 0) - dmgPerMember);
+            memberHit[key] = true;
+          }
+        } else if (eAction === "unavoidable" || eAction === "unavoidable_lite") {
+          // ── 回避不能攻撃 ──────────────────────────────────────────────
           const [minD, maxD] = eAction === "unavoidable"
             ? (ed.unavoidableAtk ?? [30, 45])
             : [18, 28];
-          // 全メンバーに当たる
+          const baseRaw = randInt(minD, maxD);
+          const rawWithMods = Math.max(1, Math.floor(baseRaw * totalMult));
+          const dmg = Math.max(1, rawWithMods - defBonus);
+          const label = eAction === "unavoidable" ? "💥 回避不能攻撃！" : "⚡ 強化攻撃！";
+          const rageLabel = isEnraged ? "🔴" : "";
+          const halfLabel = atkHalf ? "（ATK半減）" : "";
+          logs.push(`${ed.em} ${rageLabel}${label}${halfLabel} 全員に ${dmg} ダメージ！`);
           const targets = [
             { id:"eltz",    isPlayer:true  },
             { id:"swift",   isPlayer:false },
             { id:"linz",    isPlayer:false },
             { id:"chopper", isPlayer:false },
           ];
-          const rawU = randInt(minD, maxD);
-          const label = eAction === "unavoidable" ? "💥 回避不能攻撃！" : "⚡ 強化攻撃！";
-          logs.push(`${ed.em} ${label} 全員に ${Math.max(1, rawU - defBonus)} ダメージ！`);
           for (const t of targets) {
-            const dmg = Math.max(1, rawU - defBonus);
             if (t.isPlayer) { curHp = Math.max(0, curHp - dmg); }
             else { curPartyHp[t.id] = Math.max(0, (curPartyHp[t.id] ?? 0) - dmg); }
             memberHit[t.id] = true;
@@ -1202,80 +1280,91 @@ export default function ArcadiaCh2() {
         } else if (eAction === "dodge") {
           logs.push(`${ed.em} ${ed.name} 💨 回避！（行動なし）`);
         } else if (eAction === "counter") {
-          // カウンター: 「敵より先に動いたプレイヤー」のatkを無効化し反撃
-          // 先に動いたエルツのコマンドを代表として判定
+          // カウンター: エルツのコマンドを代表として判定
           const eltzCmd = cmds["eltz"];
           if (eltzCmd === "atk") {
-            const cDmg = Math.max(1, randInt(ed.atk[0], ed.atk[1]) + Math.floor(ed.atk[1]*0.3) - defBonus);
+            const baseRaw = randInt(ed.atk[0], ed.atk[1]) + Math.floor(ed.atk[1]*0.3);
+            const rawWithMods = Math.max(1, Math.floor(baseRaw * totalMult));
+            const cDmg = Math.max(1, rawWithMods - defBonus);
+            const rageLabel = isEnraged ? "🔴" : "";
+            const halfLabel = atkHalf ? "（ATK半減）" : "";
             curHp = Math.max(0, curHp - cDmg);
             memberHit["eltz"] = true;
-            logs.push(`${ed.em} 🔄 ${ed.name}カウンター！ エルツに ${cDmg} ダメージ！（強攻無効）`);
+            logs.push(`${ed.em} ${rageLabel}🔄 ${ed.name}カウンター！${halfLabel} エルツに ${cDmg} ダメージ！（強攻無効）`);
           } else if (eltzCmd === "counter") {
             logs.push(`🔄 カウンター相殺！ ${ed.name}の攻撃を完全に無効化した！`);
           } else if (eltzCmd === "dodge") {
             logs.push(`💨 回避成功！ ${ed.name}のカウンターをかわした！`);
           } else {
-            const eDmg = Math.max(1, randInt(ed.atk[0], ed.atk[1]) - defBonus);
+            const baseRaw = randInt(ed.atk[0], ed.atk[1]);
+            const rawWithMods = Math.max(1, Math.floor(baseRaw * totalMult));
+            const eDmg = Math.max(1, rawWithMods - defBonus);
+            const rageLabel = isEnraged ? "🔴" : "";
+            const halfLabel = atkHalf ? "（ATK半減）" : "";
             curHp = Math.max(0, curHp - eDmg);
             memberHit["eltz"] = true;
-            logs.push(`${ed.em} 🔄 ${ed.name}カウンター！ エルツに ${eDmg} ダメージ！`);
+            logs.push(`${ed.em} ${rageLabel}🔄 ${ed.name}カウンター！${halfLabel} エルツに ${eDmg} ダメージ！`);
           }
         } else {
-          // 通常強攻: SPD順に基づいて「敵より遅いメンバー」を優先的に攻撃
-          // 実装: 敵より遅いメンバー1人にランダム攻撃（or 全員一律）
+          // 通常強攻: 最も遅いメンバーに集中攻撃
           const eltzCmd = cmds["eltz"];
           const rps = judgeRPS(eltzCmd, eAction);
           if (eltzCmd === "counter" && rps === "win") {
             logs.push(`🔄 カウンターで ${ed.name}の強攻を完全に封じた！`);
           } else {
-            // 最も遅いメンバーに集中攻撃（SPDの低い順に1ターン1名）
-            // 全員に同一ダメージを分配する実装
             const spdSorted = [...PARTY_DEFS].sort((a,b) => a.spd - b.spd);
-            const targetMember = spdSorted[0]; // 最も遅いチョッパー
-            const eDmg = Math.max(1, randInt(ed.atk[0], ed.atk[1]) - defBonus);
+            const targetMember = spdSorted[0]; // 最も遅いメンバー
+            const baseRaw = randInt(ed.atk[0], ed.atk[1]);
+            const rawWithMods = Math.max(1, Math.floor(baseRaw * totalMult));
+            const eDmg = Math.max(1, rawWithMods - defBonus);
+            const rageLabel = isEnraged ? "🔴" : "";
+            const halfLabel = atkHalf ? "（ATK半減）" : "";
             if (targetMember.id === "eltz") {
-              // eltzが最低速（通常ない）
               const dodge = eltzCmd === "dodge";
-              if (dodge) {
-                logs.push(`${ed.em} ⚔ ${ed.name}強攻！ エルツ 回避できず ${eDmg} ダメージ！`);
-                curHp = Math.max(0, curHp - eDmg);
-                memberHit["eltz"] = true;
-              } else {
-                logs.push(`${ed.em} ⚔ ${ed.name}強攻！ エルツに ${eDmg} ダメージ！`);
-                curHp = Math.max(0, curHp - eDmg);
-                memberHit["eltz"] = true;
-              }
+              const dodgeLabel = dodge ? "（回避不可）" : "";
+              logs.push(`${ed.em} ${rageLabel}⚔ ${ed.name}強攻！${halfLabel}${dodgeLabel} エルツに ${eDmg} ダメージ！`);
+              curHp = Math.max(0, curHp - eDmg);
+              memberHit["eltz"] = true;
             } else {
               curPartyHp[targetMember.id] = Math.max(0, (curPartyHp[targetMember.id] ?? 0) - eDmg);
               memberHit[targetMember.id] = true;
-              logs.push(`${ed.em} ⚔ ${ed.name}強攻！ ${targetMember.icon}${targetMember.name}に ${eDmg} ダメージ！`);
+              logs.push(`${ed.em} ${rageLabel}⚔ ${ed.name}強攻！${halfLabel} ${targetMember.icon}${targetMember.name}に ${eDmg} ダメージ！`);
             }
           }
         }
       }
     }
 
-    // ── コンボ判定（人数分） ────────────────────────────────────────────────
-    // 「誰もダメージを受けなかった行動数」を streak としてカウント
-    // 各メンバーが無被弾なら +1、ダメージを受けたら streak リセット
+    // ── コンボ判定 ────────────────────────────────────────────────────────
     const anyoneHit = Object.values(memberHit).some(v => v);
     const newStreak = anyoneHit ? 0 : noDmgStreak + PARTY_DEFS.length;
     if (!anyoneHit && noDmgStreak >= 0) {
       const gain = 5 + newStreak;
       curMp = Math.min(curMp + gain, mmp);
-      // 仲間にも同量のMP回復
       for (const key of Object.keys(curPartyMp)) {
         curPartyMp[key] = Math.min((curPartyMp[key] ?? 0) + gain, partyMmp[key] ?? 0);
       }
       if (newStreak >= 3) logs.push(`✨ PARTY COMBO ${newStreak}! 全員MP +${gain} 回復！`);
     }
 
-    // ── 属性チェンジログ ────────────────────────────────────────────────────
+    // ── 属性チェンジログ ──────────────────────────────────────────────────
     if (elementCycle && curEnemyHp > 0) {
       const nextElemKey = elementCycle[nextElementIdx];
       const nextInfo = ELEMENT_NAMES[nextElemKey];
       logs.push(`🔮 ${ed.name}が属性チェンジ！ 次の属性: ${nextInfo.icon} ${nextInfo.label}`);
     }
+
+    // ── 次ターンの怒り状態・バフ・デバフを計算 ──────────────────────────
+    // 怒り状態: enrageアクションで3セット、毎ターン減算、氷結斬で0に
+    const nextEnrageCount = iceSlashUsed
+      ? 0
+      : eAction === "enrage"
+      ? 3
+      : Math.max(0, enrageCount - 1);
+    // 敵ATKデバフ: 火炎斬で3セット、毎ターン減算
+    const nextEnemyAtkDebuff = fireSlashUsed ? 3 : Math.max(0, enemyAtkDebuff - 1);
+    // パーティSPDバフ: 雷神斬で3セット、毎ターン減算
+    const nextPartySpdBuff = thunderSlashUsed ? 3 : Math.max(0, partySpdBuff - 1);
 
     // ── ステート一括更新 ────────────────────────────────────────────────────
     setHp(Math.min(curHp, mhp));
@@ -1290,8 +1379,11 @@ export default function ArcadiaCh2() {
     setEnemyTurnIdx(nextEnemyTurnIdx);
     setEnemyNextAction(pattern[nextEnemyTurnIdx]);
     setEnemySpdDebuff(prev => earthSlashUsed ? 1 : Math.max(0, prev - 1));
+    setEnrageCount(nextEnrageCount);
+    setEnemyAtkDebuff(nextEnemyAtkDebuff);
+    setPartySpdBuff(nextPartySpdBuff);
     setBtlAnimEnemy(true); setTimeout(() => setBtlAnimEnemy(false), 400);
-    setBtlLogs(prev => [...prev, ...logs].slice(-16));
+    setBtlLogs(prev => [...prev, ...logs].slice(-18));
 
     // ── 勝敗判定 ────────────────────────────────────────────────────────────
     if (curEnemyHp <= 0) {
@@ -1322,6 +1414,7 @@ export default function ArcadiaCh2() {
   }, [
     battleEnemy, currentEnemyType, battleDefs, enemyTurnIdx,
     enemyElementIdx, elemDmgAccum, enemySpdDebuff,
+    enrageCount, enemyAtkDebuff, partySpdBuff,
     enemyHp, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, noDmgStreak, lv,
     showNotif, handleExpGain, turn,
@@ -1952,7 +2045,8 @@ export default function ArcadiaCh2() {
     const battleBgKey = BATTLE_BG_MAP[currentEnemyType];
     const battleBgUrl = battleBgKey ? assetUrl(battleBgKey) : null;
     const enemyImgKey = ENEMY_IMG_MAP[currentEnemyType];
-    const enemyImgUrl = enemyImgKey ? assetUrl(enemyImgKey) : null;
+    const isSimuluu = currentEnemyType === "simuluu" || currentEnemyType === "simuluu_ch2";
+    const enemyImgUrl = isSimuluu ? SIMULUU_IMG_URL : (enemyImgKey ? assetUrl(enemyImgKey) : null);
 
     // ENEMY_IMG_SIZE は数値 or { mode:"fixed"|"auto", size?:px, pct?:% } のどちらでも受け付ける
     const _rawSize = ENEMY_IMG_SIZE[currentEnemyType] ?? (isBoss ? 220 : 140);
@@ -1973,11 +2067,12 @@ export default function ArcadiaCh2() {
     const elemBarPct = Math.min(100, (elemDmgAccum / ELEMENT_BREAK_THRESHOLD) * 100);
 
     // ── パーティーメンバー表示データ ────────────────────────────────────────
+    const spdBuffDisp = partySpdBuff > 0 ? 3 : 0;
     const partyMembers = [
-      { key:"eltz",    name:"エルツ",    icon:"🧑",   hp, mhp,               mp,                mmp,               spd:12 },
-      { key:"swift",   name:"スウィフト", icon:"🧑‍🦱", hp:partyHp.swift,   mhp:partyMhp.swift,   mp:partyMp.swift,  mmp:partyMmp.swift,  spd:15 },
-      { key:"linz",    name:"リンス",    icon:"👩",   hp:partyHp.linz,    mhp:partyMhp.linz,    mp:partyMp.linz,   mmp:partyMmp.linz,   spd:11 },
-      { key:"chopper", name:"チョッパー", icon:"👦",   hp:partyHp.chopper, mhp:partyMhp.chopper, mp:partyMp.chopper,mmp:partyMmp.chopper, spd:9  },
+      { key:"eltz",    name:"エルツ",    icon:"🧑",   hp, mhp,               mp,                mmp,               spd:12 + spdBuffDisp },
+      { key:"swift",   name:"スウィフト", icon:"🧑‍🦱", hp:partyHp.swift,   mhp:partyMhp.swift,   mp:partyMp.swift,  mmp:partyMmp.swift,  spd:15 + spdBuffDisp },
+      { key:"linz",    name:"リンス",    icon:"👩",   hp:partyHp.linz,    mhp:partyMhp.linz,    mp:partyMp.linz,   mmp:partyMmp.linz,   spd:11 + spdBuffDisp },
+      { key:"chopper", name:"チョッパー", icon:"👦",   hp:partyHp.chopper, mhp:partyMhp.chopper, mp:partyMp.chopper,mmp:partyMmp.chopper, spd:9  + spdBuffDisp },
     ];
     // 現在コマンド入力中のメンバー
     const currentCmdMember = PARTY_DEFS[cmdInputIdx];
@@ -1988,6 +2083,14 @@ export default function ArcadiaCh2() {
       <div style={{width:"100%",height:"100%",minHeight:"600px",display:"flex",flexDirection:"column",background:battleBg,fontFamily:"'Noto Serif JP',serif",userSelect:"none",position:"relative",overflow:"hidden"}}>
         <style>{keyframes}</style>
         {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease"}}>{notif}</div>}
+
+        {/* ── 怒り状態フルスクリーン警告エフェクト ─────────────────────────── */}
+        {enrageCount > 0 && (
+          <div style={{position:"absolute",inset:0,zIndex:1,pointerEvents:"none",
+            border:`3px solid #ff446688`,
+            boxShadow:"inset 0 0 40px rgba(255,50,50,0.15), inset 0 0 80px rgba(255,50,50,0.08)",
+            animation:"dngr 1.2s infinite"}} />
+        )}
 
         {/* ── 属性破壊エフェクト ────────────────────────────────────────────── */}
         {elemBreakAnim && (
@@ -2059,35 +2162,100 @@ export default function ArcadiaCh2() {
 
             {/* エネミー名＋HPバー（画像の直下） */}
             <div style={{width:"88%",flexShrink:0,zIndex:2,background:"rgba(5,13,20,0.6)",padding:"6px 10px",borderRadius:4}}>
-              <div style={{color:C.white,fontSize:13,fontWeight:700,letterSpacing:1,textAlign:"center",marginBottom:6,textShadow:"0 1px 4px #000"}}>{ed.name}</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:4,flexWrap:"wrap"}}>
+                <span style={{color:C.white,fontSize:13,fontWeight:700,letterSpacing:1,textShadow:"0 1px 4px #000"}}>{ed.name}</span>
+                {/* 怒り状態バッジ */}
+                {enrageCount > 0 && (
+                  <span style={{fontSize:9,color:C.red,fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,50,50,0.18)",border:`1px solid ${C.red}66`,borderRadius:3,padding:"1px 5px",animation:"dngr 0.8s infinite",whiteSpace:"nowrap"}}>
+                    🔴 怒り×2 残{enrageCount}T
+                  </span>
+                )}
+              </div>
+              {/* バフ・デバフバッジ行 */}
+              {(enemyAtkDebuff > 0 || partySpdBuff > 0) && (
+                <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap",marginBottom:4}}>
+                  {enemyAtkDebuff > 0 && (
+                    <span style={{fontSize:8,color:"#ff9944",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,120,50,0.15)",border:"1px solid #ff994466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
+                      🔥 ATK½ 残{enemyAtkDebuff}T
+                    </span>
+                  )}
+                  {partySpdBuff > 0 && (
+                    <span style={{fontSize:8,color:"#ffee44",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,238,50,0.12)",border:"1px solid #ffee4466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
+                      ⚡ 味方SPD+3 残{partySpdBuff}T
+                    </span>
+                  )}
+                </div>
+              )}
               <div style={{width:"100%",height:8,background:C.panel2,borderRadius:4,overflow:"hidden"}}>
-                <div style={{height:"100%",width:`${enemyPct}%`,background:isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:4}}/>
+                <div style={{height:"100%",width:`${enemyPct}%`,background:isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:4,boxShadow:enrageCount>0?`0 0 8px ${C.red}`:"none"}}/>
               </div>
               <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center",marginTop:3}}>{enemyHp} / {ed.maxHp}</div>
             </div>
 
-            {/* パーティーHPパネル */}
-            <div style={{width:"88%",flexShrink:0,zIndex:2,background:"rgba(5,13,20,0.7)",padding:"6px 10px",borderRadius:4,border:`1px solid ${C.border}44`}}>
-              <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginBottom:4,textAlign:"center"}}>PARTY</div>
-              {partyMembers.map(m => {
+            {/* パーティーHPパネル（強化版） */}
+            <div style={{width:"88%",flexShrink:0,zIndex:2,background:"rgba(5,13,20,0.82)",padding:"6px 8px",borderRadius:6,border:`1px solid ${C.border}55`}}>
+              <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:3,marginBottom:5,textAlign:"center"}}>── PARTY ──</div>
+              {partyMembers.map((m, mi) => {
                 const hpPct = Math.max(0, m.hp / m.mhp * 100);
                 const mpPct = Math.max(0, m.mp / m.mmp * 100);
                 const hpColor = hpPct <= 25 ? C.red : hpPct <= 50 ? C.gold : C.accent2;
+                const isCmdDone = !victory && !defeat && mi < cmdInputIdx;
+                const isCmdCurrent = !victory && !defeat && inputPhase === "command" && mi === cmdInputIdx;
+                const cmd = pendingCommands[m.key];
+                const cmdSk = BATTLE_SKILLS.find(s=>s.id===cmd) || ELEMENT_SKILL_DEFS.find(s=>s.id===cmd);
+                const sprKey = SPRITE_MAP[m.icon];
+                const sprUrl = sprKey ? assetUrl(sprKey) : null;
+
+                const rowBg = isCmdCurrent
+                  ? `linear-gradient(90deg,${C.accent}22,${C.accent}08)`
+                  : isCmdDone
+                  ? `${C.accent2}08`
+                  : "transparent";
+                const rowBorder = isCmdCurrent ? C.accent : isCmdDone ? `${C.accent2}55` : `${C.border}33`;
+
                 return (
-                  <div key={m.key} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-                    <span style={{fontSize:12,lineHeight:1,flexShrink:0}}>{m.icon}</span>
-                    <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",width:44,flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.name}</span>
-                    <div style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
-                      <div style={{height:4,background:"rgba(255,255,255,0.08)",borderRadius:2,overflow:"hidden"}}>
-                        <div style={{height:"100%",width:`${hpPct}%`,background:hpColor,transition:"width 0.3s",borderRadius:2}}/>
-                      </div>
-                      <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
-                        <div style={{height:"100%",width:`${mpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.3s",borderRadius:2}}/>
-                      </div>
+                  <div key={m.key} style={{
+                    display:"flex", alignItems:"center", gap:6, marginBottom:4,
+                    padding:"4px 6px", borderRadius:5,
+                    background:rowBg, border:`1px solid ${rowBorder}`,
+                    transition:"all 0.25s",
+                  }}>
+                    {/* キャラアイコン（画像 or 絵文字） */}
+                    <div style={{position:"relative",flexShrink:0,width:26,height:26}}>
+                      {sprUrl
+                        ? <img src={sprUrl} alt={m.name} style={{width:26,height:26,objectFit:"cover",borderRadius:4,border:`1px solid ${isCmdCurrent?C.accent:C.border}55`,filter:isCmdCurrent?`drop-shadow(0 0 4px ${C.accent})`:"none"}} />
+                        : <div style={{width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,borderRadius:4,border:`1px solid ${isCmdCurrent?C.accent:C.border}55`,background:isCmdCurrent?`${C.accent}18`:"rgba(255,255,255,0.04)",filter:isCmdCurrent?`drop-shadow(0 0 4px ${C.accent})`:"none"}}>{m.icon}</div>
+                      }
+                      {/* コマンド選択中インジケーター */}
+                      {isCmdCurrent && (
+                        <div style={{position:"absolute",top:-3,right:-3,width:8,height:8,borderRadius:"50%",background:C.accent,animation:"dngr 0.6s infinite",border:"1px solid #000"}}/>
+                      )}
+                      {/* コマンド確定済みアイコン */}
+                      {isCmdDone && cmdSk && (
+                        <div style={{position:"absolute",bottom:-3,right:-3,fontSize:8,background:"rgba(5,13,20,0.9)",borderRadius:"50%",width:12,height:12,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.accent2}55`}}>{cmdSk.icon}</div>
+                      )}
                     </div>
-                    <div style={{flexShrink:0,textAlign:"right"}}>
-                      <div style={{fontSize:8,color:hpColor,fontFamily:"'Share Tech Mono',monospace"}}>{m.hp}</div>
-                      <div style={{fontSize:7,color:"#60a5fa88",fontFamily:"'Share Tech Mono',monospace"}}>{m.mp}</div>
+
+                    {/* 名前 + HP/MPバー */}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:3}}>
+                        <span style={{fontSize:9,color:isCmdCurrent?C.white:C.muted,fontFamily:"'Noto Serif JP',serif",fontWeight:isCmdCurrent?700:400,letterSpacing:0.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:52}}>
+                          {isCmdCurrent && <span style={{color:C.accent,marginRight:2}}>▶</span>}
+                          {m.name}
+                        </span>
+                        <div style={{display:"flex",gap:4,flexShrink:0}}>
+                          <span style={{fontSize:8,color:hpColor,fontFamily:"'Share Tech Mono',monospace",lineHeight:1}}>{m.hp}<span style={{fontSize:6,color:C.muted,opacity:0.7}}>/{m.mhp}</span></span>
+                          <span style={{fontSize:7,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace",lineHeight:1,opacity:0.8}}>{m.mp}</span>
+                        </div>
+                      </div>
+                      {/* HPバー */}
+                      <div style={{height:4,background:"rgba(255,255,255,0.07)",borderRadius:2,overflow:"hidden",marginBottom:2}}>
+                        <div style={{height:"100%",width:`${hpPct}%`,background:hpColor,transition:"width 0.35s",borderRadius:2,boxShadow:hpPct<=25?`0 0 4px ${C.red}`:"none"}}/>
+                      </div>
+                      {/* MPバー */}
+                      <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:2,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:`${mpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.35s",borderRadius:2}}/>
+                      </div>
                     </div>
                   </div>
                 );
@@ -2113,25 +2281,62 @@ export default function ArcadiaCh2() {
               ))}
             </div>
 
-            {/* プレイヤーステータス */}
+            {/* 現在コマンド選択中メンバーのステータス（または全体ターン表示） */}
             <div style={{padding:"8px 12px",background:"rgba(10,26,38,0.95)",borderTop:`1px solid ${C.border}`,flexShrink:0}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                <div>
-                  <span style={{fontSize:10,color:C.muted,marginRight:6,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
-                  <span style={{fontSize:12,color:playerPct<=25?C.red:C.accent2,fontFamily:"'Share Tech Mono',monospace",animation:playerPct<=25?"dngr 0.8s infinite":"none"}}>{hp}/{mhp}</span>
+              {!victory && !defeat && inputPhase === "command" ? (() => {
+                const cm = partyMembers[cmdInputIdx];
+                const cmHpPct = Math.max(0, cm.hp / cm.mhp * 100);
+                const cmMpPct = Math.max(0, cm.mp / cm.mmp * 100);
+                const cmHpColor = cmHpPct <= 25 ? C.red : cmHpPct <= 50 ? C.gold : C.accent2;
+                const cmSprKey = SPRITE_MAP[cm.icon];
+                const cmSprUrl = cmSprKey ? assetUrl(cmSprKey) : null;
+                return (
+                  <div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                      {cmSprUrl
+                        ? <img src={cmSprUrl} alt={cm.name} style={{width:28,height:28,objectFit:"cover",borderRadius:4,border:`1px solid ${C.accent}66`,flexShrink:0,filter:`drop-shadow(0 0 5px ${C.accent}66)`}} />
+                        : <div style={{width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,borderRadius:4,border:`1px solid ${C.accent}66`,background:`${C.accent}18`,flexShrink:0}}>{cm.icon}</div>
+                      }
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <span style={{fontSize:11,color:C.white,fontFamily:"'Noto Serif JP',serif",fontWeight:700}}>
+                            <span style={{color:C.accent,marginRight:3}}>▶</span>{cm.name}
+                          </span>
+                          <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>Turn {turn}　{cmdInputIdx+1}/{PARTY_DEFS.length}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                      <div style={{display:"flex",alignItems:"center",gap:5}}>
+                        <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
+                        <span style={{fontSize:12,color:cmHpColor,fontFamily:"'Share Tech Mono',monospace",animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{cm.hp}<span style={{fontSize:9,color:C.muted}}>/{cm.mhp}</span></span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:5}}>
+                        <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
+                        <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{cm.mp}<span style={{fontSize:9,color:C.muted}}>/{cm.mmp}</span></span>
+                      </div>
+                    </div>
+                    <div style={{height:4,background:C.panel2,borderRadius:2,marginBottom:3,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${cmHpPct}%`,background:`linear-gradient(90deg,${cmHpColor}99,${cmHpColor})`,transition:"width 0.4s",borderRadius:2,boxShadow:cmHpPct<=25?`0 0 6px ${C.red}`:"none"}}/>
+                    </div>
+                    <div style={{height:3,background:C.panel2,borderRadius:2,marginBottom:6,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${cmMpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.4s",borderRadius:2}}/>
+                    </div>
+                  </div>
+                );
+              })() : (
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
+                    <span style={{fontSize:12,color:playerPct<=25?C.red:C.accent2,fontFamily:"'Share Tech Mono',monospace",animation:playerPct<=25?"dngr 0.8s infinite":"none"}}>{hp}/{mhp}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
+                    <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{mp}/{mmp}</span>
+                  </div>
+                  <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>Turn {turn}</div>
                 </div>
-                <div>
-                  <span style={{fontSize:10,color:C.muted,marginRight:6,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
-                  <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{mp}/{mmp}</span>
-                </div>
-                <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>Turn {turn}</div>
-              </div>
-              <div style={{height:3,background:C.panel2,borderRadius:2,marginBottom:3,overflow:"hidden"}}>
-                <div style={{height:"100%",width:`${playerPct}%`,background:`linear-gradient(90deg,${C.red},${C.accent2})`,transition:"width 0.4s"}}/>
-              </div>
-              <div style={{height:3,background:C.panel2,borderRadius:2,marginBottom:6,overflow:"hidden"}}>
-                <div style={{height:"100%",width:`${mpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.4s"}}/>
-              </div>
+              )}
 
               {/* 敵の次ターン行動予告 */}
               {!victory && !defeat && enemyNextAction && (() => {
@@ -2153,40 +2358,15 @@ export default function ArcadiaCh2() {
               <div style={{flexShrink:0}}>
                 {!victory && !defeat ? (
                   <div>
-                    {/* コマンド入力進捗 */}
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-                      {PARTY_DEFS.map((m, i) => {
-                        const isDone = i < cmdInputIdx;
-                        const isCurrent = i === cmdInputIdx;
-                        const cmd = pendingCommands[m.id];
-                        const cmdSk = BATTLE_SKILLS.find(s=>s.id===cmd) || ELEMENT_SKILL_DEFS.find(s=>s.id===cmd);
-                        const borderCol = isCurrent ? C.accent : isDone ? C.accent2 : C.border;
-                        return (
-                          <div key={m.id} style={{flex:1,textAlign:"center",padding:"3px 2px",background:isCurrent?`${C.accent}18`:isDone?`${C.accent2}10`:"transparent",border:`1px solid ${borderCol}`,borderRadius:4,transition:"all 0.2s"}}>
-                            <div style={{fontSize:11}}>{m.icon}</div>
-                            <div style={{fontSize:7,color:isCurrent?C.accent:isDone?C.accent2:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
-                              {isDone ? (cmdSk?.icon ?? "?") : isCurrent ? "▶" : "─"}
-                            </div>
-                            <div style={{fontSize:6,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>SPD{m.spd}</div>
-                          </div>
-                        );
-                      })}
-                      {/* 敵SPD表示 */}
-                      <div style={{flex:1,textAlign:"center",padding:"3px 2px",background:"transparent",border:`1px solid ${C.border}`,borderRadius:4}}>
-                        <div style={{fontSize:11}}>{ed.em}</div>
-                        <div style={{fontSize:7,color:enemySpdDebuff>0?C.gold:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>
-                          {enemySpdDebuff>0?"⬇":"─"}
-                        </div>
-                        <div style={{fontSize:6,color:enemySpdDebuff>0?C.gold:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>SPD{effectiveEnemySpdDisp}</div>
+                    {/* 敵SPD表示（コンパクト） */}
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6,marginBottom:5}}>
+                      <div style={{display:"flex",alignItems:"center",gap:4,padding:"2px 8px",background:"transparent",border:`1px solid ${C.border}44`,borderRadius:4}}>
+                        <span style={{fontSize:11}}>{ed.em}</span>
+                        <span style={{fontSize:8,color:enemySpdDebuff>0?C.gold:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>
+                          SPD {effectiveEnemySpdDisp}{enemySpdDebuff>0?" ⬇":""}
+                        </span>
                       </div>
                     </div>
-
-                    {/* 入力中メンバー表示 */}
-                    {inputPhase === "command" && (
-                      <div style={{fontSize:9,color:C.accent,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,textAlign:"center",marginBottom:4}}>
-                        {currentCmdMember.icon} {currentCmdMember.name} のコマンド ({cmdInputIdx+1}/{PARTY_DEFS.length})
-                      </div>
-                    )}
 
                     {showElemMenu ? (
                       /* 属性スキルサブメニュー */
@@ -2201,15 +2381,26 @@ export default function ArcadiaCh2() {
                             const isEffective = currentElemKey && esk.targetElement === currentElemKey;
                             const borderColor = isEffective ? esk.color : `${esk.color}44`;
                             const bgColor = isEffective ? `${esk.color}22` : C.panel;
+                            // 各スキルの追加効果テキスト
+                            const extraEffectMap = {
+                              "elem_ice":     enrageCount > 0 ? "❄怒り解除" : "❄怒り解除",
+                              "elem_thunder": "⚡SPD+3(3T)",
+                              "elem_fire":    "🔥ATK½(3T)",
+                              "elem_earth":   "🌿敵SPD-5",
+                            };
+                            const extraEffect = extraEffectMap[esk.id];
+                            const isIceWithEnrage = esk.id === "elem_ice" && enrageCount > 0;
                             const btnSt = canAfford
                               ? { padding:"5px 4px", background:bgColor, border:`1px solid ${borderColor}`, color:esk.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:"'Noto Serif JP',serif", position:"relative" }
                               : { padding:"5px 4px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:"'Noto Serif JP',serif", opacity:0.5, position:"relative" };
                             return (
                               <button key={esk.id} onClick={() => canAfford && onSelectCommand(esk.id)} style={btnSt}>
                                 {isEffective && <div style={{position:"absolute",top:-2,right:-2,fontSize:7,background:esk.color,color:"#000",borderRadius:2,padding:"0 3px",fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>有効!</div>}
+                                {isIceWithEnrage && <div style={{position:"absolute",top:-2,left:-2,fontSize:7,background:C.red,color:"#fff",borderRadius:2,padding:"0 3px",fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:"dngr 0.6s infinite"}}>解除!</div>}
                                 <div style={{fontSize:16}}>{esk.icon}</div>
                                 <div style={{fontSize:9,marginTop:1}}>{esk.label}</div>
                                 <div style={{fontSize:7,color:canAfford?C.muted:"#553333"}}>MP {esk.cost}</div>
+                                {extraEffect && <div style={{fontSize:6,color:isIceWithEnrage?C.red:esk.color,marginTop:1,opacity:0.9}}>{extraEffect}</div>}
                               </button>
                             );
                           })}
