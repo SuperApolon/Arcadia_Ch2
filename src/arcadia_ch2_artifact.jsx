@@ -34,65 +34,54 @@ const INITIAL_BATTLE_DEFS = {
 
   seagull: {
     name:"カモメ型モンスター", em:"🦅",
-    maxHp:55, atk:[8,14], elk:20, exp:15, lv:1,
+    maxHp:55, atk:[8,14], elk:20, exp:15, lv:1, spd:14,
     bg:["#0a1628","#0d2a5e","#1a5fa0"], isFloating:true, isGround:false,
-    // ★ パターン調整ポイント ─────────────────────────────────────────────
     pattern:["atk","dodge","atk","counter"],
   },
 
   koza: {
     name:"コーザ（訓練）", em:"🙍",
-    maxHp:120, atk:[10,16], elk:0, exp:0, lv:1,
+    maxHp:120, atk:[10,16], elk:0, exp:0, lv:1, spd:13,
     bg:["#0a1808","#184018","#2a2818"], isFloating:false, isGround:true,
-    // ★ パターン調整ポイント ─────────────────────────────────────────────
     pattern:["atk","counter","atk","dodge","counter","atk"],
   },
 
   shamerlot: {
     name:"シャメロット Lv.1", em:"🦀",
-    maxHp:80, atk:[6,12], elk:30, exp:20, lv:1,
+    maxHp:80, atk:[6,12], elk:30, exp:20, lv:1, spd:8,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    // ★ パターン調整ポイント ─────────────────────────────────────────────
     pattern:["atk","atk","dodge","counter"],
   },
 
   shamerlot_lv3: {
     name:"シャメロット Lv.3", em:"🦀",
-    maxHp:130, atk:[10,18], elk:50, exp:40, lv:3,
+    maxHp:130, atk:[10,18], elk:50, exp:40, lv:3, spd:10,
     bg:["#0a1808","#1a2808","#301008"], isFloating:false, isGround:true,
-    // ★ パターン調整ポイント ─────────────────────────────────────────────
     pattern:["counter","atk","dodge","atk","counter","dodge"],
   },
 
   shamerlot_lv5: {
     name:"シャメロット Lv.5", em:"🦀",
-    maxHp:200, atk:[14,24], elk:80, exp:70, lv:5,
+    maxHp:200, atk:[14,24], elk:80, exp:70, lv:5, spd:11,
     bg:["#0a1808","#1a2808","#301008"], isFloating:false, isGround:true,
-    // ★ パターン調整ポイント ─────────────────────────────────────────────
     pattern:["counter","atk","unavoidable_lite","dodge","atk","counter","atk","dodge"],
   },
 
   simuluu: {
     name:"Simuluu ─ 試練の主", em:"🦌",
-    maxHp:400, atk:[15,25], elk:200, exp:200, lv:6,
+    maxHp:400, atk:[15,25], elk:200, exp:200, lv:6, spd:12,
     bg:["#010610","#050e28","#0a1840"], isBoss:true, isFloating:false, isGround:true,
-    // ★ パターン調整ポイント ─────────────────────────────────────────────
-    // unavoidable はカウンター/回避を粉砕するボス専用行動
     pattern:["atk","counter","unavoidable","atk","dodge","unavoidable","counter","unavoidable"],
     unavoidableAtk:[30,45],
   },
 
   // ── 第二章専用ボス ─────────────────────────────────────────────────────────
-  // 属性: 毎ターン 炎→氷→雷→地→無 でローテーション
-  // 属性ダメージ累積が ELEMENT_BREAK_THRESHOLD(50) を超えると攻撃無効化＆リセット
   simuluu_ch2: {
     name:"Simuluu ─ 覚醒体", em:"🦌",
-    maxHp:2000, atk:[18,30], elk:500, exp:500, lv:10,
+    maxHp:2000, atk:[18,30], elk:500, exp:500, lv:10, spd:12,
     bg:["#050210","#0f0528","#1a0a50"], isBoss:true, isFloating:false, isGround:true,
-    // atk_all = 全体攻撃、enrage = 怒り状態付与（3ターン攻撃×2）
     pattern:["atk","counter","unavoidable","atk_all","enrage","dodge","unavoidable","counter","atk_all","unavoidable"],
     unavoidableAtk:[35,50],
-    // 1ターンごとに循環する属性リスト
     elementCycle:["fire","ice","thunder","earth","none"],
   },
 
@@ -110,10 +99,10 @@ const ELEMENT_NAMES = {
 
 // 属性スキル定義。targetElement = このスキルが有効な敵の弱点属性
 const ELEMENT_SKILL_DEFS = [
-  { id:"elem_fire",    label:"火炎斬", icon:"🔥", color:"#ff6633", cost:20, dmg:[20,32], targetElement:"ice",     desc:"氷属性の敵に有効" },
-  { id:"elem_ice",     label:"氷結斬", icon:"❄️", color:"#88ddff", cost:20, dmg:[20,32], targetElement:"thunder", desc:"雷属性の敵に有効" },
-  { id:"elem_thunder", label:"雷神斬", icon:"⚡", color:"#ffee44", cost:20, dmg:[20,32], targetElement:"earth",   desc:"地属性の敵に有効" },
-  { id:"elem_earth",   label:"大地斬", icon:"🌿", color:"#66cc44", cost:20, dmg:[20,32], targetElement:"fire",    desc:"炎属性の敵に有効" },
+  { id:"elem_fire",    label:"火炎斬", icon:"🔥", color:"#ff6633", cost:20, dmg:[50,50], targetElement:"ice",     desc:"氷属性の敵に有効" },
+  { id:"elem_ice",     label:"氷結斬", icon:"❄️", color:"#88ddff", cost:20, dmg:[50,50], targetElement:"thunder", desc:"雷属性の敵に有効" },
+  { id:"elem_thunder", label:"雷神斬", icon:"⚡", color:"#ffee44", cost:20, dmg:[50,50], targetElement:"earth",   desc:"地属性の敵に有効" },
+  { id:"elem_earth",   label:"大地斬", icon:"🌿", color:"#66cc44", cost:20, dmg:[50,50], targetElement:"fire",    desc:"炎属性の敵に有効" },
 ];
 
 // 属性破壊発動に必要な累積ダメージ閾値
@@ -237,7 +226,7 @@ const BATTLE_BGM = {
 };
 
 function resolveBgmId(phase, sceneLoc, enemyType) {
-  if (phase === "title" || phase === "tos") return PHASE_BGM.title;
+  if (phase === "title" || phase === "select") return PHASE_BGM.title;
   if (phase === "end")     return PHASE_BGM.ending;
   if (phase === "victory") return null;  // ファンファーレはplayFanfareで別管理
   if (phase === "battle")  return BATTLE_BGM[enemyType] ?? null;
@@ -322,11 +311,11 @@ const ENEMY_IMG_SIZE = {
 };
 
 const BATTLE_BG_MAP = {
-  seagull:       "battle/bg_coast",
-  koza:          "battle/bg_meadow",
-  shamerlot:     "battle/bg_rocks",
-  shamerlot_lv3: "battle/bg_rocks",
-  shamerlot_lv5: "battle/bg_rocks",
+  seagull:       "battle/bg_cave",
+  koza:          "battle/bg_cave",
+  shamerlot:     "battle/bg_cave",
+  shamerlot_lv3: "battle/bg_cave",
+  shamerlot_lv5: "battle/bg_cave",
   simuluu:       "battle/bg_cave",
 };
 
@@ -446,6 +435,10 @@ const SCENES = [
     { sp:"ナレーション", t:"Verneの宿屋で一夜を過ごした四人。\n\n明日から始まる新たな冒険に向けて、\nエルツは静かに目を閉じた。\n\n─ 第二章 序章 ─\n\nTO BE CONTINUED..." },
     { sp:"SYSTEM", t:"── 第二章 序章 完了 ──\n\n引き続きのご冒険を、お楽しみに。", ending:true }
   ]},
+  // S3: マルチバトルテスト（シャメロットLv5 × 2 ＋ シムルー中央）
+  { bg:["#0a1808","#1a2808","#301008"], loc:"イルカ島 岩場", sprites:["🧑","🧑‍🦱","👩","👦"], dl:[
+    { sp:"エルツ", t:"「3体同時......！\n行くぞ、みんな！」", battle:true, multiEnemyTypes:["shamerlot_lv5","simuluu","shamerlot_lv5"], battleNext:2 }
+  ]},
 ];
 
 // @@SECTION:MAIN_COMPONENT
@@ -455,7 +448,6 @@ export default function ArcadiaCh2() {
   const [saveFile,  setSaveFile]  = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [dragOver,  setDragOver]  = useState(false);
-  const [tosScrolled, setTosScrolled] = useState(false);
   // エネミーパターンをランタイムで編集可能なステートとして保持
   const [battleDefs, setBattleDefs] = useState(INITIAL_BATTLE_DEFS);
   const [sceneIdx, setSceneIdx] = useState(0);
@@ -516,10 +508,21 @@ export default function ArcadiaCh2() {
   const [noDmgStreak, setNoDmgStreak] = useState(0);
   const [battleResultBonus, setBattleResultBonus] = useState({ comboMult: 1.0, gradeMult: 1.0 });
 
+  // ── 複数敵バトル ───────────────────────────────────────────────────────────
+  // null = 単体バトル（既存ロジックそのまま）
+  // array = [{ type, def, hp, turnIdx, defeated }, ...]
+  const [multiEnemies, setMultiEnemies] = useState(null);
+  // コマンド選択後のターゲット選択モード
+  // { memberIdx, skillId } を保持し、ターゲット選択UIを出す
+  const [pendingTargetSelect, setPendingTargetSelect] = useState(null);
+  // { memberId → targetIdx } ターゲット決定済みバッファ
+  const [pendingTargets, setPendingTargets] = useState({});
+
   // ── 属性システム（第二章） ────────────────────────────────────────────────
   const [enemyElementIdx, setEnemyElementIdx] = useState(0);
   const [elemDmgAccum, setElemDmgAccum] = useState(0);
   const [showElemMenu, setShowElemMenu] = useState(false);
+  const [showSpecMenu, setShowSpecMenu] = useState(false); // 特殊スキルサブメニュー
   const [elemBreakAnim, setElemBreakAnim] = useState(false);
 
   // ── パーティーHP・MP・SPD（第二章専用） ────────────────────────────────
@@ -553,6 +556,29 @@ export default function ArcadiaCh2() {
   // ── パーティSPDバフ管理（雷神斬効果） ─────────────────────────────────
   // partySpdBuff > 0 のとき、全味方のSPDを+3する残りターン数
   const [partySpdBuff, setPartySpdBuff] = useState(0);
+
+  // ── 挑発クールダウン管理（エルツ専用） ──────────────────────────────────
+  // provokeCooldown > 0 のとき挑発は使用不可。使用後3ターン経過で再使用可能。
+  // provokeActive > 0 のとき敵の行動を強制的にatkに変換する（残りターン数）。
+  const [provokeCooldown, setProvokeCooldown] = useState(0);
+  const [provokeActive,   setProvokeActive  ] = useState(0);
+
+  // ── テイクダウン（エルツ専用）────────────────────────────────────────────
+  // takedownCooldown > 0: CD中。使用後3T経過で再使用可。
+  // takedownActive > 0: このターン敵を行動不能にする（使用した次ターン反映）
+  const [takedownCooldown, setTakedownCooldown] = useState(0);
+  const [takedownActive,   setTakedownActive  ] = useState(0);
+
+  // ── スリープ（リンス専用）──────────────────────────────────────────────
+  // sleepCooldown > 0: CD中。使用後3T経過で再使用可。
+  // sleepActive > 0: 敵全員を行動不能にする残りターン数
+  const [sleepCooldown, setSleepCooldown] = useState(0);
+  const [sleepActive,   setSleepActive  ] = useState(0);
+
+  // ── 属性スキルクールダウン（各3T）────────────────────────────────────────
+  // { elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 }
+  // > 0 のとき使用不可、毎ターン1ずつ減算
+  const [elemCooldowns, setElemCooldowns] = useState({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });
 
   const typeTimerRef = useRef(null);
   const notifTimerRef = useRef(null);
@@ -940,6 +966,35 @@ export default function ArcadiaCh2() {
       return;
     }
     if (ch.battle) {
+      // ── マルチ敵バトル（ch.multiEnemyTypes が配列の場合） ────────────────
+      if (ch.multiEnemyTypes && Array.isArray(ch.multiEnemyTypes)) {
+        const types = ch.multiEnemyTypes;
+        const firstDef = battleDefs[types[0]];
+        // バトル全体の代表敵（BGM・単体用HPバー表示などの fallback に使用）
+        setBattleEnemy(firstDef);
+        setCurrentEnemyType(types[0]);
+        setEnemyHp(firstDef.maxHp);
+        // 複数敵配列を初期化（slot=インデックスで識別）
+        const initEnemies = types.map((t, i) => ({
+          slot: i, type: t, def: battleDefs[t],
+          hp: battleDefs[t].maxHp, turnIdx: 0, defeated: false,
+        }));
+        setMultiEnemies(initEnemies);
+        setBtlLogs([`⚔ ${types.length}体の敵が現れた！`]);
+        setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
+        setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
+        setEnemyTurnIdx(0);
+        setEnemyNextAction((firstDef.pattern || ["atk"])[0]);
+        setBattleNext(ch.battleNext !== undefined ? ch.battleNext : sceneIdx + 1);
+        setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+        setPartyHp({ swift:80, linz:70, chopper:65 });
+        setPartyMp({ swift:60, linz:70, chopper:50 });
+        setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
+        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });
+        setPhase("battle");
+        return;
+      }
+      // ── 単体バトル（従来） ─────────────────────────────────────────────────
       const eKey = ch.battleType || "seagull";
       const ed = battleDefs[eKey];
       setBattleEnemy(ed);
@@ -951,23 +1006,12 @@ export default function ArcadiaCh2() {
       setEnemyTurnIdx(0);
       setEnemyNextAction((ed.pattern || ["atk"])[0]);
       setBattleNext(ch.battleNext !== undefined ? ch.battleNext : sceneIdx + 1);
-      // 属性システムリセット
-      setEnemyElementIdx(0);
-      setElemDmgAccum(0);
-      setShowElemMenu(false);
-      setElemBreakAnim(false);
-      // パーティーHPリセット
+      setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
       setPartyHp({ swift:80, linz:70, chopper:65 });
       setPartyMp({ swift:60, linz:70, chopper:50 });
-      // パーティーコマンド・SPDデバフリセット
-      setInputPhase("command");
-      setPendingCommands({});
-      setCmdInputIdx(0);
-      setEnemySpdDebuff(0);
-      // 怒り状態・ATKデバフ・SPDバフリセット
-      setEnrageCount(0);
-      setEnemyAtkDebuff(0);
-      setPartySpdBuff(0);
+      setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });
+      setMultiEnemies(null);
       setPhase("battle");
       return;
     }
@@ -989,10 +1033,12 @@ export default function ArcadiaCh2() {
   // ─── 定数 ────────────────────────────────────────────────────────────────
   // パーティーメンバー基本情報（変更しない固定値）
   const PARTY_DEFS = [
-    { id:"eltz",    name:"エルツ",    icon:"🧑",   spd:12 },
-    { id:"swift",   name:"スウィフト", icon:"🧑‍🦱", spd:15 },
-    { id:"linz",    name:"リンス",    icon:"👩",   spd:11 },
-    { id:"chopper", name:"チョッパー", icon:"👦",   spd:9  },
+    // allowedElemSkills: 使用可能な属性スキルID（空配列=属性スキルなし）
+    // specialSkill: キャラ固有スキルID（nullなし）
+    { id:"eltz",    name:"エルツ",    icon:"🧑",   spd:12, allowedElemSkills:[],                              specialSkills:["provoke","takedown"] },
+    { id:"swift",   name:"スウィフト", icon:"🧑‍🦱", spd:15, allowedElemSkills:["elem_ice","elem_thunder"],    specialSkills:[]                    },
+    { id:"linz",    name:"リンス",    icon:"👩",   spd:11, allowedElemSkills:[],                              specialSkills:["overheal","sleep"]   },
+    { id:"chopper", name:"チョッパー", icon:"👦",   spd:9,  allowedElemSkills:["elem_fire","elem_earth"],     specialSkills:[]                    },
   ];
   const ENEMY_BASE_SPD = 12; // シムルー基本SPD
 
@@ -1026,21 +1072,50 @@ export default function ArcadiaCh2() {
   };
 
   // ─── コマンド登録（コマンドフェーズ専用） ───────────────────────────────
-  // skillId: 通常スキルID or 属性スキルID
-  // 1人ずつ順番に選択し、4人分揃ったら実行フェーズへ移行する
   const onSelectCommand = useCallback((skillId) => {
     if (victory || defeat || inputPhase !== "command") return;
     setShowElemMenu(false);
+    setShowSpecMenu(false);
 
     const member = PARTY_DEFS[cmdInputIdx];
     const elemSk = ELEMENT_SKILL_DEFS.find(s => s.id === skillId);
     const baseSk = BATTLE_SKILLS.find(s => s.id === skillId);
-    const sk = elemSk || baseSk;
+    // 特殊スキルは全てコスト0として扱う
+    const SPECIAL_IDS = ["provoke","takedown","overheal","sleep"];
+    const specialSk = SPECIAL_IDS.includes(skillId) ? { id:skillId, cost:0, dmg:[0,0] } : null;
+    const sk = elemSk || baseSk || specialSk;
     if (!sk) return;
 
-    // MPチェック: エルツはmp、仲間はpartyMpの該当メンバー値を参照
+    // キャラ別属性スキル制限チェック
+    if (elemSk && !member.allowedElemSkills.includes(skillId)) {
+      showNotif(`${member.name}はこのスキルを使えない！`); return;
+    }
+    // キャラ別特殊スキル制限チェック
+    if (specialSk && !member.specialSkills.includes(skillId)) {
+      showNotif(`${member.name}はこのスキルを使えない！`); return;
+    }
+    // 各スキルのクールダウンチェック
+    if (skillId === "provoke"   && provokeCooldown   > 0) { showNotif(`挑発 CD中（残${provokeCooldown}T）`);    return; }
+    if (skillId === "takedown"  && takedownCooldown  > 0) { showNotif(`テイクダウン CD中（残${takedownCooldown}T）`); return; }
+    if (skillId === "sleep"     && sleepCooldown     > 0) { showNotif(`スリープ CD中（残${sleepCooldown}T）`);  return; }
+    if (elemSk && elemCooldowns[skillId] > 0) {
+      showNotif(`${elemSk.label} CD中（残${elemCooldowns[skillId]}T）`); return;
+    }
+
     const currentMp = member.id === "eltz" ? mp : (partyMp[member.id] ?? 0);
     if (sk.cost > 0 && currentMp < sk.cost) { showNotif(`${member.name}のMPが足りない！`); return; }
+
+    // 複数敵バトル かつ 攻撃系スキル → ターゲット選択モードへ
+    const needsTarget = !!multiEnemies && skillId !== "heal" && skillId !== "dodge";
+    if (needsTarget) {
+      setPendingCommands(prev => ({ ...prev, [member.id]: skillId }));
+      setPendingTargetSelect({ memberIdx: cmdInputIdx, skillId });
+      return;
+    }
+
+    // ターゲット不要（heal/dodge または単体バトル）
+    const newTargets = multiEnemies ? { ...pendingTargets, [member.id]: 0 } : pendingTargets;
+    if (multiEnemies) setPendingTargets(newTargets);
 
     const newCmds = { ...pendingCommands, [member.id]: skillId };
     const nextIdx = cmdInputIdx + 1;
@@ -1050,11 +1125,256 @@ export default function ArcadiaCh2() {
       setCmdInputIdx(nextIdx);
     } else {
       setPendingCommands({});
+      if (multiEnemies) setPendingTargets({});
       setCmdInputIdx(0);
       setInputPhase("execute");
-      executePartyTurn(newCmds);
+      if (multiEnemies) {
+        executeMultiTurn(newCmds, newTargets);
+      } else {
+        executePartyTurn(newCmds);
+      }
     }
-  }, [victory, defeat, inputPhase, cmdInputIdx, pendingCommands, mp, partyMp, showNotif]);
+  }, [victory, defeat, inputPhase, cmdInputIdx, pendingCommands, pendingTargets, mp, partyMp, showNotif, multiEnemies, provokeCooldown, takedownCooldown, sleepCooldown, elemCooldowns]);
+
+  // ─── ターゲット確定（複数敵専用） ─────────────────────────────────────────
+  const onSelectTarget = useCallback((targetIdx) => {
+    if (!pendingTargetSelect || !multiEnemies) return;
+    const { memberIdx, skillId } = pendingTargetSelect;
+    const member = PARTY_DEFS[memberIdx];
+    const newTargets = { ...pendingTargets, [member.id]: targetIdx };
+    const newCmds = { ...pendingCommands }; // skillIdは既に登録済み
+    setPendingTargetSelect(null);
+    const nextIdx = memberIdx + 1;
+
+    if (nextIdx < PARTY_DEFS.length) {
+      setPendingTargets(newTargets);
+      setCmdInputIdx(nextIdx);
+    } else {
+      setPendingCommands({});
+      setPendingTargets({});
+      setCmdInputIdx(0);
+      setInputPhase("execute");
+      executeMultiTurn(newCmds, newTargets);
+    }
+  }, [pendingTargetSelect, pendingTargets, pendingCommands, multiEnemies]);
+
+  // ─── 複数敵ターン実行 ──────────────────────────────────────────────────────
+  const executeMultiTurn = useCallback((cmds, targets) => {
+    const enemies = multiEnemies;
+    if (!enemies) return;
+
+    const spdBuff = partySpdBuff > 0 ? 3 : 0;
+    const defBonus = Math.floor((statAlloc.pdef - 10) * 1.2);
+    const atkBonus = weaponPatk + Math.floor((statAlloc.patk - 10) * 1.5);
+
+    // 各生存敵の今ターンのアクションを決定
+    const aliveEnemies = enemies.filter(e => !e.defeated);
+
+    // SPD順アクターリスト構築（プレイヤー4人 + 生存敵）
+    const actors = [
+      ...PARTY_DEFS.map(m => ({
+        type: "player", id: m.id, name: m.name, icon: m.icon,
+        spd: m.spd + spdBuff, skill: cmds[m.id], targetIdx: targets[m.id] ?? 0,
+      })),
+      ...aliveEnemies.map(e => {
+        const eSpd = Math.max(1, (e.def.spd ?? 12) - (enemySpdDebuff > 0 ? 5 : 0));
+        const eAction = e.def.pattern[e.turnIdx % e.def.pattern.length];
+        return { type: "enemy", enemySlot: e.slot, name: e.def.name, icon: e.def.em,
+                 spd: eSpd, skill: eAction, def: e.def };
+      }),
+    ].sort((a, b) => b.spd !== a.spd ? b.spd - a.spd : (a.type === "player" ? -1 : 1));
+
+    let logs = [];
+    let curHp = hp;
+    let curMp = mp;
+    let curPartyHp = { ...partyHp };
+    let curPartyMp = { ...partyMp };
+    let curEnemies = enemies.map(e => ({ ...e }));
+    const memberHit = { eltz:false, swift:false, linz:false, chopper:false };
+    let earthSlashUsed = false;
+    let iceSlashUsed = false;
+    let thunderSlashUsed = false;
+    let fireSlashUsed = false;
+
+    // SPD順行動リスト表示
+    const spdLine = actors.map(a => `${a.icon}${a.spd}`).join(">");
+    logs.push(`─ ターン ${turn + 1} ─ ${spdLine}`);
+
+    for (const actor of actors) {
+      if (actor.type === "player") {
+        const skillId = actor.skill;
+        const elemSk = ELEMENT_SKILL_DEFS.find(s => s.id === skillId);
+        const baseSk = BATTLE_SKILLS.find(s => s.id === skillId);
+        const sk = elemSk || baseSk;
+        const isEltz = actor.id === "eltz";
+
+        if (sk && sk.cost > 0) {
+          if (isEltz) curMp = Math.max(0, curMp - sk.cost);
+          else curPartyMp[actor.id] = Math.max(0, (curPartyMp[actor.id] ?? 0) - sk.cost);
+        }
+
+        if (skillId === "heal") {
+          const healAmt = 80;
+          if (isEltz) curHp = Math.min(curHp + healAmt, mhp);
+          else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id] ?? 0) + healAmt, partyMhp[actor.id]);
+          logs.push(`${actor.icon}${actor.name} 🧪 HP+${healAmt}`);
+          continue;
+        }
+        if (skillId === "dodge") {
+          logs.push(`${actor.icon}${actor.name} 💨 回避態勢`);
+          continue;
+        }
+
+        // 攻撃先を決定（倒されていたら生存中の先頭にフォールバック）
+        let tIdx = actor.targetIdx;
+        if (!curEnemies[tIdx] || curEnemies[tIdx].defeated) {
+          const fb = curEnemies.findIndex(e => !e.defeated);
+          if (fb < 0) { logs.push(`${actor.icon}${actor.name} 攻撃対象なし`); continue; }
+          tIdx = fb;
+        }
+        const tEnemy = curEnemies[tIdx];
+        const eAction = tEnemy.def.pattern[tEnemy.turnIdx % tEnemy.def.pattern.length];
+        const rawDmg = Math.max(1, randInt(sk.dmg[0], sk.dmg[1]) + (isEltz ? atkBonus : 0));
+
+        // 属性スキル追加効果フラグ
+        if (skillId === "elem_earth")   { earthSlashUsed = true; }
+        if (skillId === "elem_ice")     { iceSlashUsed = true; }
+        if (skillId === "elem_thunder") { thunderSlashUsed = true; }
+        if (skillId === "elem_fire")    { fireSlashUsed = true; }
+
+        if (elemSk) {
+          curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - rawDmg);
+          if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+          logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} ${rawDmg}ダメージ！`);
+        } else {
+          const rps = judgeRPS(skillId, eAction);
+          if (skillId === "atk" && rps === "lose") {
+            logs.push(`${actor.icon}${actor.name} ⚔ → ${tEnemy.def.em}カウンター無効！`);
+          } else if (skillId === "counter" && rps === "lose") {
+            logs.push(`${actor.icon}${actor.name} 🔄 カウンター → 空振り`);
+          } else if (skillId === "counter" && rps === "win") {
+            const bd = Math.floor(rawDmg * 1.5);
+            curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - bd);
+            if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+            logs.push(`${actor.icon}${actor.name} 🔄カウンター！ → ${tEnemy.def.em}${tEnemy.def.name} ${bd}ダメージ（×1.5）！`);
+          } else {
+            curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - rawDmg);
+            if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+            logs.push(`${actor.icon}${actor.name} ${baseSk.icon} → ${tEnemy.def.em}${tEnemy.def.name} ${rawDmg}ダメージ！`);
+          }
+        }
+      } else {
+        // ── 敵行動 ──────────────────────────────────────────────────────────
+        const slot = actor.enemySlot;
+        const e = curEnemies.find(e => e.slot === slot);
+        if (!e || e.defeated) continue;
+        const eAction = actor.skill;
+
+        const isEnraged = enrageCount > 0 && !iceSlashUsed;
+        const atkHalf = enemyAtkDebuff > 0;
+        const totalMult = (isEnraged ? 2.0 : 1.0) * (atkHalf ? 0.5 : 1.0);
+        const rageLabel = isEnraged ? "🔴" : "";
+        const halfLabel = atkHalf ? "（ATK½）" : "";
+
+        // 攻撃先パーティメンバー（SPD最低のメンバー）
+        const spdSorted = [...PARTY_DEFS].sort((a, b) => a.spd - b.spd);
+        const tMember = spdSorted[0];
+        const isAtkAll = eAction === "atk_all" || eAction === "unavoidable" || eAction === "unavoidable_lite";
+
+        if (eAction === "dodge") {
+          logs.push(`${e.def.em}${e.def.name} 💨 回避！`);
+        } else if (eAction === "enrage") {
+          logs.push(`${e.def.em}${e.def.name} 🔴 怒り状態に！`);
+        } else if (isAtkAll) {
+          const [minD, maxD] = eAction === "unavoidable" ? (e.def.unavoidableAtk ?? [30,45]) : eAction === "unavoidable_lite" ? [18,28] : e.def.atk;
+          const dmg = Math.max(1, Math.floor(randInt(minD, maxD) * totalMult) - defBonus);
+          const label = eAction === "atk_all" ? "🌊全体攻撃" : eAction === "unavoidable" ? "💥回避不能" : "⚡強化攻撃";
+          logs.push(`${e.def.em}${rageLabel}${label}${halfLabel} 全員${dmg}ダメージ！`);
+          curHp = Math.max(0, curHp - dmg);
+          for (const k of ["swift","linz","chopper"]) curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - dmg);
+          Object.keys(memberHit).forEach(k => memberHit[k] = true);
+        } else if (eAction === "counter") {
+          const eltzCmd = cmds["eltz"];
+          if (eltzCmd === "atk") {
+            const cd = Math.max(1, Math.floor(randInt(e.def.atk[0], e.def.atk[1]) * 1.3 * totalMult) - defBonus);
+            curHp = Math.max(0, curHp - cd);
+            memberHit["eltz"] = true;
+            logs.push(`${e.def.em}${rageLabel}🔄${e.def.name}カウンター！${halfLabel} エルツ${cd}ダメージ！`);
+          } else {
+            const d = Math.max(1, Math.floor(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - defBonus);
+            if (tMember.id === "eltz") { curHp = Math.max(0, curHp - d); memberHit["eltz"] = true; }
+            else { curPartyHp[tMember.id] = Math.max(0, (curPartyHp[tMember.id] ?? 0) - d); memberHit[tMember.id] = true; }
+            logs.push(`${e.def.em}${rageLabel}🔄${e.def.name}カウンター！${halfLabel} ${tMember.icon}${tMember.name}${d}ダメージ！`);
+          }
+        } else {
+          // 通常atk
+          const d = Math.max(1, Math.floor(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - defBonus);
+          if (tMember.id === "eltz") { curHp = Math.max(0, curHp - d); memberHit["eltz"] = true; }
+          else { curPartyHp[tMember.id] = Math.max(0, (curPartyHp[tMember.id] ?? 0) - d); memberHit[tMember.id] = true; }
+          logs.push(`${e.def.em}${rageLabel}⚔${e.def.name}！${halfLabel} ${tMember.icon}${tMember.name}に${d}ダメージ！`);
+        }
+        // このスロットのturnIdxを進める
+        const slotIdx = curEnemies.findIndex(e => e.slot === slot);
+        if (slotIdx >= 0) curEnemies[slotIdx].turnIdx = (e.turnIdx + 1) % e.def.pattern.length;
+      }
+    }
+
+    // コンボ判定
+    const anyHit = Object.values(memberHit).some(v => v);
+    const newStreak = anyHit ? 0 : noDmgStreak + PARTY_DEFS.length;
+    if (!anyHit) {
+      const gain = 5 + newStreak;
+      curMp = Math.min(curMp + gain, mmp);
+      for (const k of Object.keys(curPartyMp)) curPartyMp[k] = Math.min((curPartyMp[k] ?? 0) + gain, partyMmp[k] ?? 0);
+      if (newStreak >= 3) logs.push(`✨PARTY COMBO ${newStreak}! 全員MP+${gain}！`);
+    }
+
+    // バフ・デバフ更新
+    const nextEnrageCount = iceSlashUsed ? 0 : Math.max(0, enrageCount - 1);
+    const nextAtkDebuff = fireSlashUsed ? 3 : Math.max(0, enemyAtkDebuff - 1);
+    const nextSpdBuff = thunderSlashUsed ? 3 : Math.max(0, partySpdBuff - 1);
+
+    // ステート一括更新
+    setHp(Math.min(curHp, mhp));
+    setMp(Math.max(0, curMp));
+    setPartyHp(curPartyHp);
+    setPartyMp(curPartyMp);
+    setMultiEnemies(curEnemies);
+    setTurn(t => t + 1);
+    setNoDmgStreak(newStreak);
+    setEnemySpdDebuff(prev => earthSlashUsed ? 1 : Math.max(0, prev - 1));
+    setEnrageCount(nextEnrageCount);
+    setEnemyAtkDebuff(nextAtkDebuff);
+    setPartySpdBuff(nextSpdBuff);
+    setBtlAnimEnemy(true); setTimeout(() => setBtlAnimEnemy(false), 400);
+    setBtlLogs(prev => [...prev, ...logs].slice(-20));
+
+    // 全滅チェック
+    const allDefeated = curEnemies.every(e => e.defeated);
+    if (allDefeated) {
+      setVictory(true);
+      const totalElk = curEnemies.reduce((s, e) => s + (e.def.elk ?? 0), 0);
+      const totalExp = curEnemies.reduce((s, e) => s + (e.def.exp ?? 0), 0);
+      const maxLv = Math.max(...curEnemies.map(e => e.def.lv ?? 1));
+      if (totalElk > 0) { setElk(v => v + totalElk); showNotif(`💰 ${totalElk} ELK 獲得！`); }
+      if (totalExp > 0) {
+        const gradeMult = (() => { const d = maxLv - lv; if (d >= 3) return 2.0; if (d === 2) return 1.5; if (d === 1) return 1.2; return 1.0; })();
+        setBattleResultBonus({ comboMult:1.0, gradeMult });
+        setTimeout(() => handleExpGain(totalExp, maxLv, 1.0), 500);
+      }
+      setBtlLogs(prev => [...prev, `🏆 全敵を倒した！`]);
+    } else if (curHp <= 0) {
+      setDefeat(true);
+      setBtlLogs(prev => [...prev, "💀 エルツが戦闘不能..."]);
+    } else {
+      setInputPhase("command");
+      setCmdInputIdx(0);
+    }
+  }, [
+    multiEnemies, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
+    statAlloc, weaponPatk, partySpdBuff, enemySpdDebuff, enrageCount, enemyAtkDebuff,
+    noDmgStreak, turn, lv, showNotif, handleExpGain,
+  ]);
 
   // ─── パーティーターン実行 ──────────────────────────────────────────────
   // cmds: { memberId → skillId } の確定済みコマンドマップ
@@ -1107,6 +1427,16 @@ export default function ArcadiaCh2() {
     let thunderSlashUsed = false;
     // 火炎斬使用フラグ（敵ATKデバフ）
     let fireSlashUsed = false;
+    // 挑発使用フラグ（このターン挑発発動 → 敵行動を強攻に上書き）
+    let provokeUsed = false;
+    // テイクダウン使用フラグ（このターン使用 → 敵を1T行動不能）
+    let takedownUsed = false;
+    // スリープ使用フラグ（このターン使用 → 敵全員を1T行動不能）
+    let sleepUsed = false;
+    // オーバーヒール使用フラグ
+    let overhealUsed = false;
+    // 属性スキル使用フラグ（CDセット用）
+    const elemUsed = { elem_fire:false, elem_ice:false, elem_thunder:false, elem_earth:false };
     // このターンで敵行動が割り込んだ後の全メンバーの被弾フラグ
     const memberHit = { eltz:false, swift:false, linz:false, chopper:false };
 
@@ -1116,6 +1446,9 @@ export default function ArcadiaCh2() {
     if (enrageCount > 0)    logs.push(`🔴 ${ed.name} 怒り状態！ 攻撃力×2（残${enrageCount}T）-- 氷結斬で解除可能`);
     if (enemyAtkDebuff > 0) logs.push(`🔥 ${ed.name} ATK半減中（残${enemyAtkDebuff}T）`);
     if (partySpdBuff > 0)   logs.push(`⚡ パーティ SPD +3 バフ中（残${partySpdBuff}T）`);
+    if (provokeActive > 0)  logs.push(`👊 挑発中！ ${ed.name}の行動を強制的に強攻に変換（残${provokeActive}T）`);
+    if (takedownActive > 0) logs.push(`🦵 テイクダウン中！ ${ed.name}が行動不能（残${takedownActive}T）`);
+    if (sleepActive > 0)    logs.push(`😴 スリープ中！ ${ed.name}が眠り行動不能（残${sleepActive}T）`);
 
     for (const actor of actors) {
       // 敵が既に倒されていたら敵行動はスキップ
@@ -1166,26 +1499,43 @@ export default function ArcadiaCh2() {
           // ── 属性スキル追加効果 ──────────────────────────────────────────
           if (skillId === "elem_earth") {
             // 大地斬: 次ターン敵SPD-5
-            earthSlashUsed = true;
+            earthSlashUsed = true; elemUsed.elem_earth = true;
             logs.push(`🌿 大地斬効果：次ターン ${ed.name} SPD -5！`);
           }
           if (skillId === "elem_ice") {
             // 氷結斬: 怒り状態を即時解除
-            iceSlashUsed = true;
+            iceSlashUsed = true; elemUsed.elem_ice = true;
             if (enrageCount > 0) {
               logs.push(`❄️ 氷結斬！ ${ed.name}の怒り状態を解除した！`);
             }
           }
           if (skillId === "elem_thunder") {
             // 雷神斬: 味方全員のSPD+3（3ターン）
-            thunderSlashUsed = true;
+            thunderSlashUsed = true; elemUsed.elem_thunder = true;
             logs.push(`⚡ 雷神斬効果：味方全員 SPD +3（3ターン）！`);
           }
           if (skillId === "elem_fire") {
             // 火炎斬: 敵攻撃力半減（3ターン）
-            fireSlashUsed = true;
+            fireSlashUsed = true; elemUsed.elem_fire = true;
             logs.push(`🔥 火炎斬効果：${ed.name}の攻撃力を半減させた（3ターン）！`);
           }
+        } else if (skillId === "provoke") {
+          // ── 挑発（エルツ専用）──────────────────────────────────────────
+          provokeUsed = true;
+          logs.push(`${actor.icon} ${actor.name} 👊 挑発！ ${ed.name}の行動を強制的に強攻へ変換！（3ターン）`);
+        } else if (skillId === "takedown") {
+          // ── テイクダウン（エルツ専用）─────────────────────────────────
+          takedownUsed = true;
+          logs.push(`${actor.icon} ${actor.name} 🦵 テイクダウン！ ${ed.name}を1ターン行動不能にした！`);
+        } else if (skillId === "sleep") {
+          // ── スリープ（リンス専用）────────────────────────────────────
+          sleepUsed = true;
+          logs.push(`${actor.icon} ${actor.name} 😴 スリープ！ ${ed.name}を1ターン眠らせた！`);
+        } else if (skillId === "overheal") {
+          // ── オーバーヒール（リンス専用）── SPD最低扱い・コンボ判定前に処理
+          // このフラグはfor loopの外でまとめて処理（最遅行動）
+          overhealUsed = true;
+          logs.push(`${actor.icon} ${actor.name} 💚 オーバーヒール！ パーティ全員 HP +80！`);
         } else if (baseSk) {
           // ── 通常スキル ──────────────────────────────────────────────────
           if (skillId === "heal") {
@@ -1226,6 +1576,18 @@ export default function ArcadiaCh2() {
           continue;
         }
 
+        // 行動不能チェック（テイクダウン/スリープ）
+        const isStunned = takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0;
+        if (isStunned) {
+          const stunLabel = (takedownUsed || takedownActive > 0) ? "🦵 テイクダウン" : "😴 スリープ";
+          logs.push(`${ed.em} ${ed.name} は行動不能！（${stunLabel}）`);
+          continue;
+        }
+
+        // 挑発中（provokeActive > 0 または今ターン使用）は敵行動を強攻に強制変換
+        const isProvokeActive = provokeUsed || provokeActive > 0;
+        const resolvedEAction = isProvokeActive ? "atk" : eAction;
+
         // 怒り状態を使用後に氷結斬で解除する場合、怒り状態は無効
         const isEnraged = enrageCount > 0 && !iceSlashUsed;
         // 敵ATKデバフ（火炎斬効果）
@@ -1236,11 +1598,11 @@ export default function ArcadiaCh2() {
         const halfMult = atkHalf ? 0.5 : 1.0;
         const totalMult = rageMult * halfMult;
 
-        if (eAction === "enrage") {
+        if (resolvedEAction === "enrage") {
           // ── 怒り状態付与（攻撃なし） ──────────────────────────────────
           logs.push(`${ed.em} 🔴 ${ed.name}が怒り状態に！ 3ターン攻撃力×2！`);
           // enrageCountはターン後にセットする（フラグで管理）
-        } else if (eAction === "atk_all") {
+        } else if (resolvedEAction === "atk_all") {
           // ── 全体攻撃 ──────────────────────────────────────────────────
           const baseRaw = randInt(ed.atk[0], ed.atk[1]);
           const rawWithMods = Math.max(1, Math.floor(baseRaw * totalMult));
@@ -1254,9 +1616,9 @@ export default function ArcadiaCh2() {
             curPartyHp[key] = Math.max(0, (curPartyHp[key] ?? 0) - dmgPerMember);
             memberHit[key] = true;
           }
-        } else if (eAction === "unavoidable" || eAction === "unavoidable_lite") {
+        } else if (resolvedEAction === "unavoidable" || resolvedEAction === "unavoidable_lite") {
           // ── 回避不能攻撃 ──────────────────────────────────────────────
-          const [minD, maxD] = eAction === "unavoidable"
+          const [minD, maxD] = resolvedEAction === "unavoidable"
             ? (ed.unavoidableAtk ?? [30, 45])
             : [18, 28];
           const baseRaw = randInt(minD, maxD);
@@ -1277,9 +1639,9 @@ export default function ArcadiaCh2() {
             else { curPartyHp[t.id] = Math.max(0, (curPartyHp[t.id] ?? 0) - dmg); }
             memberHit[t.id] = true;
           }
-        } else if (eAction === "dodge") {
+        } else if (resolvedEAction === "dodge") {
           logs.push(`${ed.em} ${ed.name} 💨 回避！（行動なし）`);
-        } else if (eAction === "counter") {
+        } else if (resolvedEAction === "counter") {
           // カウンター: エルツのコマンドを代表として判定
           const eltzCmd = cmds["eltz"];
           if (eltzCmd === "atk") {
@@ -1308,7 +1670,7 @@ export default function ArcadiaCh2() {
         } else {
           // 通常強攻: 最も遅いメンバーに集中攻撃
           const eltzCmd = cmds["eltz"];
-          const rps = judgeRPS(eltzCmd, eAction);
+          const rps = judgeRPS(eltzCmd, resolvedEAction);
           if (eltzCmd === "counter" && rps === "win") {
             logs.push(`🔄 カウンターで ${ed.name}の強攻を完全に封じた！`);
           } else {
@@ -1332,6 +1694,15 @@ export default function ArcadiaCh2() {
             }
           }
         }
+      }
+    }
+
+    // ── オーバーヒール処理（コンボ判定前・最遅行動）──────────────────────
+    if (overhealUsed) {
+      const overhealAmt = 80;
+      curHp = Math.min(curHp + overhealAmt, mhp);
+      for (const key of ["swift","linz","chopper"]) {
+        curPartyHp[key] = Math.min((curPartyHp[key] ?? 0) + overhealAmt, partyMhp[key]);
       }
     }
 
@@ -1365,6 +1736,22 @@ export default function ArcadiaCh2() {
     const nextEnemyAtkDebuff = fireSlashUsed ? 3 : Math.max(0, enemyAtkDebuff - 1);
     // パーティSPDバフ: 雷神斬で3セット、毎ターン減算
     const nextPartySpdBuff = thunderSlashUsed ? 3 : Math.max(0, partySpdBuff - 1);
+    // 挑発クールダウン・アクティブ更新
+    const nextProvokeCooldown  = provokeUsed  ? 3 : Math.max(0, provokeCooldown  - 1);
+    const nextProvokeActive    = provokeUsed  ? 3 : Math.max(0, provokeActive    - 1);
+    // テイクダウン更新（使用した次ターンに1T行動不能、CD=3）
+    const nextTakedownCooldown = takedownUsed ? 3 : Math.max(0, takedownCooldown - 1);
+    const nextTakedownActive   = takedownUsed ? 1 : Math.max(0, takedownActive   - 1);
+    // スリープ更新（使用した次ターンに1T行動不能、CD=3）
+    const nextSleepCooldown    = sleepUsed    ? 3 : Math.max(0, sleepCooldown    - 1);
+    const nextSleepActive      = sleepUsed    ? 1 : Math.max(0, sleepActive      - 1);
+    // 属性スキルCD更新（使用した場合3をセット、毎ターン減算）
+    const nextElemCooldowns = {
+      elem_fire:    elemUsed.elem_fire    ? 3 : Math.max(0, elemCooldowns.elem_fire    - 1),
+      elem_ice:     elemUsed.elem_ice     ? 3 : Math.max(0, elemCooldowns.elem_ice     - 1),
+      elem_thunder: elemUsed.elem_thunder ? 3 : Math.max(0, elemCooldowns.elem_thunder - 1),
+      elem_earth:   elemUsed.elem_earth   ? 3 : Math.max(0, elemCooldowns.elem_earth   - 1),
+    };
 
     // ── ステート一括更新 ────────────────────────────────────────────────────
     setHp(Math.min(curHp, mhp));
@@ -1382,6 +1769,13 @@ export default function ArcadiaCh2() {
     setEnrageCount(nextEnrageCount);
     setEnemyAtkDebuff(nextEnemyAtkDebuff);
     setPartySpdBuff(nextPartySpdBuff);
+    setProvokeCooldown(nextProvokeCooldown);
+    setProvokeActive(nextProvokeActive);
+    setTakedownCooldown(nextTakedownCooldown);
+    setTakedownActive(nextTakedownActive);
+    setSleepCooldown(nextSleepCooldown);
+    setSleepActive(nextSleepActive);
+    setElemCooldowns(nextElemCooldowns);
     setBtlAnimEnemy(true); setTimeout(() => setBtlAnimEnemy(false), 400);
     setBtlLogs(prev => [...prev, ...logs].slice(-18));
 
@@ -1415,6 +1809,8 @@ export default function ArcadiaCh2() {
     battleEnemy, currentEnemyType, battleDefs, enemyTurnIdx,
     enemyElementIdx, elemDmgAccum, enemySpdDebuff,
     enrageCount, enemyAtkDebuff, partySpdBuff,
+    provokeCooldown, provokeActive,
+    takedownCooldown, takedownActive, sleepCooldown, sleepActive, elemCooldowns,
     enemyHp, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, noDmgStreak, lv,
     showNotif, handleExpGain, turn,
@@ -1422,34 +1818,54 @@ export default function ArcadiaCh2() {
 
   // コマンドキャンセル（最後に選んだメンバーの選択を1つ戻す）
   const onCancelCommand = useCallback(() => {
+    // ターゲット選択中のキャンセル → スキル選択に戻る（cmdInputIdxはそのまま）
+    if (pendingTargetSelect) {
+      const { memberIdx, skillId } = pendingTargetSelect;
+      const memberId = PARTY_DEFS[memberIdx].id;
+      const newCmds = { ...pendingCommands };
+      delete newCmds[memberId];
+      setPendingCommands(newCmds);
+      setPendingTargetSelect(null);
+      return;
+    }
     if (cmdInputIdx === 0) return;
     const prevIdx = cmdInputIdx - 1;
     const prevId = PARTY_DEFS[prevIdx].id;
     const newCmds = { ...pendingCommands };
+    const newTargets = { ...pendingTargets };
     delete newCmds[prevId];
+    delete newTargets[prevId];
     setPendingCommands(newCmds);
+    if (multiEnemies) setPendingTargets(newTargets);
     setCmdInputIdx(prevIdx);
-  }, [cmdInputIdx, pendingCommands]);
+  }, [cmdInputIdx, pendingCommands, pendingTargets, pendingTargetSelect, multiEnemies]);
 
   const exitBattle = useCallback(() => {
     if (defeat) {
       setHp(Math.floor(mhp * 0.3));
       setMp(Math.floor(mmp * 0.3));
-      showNotif("💀 敗北... ホームポイントへ戻る");
-      const nextSc = battleNext !== null ? battleNext : sceneIdx;
+      setMultiEnemies(null);
+      showNotif("💀 敗北...");
       setFade(true);
-      setTimeout(() => { setPhase("game"); setSceneIdx(nextSc); setDlIdx(0); setFade(false); }, 400);
+      setTimeout(() => { setPhase("select"); setFade(false); }, 400);
       return;
     }
     const nextSc = battleNext !== null ? battleNext : sceneIdx;
     setVictoryNextSc(nextSc);
-    const ed = battleEnemy;
+    // マルチバトルの場合は全敵のELK/EXPを合算
     const totalMult = (battleResultBonus.comboMult ?? 1.0) * (battleResultBonus.gradeMult ?? 1.0);
-    const displayExp = ed ? Math.round(ed.exp * totalMult) : 0;
-    setBattleResult({ gainExp:displayExp, gainElk:ed?ed.elk:0, comboMult:battleResultBonus.comboMult??1.0, gradeMult:battleResultBonus.gradeMult??1.0 });
+    const gainElk = multiEnemies
+      ? multiEnemies.reduce((s, e) => s + (e.def.elk ?? 0), 0)
+      : (battleEnemy ? battleEnemy.elk : 0);
+    const baseExp = multiEnemies
+      ? multiEnemies.reduce((s, e) => s + (e.def.exp ?? 0), 0)
+      : (battleEnemy ? battleEnemy.exp : 0);
+    const displayExp = Math.round(baseExp * totalMult);
+    setBattleResult({ gainExp:displayExp, gainElk, comboMult:battleResultBonus.comboMult??1.0, gradeMult:battleResultBonus.gradeMult??1.0 });
+    setMultiEnemies(null);
     setFade(true);
     setTimeout(() => { setPhase("victory"); setFade(false); }, 300);
-  }, [defeat, mhp, mmp, battleNext, sceneIdx, showNotif, battleEnemy, battleResultBonus]);
+  }, [defeat, mhp, mmp, battleNext, sceneIdx, showNotif, battleEnemy, battleResultBonus, multiEnemies]);
 
   // ──────────── RENDER ────────────
   const sc = SCENES[sceneIdx] || SCENES[0];
@@ -1496,9 +1912,7 @@ export default function ArcadiaCh2() {
       isFanfareRef.current = false;
       setFade(true);
       setTimeout(() => {
-        setPhase("game");
-        setSceneIdx(victoryNextSc ?? 0);
-        setDlIdx(0);
+        setPhase("title");
         setFade(false);
       }, 400);
     };
@@ -1787,7 +2201,7 @@ export default function ArcadiaCh2() {
         <div style={{width:280,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 40px"}}/>
 
         <button
-          onClick={() => { unlockAudio("bgm/title"); setTosScrolled(false); setPhase("tos"); }}
+          onClick={() => { unlockAudio("bgm/title"); setPhase("select"); }}
           style={{padding:"14px 48px",background:"transparent",border:`1px solid ${C.accent}`,color:C.accent,fontSize:16,letterSpacing:6,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",animation:"glow 2s infinite",transition:"all 0.3s"}}
           onMouseEnter={e => e.target.style.background = `${C.accent}22`}
           onMouseLeave={e => e.target.style.background = "transparent"}
@@ -1805,80 +2219,106 @@ export default function ArcadiaCh2() {
     </div>
   );
 
-  // @@SECTION:RENDER_TOS
-  if (phase === "tos") {
+  // @@SECTION:RENDER_SELECT -- バトル選択画面
+  if (phase === "select") {
+    // バトル直接起動ヘルパー
+    const startBattle = (types) => {
+      const isMulti = Array.isArray(types);
+      const firstKey = isMulti ? types[0] : types;
+      const ed = battleDefs[firstKey];
+      setBattleEnemy(ed);
+      setCurrentEnemyType(firstKey);
+      setEnemyHp(ed.maxHp);
+      if (isMulti) {
+        const initEnemies = types.map((t, i) => ({
+          slot: i, type: t, def: battleDefs[t],
+          hp: battleDefs[t].maxHp, turnIdx: 0, defeated: false,
+        }));
+        setMultiEnemies(initEnemies);
+        setBtlLogs([`⚔ ${types.length}体の敵が現れた！`]);
+      } else {
+        setMultiEnemies(null);
+        setBtlLogs([`⚔ ${ed.name} との戦闘が始まった！`]);
+      }
+      setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
+      setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
+      setEnemyTurnIdx(0);
+      setEnemyNextAction((ed.pattern || ["atk"])[0]);
+      setBattleNext(0); // 勝利後はsceneIdx=0へ戻す
+      setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+      setPartyHp({ swift:80, linz:70, chopper:65 });
+      setPartyMp({ swift:60, linz:70, chopper:50 });
+      setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });
+      setPhase("battle");
+    };
+
+    const OPTIONS = [
+      {
+        key: "single",
+        label: "Simuluu 単体戦",
+        sub: "─── 試練の主 ───",
+        em: "🦌",
+        color: C.red,
+        types: "simuluu_ch2",
+        desc: "ボス単体。属性システムを使ってブレイクを狙え",
+        lv: "Lv10 / HP2000",
+      },
+      {
+        key: "multi",
+        label: "3体同時戦",
+        sub: "シャメロット Lv5 × 2 ＋ Simuluu",
+        em: "🦀🦌🦀",
+        color: C.accent,
+        types: ["shamerlot_lv5", "simuluu_ch2", "shamerlot_lv5"],
+        desc: "取り巻き2体を先に倒すか、ボスを集中攻撃するか",
+        lv: "Lv5 × 2 ＋ Lv10",
+      },
+    ];
+
     return (
-      <div style={{width:"100%",height:"100%",minHeight:"600px",maxHeight:"100vh",display:"flex",flexDirection:"column",background:`linear-gradient(180deg,#020810 0%,${C.bg} 100%)`,fontFamily:"'Noto Serif JP',serif",position:"relative",overflow:"hidden"}}>
+      <div style={{width:"100%",height:"100%",minHeight:"600px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 50%,#0a1828 100%)`,fontFamily:"'Noto Serif JP',serif",position:"relative",overflow:"hidden"}}>
         <style>{keyframes}</style>
-        <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none",zIndex:0}}/>
+        <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
 
-        {/* ヘッダー */}
-        <div style={{padding:"16px 24px 14px",borderBottom:`1px solid ${C.border}`,background:"rgba(5,13,20,0.92)",flexShrink:0,position:"relative",zIndex:1}}>
-          <div style={{fontSize:10,letterSpacing:6,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:4}}>ARCADIA -- VRS SYSTEM</div>
-          <div style={{fontSize:16,color:C.white,fontWeight:"bold",letterSpacing:2}}>利用規約 / 同意書</div>
-          <div style={{fontSize:10,color:C.muted,marginTop:4,fontFamily:"'Share Tech Mono',monospace"}}>── プレイ前に必ず全文をお読みください ──</div>
-        </div>
+        <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 0.6s ease",width:"100%",maxWidth:480,padding:"0 24px"}}>
+          <div style={{fontSize:10,letterSpacing:6,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:8}}>BATTLE SELECT</div>
+          <div style={{fontSize:18,color:C.white,fontWeight:700,letterSpacing:3,marginBottom:4}}>バトルを選択</div>
+          <div style={{width:200,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 28px"}}/>
 
-        {/* スクロール本文 */}
-        <div style={{flex:1,overflowY:"scroll",padding:"0 24px 8px",position:"relative",zIndex:1,scrollbarWidth:"thin",scrollbarColor:`${C.border} transparent`}}
-          onScroll={e => {
-            const el = e.currentTarget;
-            if (el.scrollHeight - el.scrollTop - el.clientHeight < 100) {
-              setTosScrolled(true);
-            }
-          }}>
-          <div style={{color:C.accent,fontSize:13,fontWeight:"bold",marginTop:22,marginBottom:8,paddingLeft:10,borderLeft:`3px solid ${C.accent}`,letterSpacing:1}}>■ ご挨拶</div>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>この度は弊社製品をご購入頂きまして誠にありがとうございます。本製品はVRS[Virtual Reality System]を採用しております。プレーヤーはVRSによって創り出された仮想現実空間に広がる世界を自由に探索する事が可能です。壮大かつ繊細な世界を思う存分お楽しみ下さい。</p>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>つきまして、プレイされる前に必ず本説明書をご覧下さい。説明書には、本製品をプレイするにあたっての同意書が含まれておりますので、ご確認下さい。</p>
-
-          <div style={{color:C.accent,fontSize:13,fontWeight:"bold",marginTop:22,marginBottom:8,paddingLeft:10,borderLeft:`3px solid ${C.accent}`,letterSpacing:1}}>■ 注意事項</div>
-
-          <div style={{color:C.gold,fontSize:12,fontWeight:"bold",marginTop:16,marginBottom:5,letterSpacing:1}}>◇ プレイヤーの身体情報</div>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>プレイヤーの身体情報については、これは現実と同期という形を取らさせて頂きます。つまり現実の姿形がゲーム内においても適応されるという事です。ゲーム内においてキャラクターが変更出来る身体情報については、髪型・髪色・瞳色の三点となっております。</p>
-          <p style={{color:C.muted,fontSize:11,lineHeight:1.85,marginBottom:8}}>※ 身長・体重・声質・性別・年齢といったキャラクターの基本情報については、あくまで現実の情報が適応されますので、ご注意下さい。</p>
-
-          <div style={{color:C.gold,fontSize:12,fontWeight:"bold",marginTop:16,marginBottom:5,letterSpacing:1}}>◇ 死亡定義</div>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>本製品において『死亡』の定義は現実世界とは大きく異なり、ゲーム内でプレイヤーが死亡した場合においては、いかなる場合においても蘇生が可能です。</p>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>また、ゲーム内ではモンスターの攻撃によってダメージを受けた際、致死レベルの痛覚を受けないよう調整させて頂いております。これは、ゲーム内でのV-Shock[バーチャル・ショック]による事故死を防ぐための処置です。</p>
-          <p style={{color:C.muted,fontSize:11,lineHeight:1.85,marginBottom:8}}>※ ゲーム内においての視覚・嗅覚・味覚・聴覚・触覚についてはシステム上、個人差がありません。</p>
-
-          <div style={{color:C.gold,fontSize:12,fontWeight:"bold",marginTop:16,marginBottom:5,letterSpacing:1}}>◇ 時層差</div>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>本製品では、時層弛緩技術を用いる事で現実世界の二十四倍というスピードでの時流を実現しています。つまりARCADIAで二十四時間経過した場合、現実での一日に相当します。</p>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>なお、肉体の老化につきましては、現実の経過時間に即して身体が疲弊します。老化につきましては、個人差がありますので、あらかじめご了承ください。現状、本製品の連続使用による副次的作用は報告されておりませんが、ゲーム内時間において七十二日に一度は現実世界へ帰還される事を推奨致します。</p>
-
-          <div style={{color:C.gold,fontSize:12,fontWeight:"bold",marginTop:16,marginBottom:5,letterSpacing:1}}>◇ 医療提携について</div>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>また弊社は医療機関と提携させて頂いております。万が一、本製品によって身体に何らかの障害が発生した場合、弊社では医療機関とその症状を分析し、その医療責任が弊社のシステムに由ると判断された場合に限り、お客様の医療負担を負うものとさせて頂きます。</p>
-
-          <div style={{color:C.accent,fontSize:13,fontWeight:"bold",marginTop:22,marginBottom:8,paddingLeft:10,borderLeft:`3px solid ${C.accent}`,letterSpacing:1}}>■ 免責事項</div>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>本製品アルカディアは多くのプレイヤーの皆様が同時に参加されるという性質上、仮想世界では他のプレイヤーの方々との接触があります。そのため、お客様間で発生する問題については弊社においてサポートデスク、又はGM[ゲームマスター]を通して対応をさせて頂きますが、多数のお問い合わせが集中した場合、運営上、全てのお問い合わせに対して円滑に対応出来ない状況が予想されます。</p>
-          <p style={{color:C.text,fontSize:12,lineHeight:1.95,marginBottom:10}}>基本的にサポートデスク、及びGMはゲーム上の不具合改善のために存在します。こうしたアクセスが混雑した状況を未然に防ぐためにも、ゲームに関する攻略のご質問、又はお客様間でのトラブルについては、なるべくお客様自身で解消される事をお願い致します。お客様の良識ある行動[プレイ]を心よりお願い申し上げます。</p>
-
-          <div style={{textAlign:"center",padding:"16px 0 8px",fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
-            {tosScrolled
-              ? <span style={{color:C.accent2}}>✓ 内容の確認が完了しました</span>
-              : <span style={{color:C.muted}}>↓ 下までスクロールして内容をご確認ください</span>}
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {OPTIONS.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => startBattle(opt.types)}
+                style={{
+                  width:"100%", padding:"18px 20px",
+                  background:`${opt.color}0a`,
+                  border:`1px solid ${opt.color}55`,
+                  borderRadius:8, cursor:"pointer",
+                  textAlign:"left", transition:"all 0.2s",
+                  display:"flex", alignItems:"center", gap:16,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background=`${opt.color}1a`; e.currentTarget.style.borderColor=opt.color; }}
+                onMouseLeave={e => { e.currentTarget.style.background=`${opt.color}0a`; e.currentTarget.style.borderColor=`${opt.color}55`; }}>
+                <div style={{fontSize:32,lineHeight:1,flexShrink:0}}>{opt.em}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14,color:opt.color,fontWeight:700,letterSpacing:1,marginBottom:2}}>{opt.label}</div>
+                  <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,marginBottom:5}}>{opt.sub}</div>
+                  <div style={{fontSize:11,color:C.text,lineHeight:1.5,marginBottom:4}}>{opt.desc}</div>
+                  <div style={{fontSize:9,color:`${opt.color}99`,fontFamily:"'Share Tech Mono',monospace"}}>{opt.lv}</div>
+                </div>
+                <div style={{fontSize:18,color:`${opt.color}88`,flexShrink:0}}>▶</div>
+              </button>
+            ))}
           </div>
-          <div style={{height:16}}/>
-        </div>
 
-        {/* フッター */}
-        <div style={{padding:"14px 24px 18px",borderTop:`1px solid ${C.border}`,background:"rgba(5,13,20,0.95)",flexShrink:0,display:"flex",gap:12,position:"relative",zIndex:1}}>
           <button
-            style={{padding:"13px 28px",background:"transparent",color:C.muted,border:`1px solid ${C.border}`,borderRadius:4,fontSize:14,fontWeight:"bold",cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,flexShrink:0}}
             onClick={() => setPhase("title")}
-            onMouseEnter={e=>{e.currentTarget.style.color=C.red;e.currentTarget.style.borderColor=C.red;}}
-            onMouseLeave={e=>{e.currentTarget.style.color=C.muted;e.currentTarget.style.borderColor=C.border;}}>
-            同意しない
-          </button>
-          <button
-            disabled={!tosScrolled}
-            style={{flex:1,padding:"13px 0",borderRadius:4,fontSize:14,fontWeight:"bold",letterSpacing:1,fontFamily:"'Share Tech Mono',monospace",border:"none",
-              background: tosScrolled ? `linear-gradient(135deg,${C.accent},${C.accent2})` : "#0d2235",
-              color: tosScrolled ? C.bg : C.muted,
-              cursor: tosScrolled ? "pointer" : "not-allowed",
-            }}
-            onClick={() => { unlockAudio("bgm/title"); setSceneIdx(0); setDlIdx(0); setPhase("movie"); }}>
-            {tosScrolled ? "同意する  ▶  ゲーム開始" : "同意する（要スクロール）"}
+            style={{marginTop:24,padding:"8px 28px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:10,letterSpacing:3,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4,transition:"all 0.2s"}}
+            onMouseEnter={e => { e.currentTarget.style.color=C.text; e.currentTarget.style.borderColor=C.muted; }}
+            onMouseLeave={e => { e.currentTarget.style.color=C.muted; e.currentTarget.style.borderColor=C.border; }}>
+            ← タイトルへ戻る
           </button>
         </div>
       </div>
@@ -2107,6 +2547,113 @@ export default function ArcadiaCh2() {
 
           {/* 左カラム：エネミー表示 */}
           <div style={{flex:"0 0 62%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 8px",position:"relative",overflow:"hidden",gap:8}}>
+
+          {multiEnemies ? (
+            /* ── マルチ敵表示 ─────────────────────────────────────────────── */
+            <>
+              {/* ターゲット選択モード中ヘッダー */}
+              {pendingTargetSelect && (
+                <div style={{position:"absolute",top:6,left:"50%",transform:"translateX(-50%)",zIndex:5,background:"rgba(5,13,20,0.9)",border:`1px solid ${C.accent}`,borderRadius:5,padding:"4px 16px",fontSize:10,color:C.accent,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,whiteSpace:"nowrap",animation:"glow 1.5s infinite"}}>
+                  👆 攻撃対象を選択
+                </div>
+              )}
+
+              {/* 3敵カード横並び */}
+              <div style={{display:"flex",flexDirection:"row",alignItems:"flex-end",justifyContent:"center",gap:6,width:"100%",paddingTop:pendingTargetSelect ? 28 : 0}}>
+                {multiEnemies.map((me, idx) => {
+                  const meDef = me.def;
+                  const isSimuluuSlot = me.type === "simuluu" || me.type === "simuluu_ch2";
+                  const meImg = isSimuluuSlot ? SIMULUU_IMG_URL : (ENEMY_IMG_MAP[me.type] ? assetUrl(ENEMY_IMG_MAP[me.type]) : null);
+                  const meHpPct = Math.max(0, me.hp / meDef.maxHp * 100);
+                  const meIsBoss = meDef.isBoss;
+                  const meNextAction = meDef.pattern[me.turnIdx % meDef.pattern.length];
+                  const meLabel = ENEMY_ACTION_LABEL[meNextAction];
+                  const meIsUnavoidable = meNextAction === "unavoidable" || meNextAction === "unavoidable_lite";
+                  const meColor = meIsUnavoidable ? C.red : meNextAction === "counter" ? "#f97316" : meNextAction === "dodge" ? C.muted : "#60a5fa";
+                  // ターゲット選択モードで選択可能かどうか
+                  const isTargetable = !!pendingTargetSelect && !me.defeated;
+                  const cardBorder = isTargetable ? `2px solid ${C.accent}` : `1px solid ${C.border}44`;
+                  const cardBg = meIsBoss ? "rgba(20,5,10,0.85)" : "rgba(5,13,20,0.8)";
+
+                  return (
+                    <div
+                      key={me.slot}
+                      onClick={() => isTargetable && onSelectTarget(idx)}
+                      style={{
+                        flex: meIsBoss ? "0 0 44%" : "0 0 26%",
+                        display:"flex", flexDirection:"column", alignItems:"center",
+                        gap:3, padding:"6px 4px",
+                        background: cardBg,
+                        border: cardBorder,
+                        borderRadius:6,
+                        cursor: isTargetable ? "pointer" : "default",
+                        opacity: me.defeated ? 0.3 : 1,
+                        transition:"border 0.15s, opacity 0.3s",
+                        position:"relative",
+                      }}>
+                      {/* ボスラベル */}
+                      {meIsBoss && !me.defeated && (
+                        <div style={{fontSize:8,letterSpacing:4,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite"}}>BOSS</div>
+                      )}
+                      {/* 倒れた敵 */}
+                      {me.defeated && (
+                        <div style={{fontSize:28,lineHeight:1}}>💀</div>
+                      )}
+                      {/* 生存中の敵画像 */}
+                      {!me.defeated && (meImg
+                        ? <img src={meImg} alt={meDef.name} style={{
+                            width: meIsBoss ? 90 : 56, height: meIsBoss ? 90 : 56,
+                            objectFit:"contain",
+                            animation: meIsBoss ? "bossFloat 2s infinite" : "idle 2s infinite",
+                            filter: meIsBoss ? `drop-shadow(0 0 12px ${C.red})` : "drop-shadow(0 2px 8px rgba(0,0,0,0.6))",
+                            transform: btlAnimEnemy ? "scale(1.08)" : "scale(1)", transition:"transform 0.1s",
+                          }} />
+                        : <div style={{fontSize: meIsBoss ? 40 : 28, lineHeight:1, animation: meIsBoss ? "bossFloat 2s infinite" : "idle 2s infinite"}}>
+                            {meDef.em}
+                          </div>
+                      )}
+                      {/* 敵名（短縮） */}
+                      {!me.defeated && (
+                        <div style={{fontSize:8,color:C.white,fontFamily:"'Share Tech Mono',monospace",textAlign:"center",lineHeight:1.2,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {meDef.name.replace("Simuluu ─ ","").replace("シャメロット ","Lv").replace(" 試練の主","")}
+                        </div>
+                      )}
+                      {/* HPバー */}
+                      {!me.defeated && (
+                        <div style={{width:"90%",height:5,background:C.panel2,borderRadius:3,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:`${meHpPct}%`,background: meIsBoss ? `linear-gradient(90deg,${C.red},#ff8844)` : `linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:3}}/>
+                        </div>
+                      )}
+                      {!me.defeated && (
+                        <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>{me.hp}/{meDef.maxHp}</div>
+                      )}
+                      {/* NEXT行動バッジ */}
+                      {!me.defeated && !victory && !defeat && (
+                        <div style={{width:"90%",padding:"2px 4px",background:`${meColor}11`,border:`1px solid ${meColor}44`,borderRadius:3,textAlign:"center"}}>
+                          <span style={{fontSize:8,color:meColor,fontFamily:"'Share Tech Mono',monospace",animation:meIsUnavoidable?"dngr 0.8s infinite":"none"}}>
+                            {meLabel?.icon} {meLabel?.text}
+                          </span>
+                        </div>
+                      )}
+                      {/* ターゲット選択中の👆アイコン */}
+                      {isTargetable && (
+                        <div style={{position:"absolute",bottom:-10,left:"50%",transform:"translateX(-50%)",fontSize:14,animation:"idle 0.8s infinite"}}>👆</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* キャンセルボタン（ターゲット選択中） */}
+              {pendingTargetSelect && (
+                <button onClick={onCancelCommand} style={{marginTop:16,padding:"5px 24px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:9,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+                  ← スキル選択に戻る
+                </button>
+              )}
+            </>
+          ) : (
+            /* ── 単体敵表示（従来） ────────────────────────────────────────── */
+            <>
             {isBoss && <div style={{position:"absolute",top:10,left:"50%",transform:"translateX(-50%)",fontSize:11,letterSpacing:6,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite",whiteSpace:"nowrap",zIndex:2}}>─── BOSS ───</div>}
 
             {/* 属性インジケーター（elementCycleを持つボス専用） */}
@@ -2140,8 +2687,6 @@ export default function ArcadiaCh2() {
             {/* エネミー画像 / 絵文字フォールバック */}
             {enemyImgUrl
               ? <img src={enemyImgUrl} alt={ed.name} style={{
-                  // mode:"auto"  → 左カラム高さの enemyImgPct% を height に使い、幅は自動
-                  // mode:"fixed" → px 固定（width/height ともに enemyImgSize px）
                   ...(enemySizeMode === "auto"
                     ? { width:"auto", height:`${enemyImgPct}%`, maxWidth:"95%", flexShrink:0 }
                     : { width:enemyImgSize, height:enemyImgSize, maxWidth:"95%", maxHeight:"80%", flexShrink:0 }),
@@ -2164,14 +2709,12 @@ export default function ArcadiaCh2() {
             <div style={{width:"88%",flexShrink:0,zIndex:2,background:"rgba(5,13,20,0.6)",padding:"6px 10px",borderRadius:4}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:4,flexWrap:"wrap"}}>
                 <span style={{color:C.white,fontSize:13,fontWeight:700,letterSpacing:1,textShadow:"0 1px 4px #000"}}>{ed.name}</span>
-                {/* 怒り状態バッジ */}
                 {enrageCount > 0 && (
                   <span style={{fontSize:9,color:C.red,fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,50,50,0.18)",border:`1px solid ${C.red}66`,borderRadius:3,padding:"1px 5px",animation:"dngr 0.8s infinite",whiteSpace:"nowrap"}}>
                     🔴 怒り×2 残{enrageCount}T
                   </span>
                 )}
               </div>
-              {/* バフ・デバフバッジ行 */}
               {(enemyAtkDebuff > 0 || partySpdBuff > 0) && (
                 <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap",marginBottom:4}}>
                   {enemyAtkDebuff > 0 && (
@@ -2207,6 +2750,8 @@ export default function ArcadiaCh2() {
                 </div>
               );
             })()}
+            </>
+          )}
           </div>
 
           {/* 右カラム：ログ＋ステータス＋ボタン */}
@@ -2293,38 +2838,40 @@ export default function ArcadiaCh2() {
                     </div>
 
                     {showElemMenu ? (
-                      /* 属性スキルサブメニュー */
+                      /* ── 属性スキルサブメニュー ── */
                       <div>
                         <div style={{fontSize:9,color:currentElemInfo ? currentElemInfo.color : C.accent,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,textAlign:"center",marginBottom:4}}>
                           {currentElemInfo ? `敵属性: ${currentElemInfo.icon}${currentElemInfo.label} ─ 弱点を突け！` : "属性スキルを選択"}
                         </div>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:4}}>
-                          {ELEMENT_SKILL_DEFS.map(esk => {
+                          {ELEMENT_SKILL_DEFS.filter(esk => currentCmdMember.allowedElemSkills.includes(esk.id)).map(esk => {
                             const memberMp = currentCmdMember.id === "eltz" ? mp : (partyMp[currentCmdMember.id] ?? 0);
                             const canAfford = memberMp >= esk.cost;
                             const isEffective = currentElemKey && esk.targetElement === currentElemKey;
                             const borderColor = isEffective ? esk.color : `${esk.color}44`;
                             const bgColor = isEffective ? `${esk.color}22` : C.panel;
-                            // 各スキルの追加効果テキスト
                             const extraEffectMap = {
-                              "elem_ice":     enrageCount > 0 ? "❄怒り解除" : "❄怒り解除",
+                              "elem_ice":     "❄怒り解除",
                               "elem_thunder": "⚡SPD+3(3T)",
                               "elem_fire":    "🔥ATK½(3T)",
                               "elem_earth":   "🌿敵SPD-5",
                             };
                             const extraEffect = extraEffectMap[esk.id];
                             const isIceWithEnrage = esk.id === "elem_ice" && enrageCount > 0;
-                            const btnSt = canAfford
+                            const elemCd = elemCooldowns[esk.id] ?? 0;
+                            const canUseElem = canAfford && elemCd === 0;
+                            const btnSt = canUseElem
                               ? { padding:"5px 4px", background:bgColor, border:`1px solid ${borderColor}`, color:esk.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:"'Noto Serif JP',serif", position:"relative" }
                               : { padding:"5px 4px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:"'Noto Serif JP',serif", opacity:0.5, position:"relative" };
                             return (
-                              <button key={esk.id} onClick={() => canAfford && onSelectCommand(esk.id)} style={btnSt}>
+                              <button key={esk.id} onClick={() => canUseElem && onSelectCommand(esk.id)} style={btnSt}>
                                 {isEffective && <div style={{position:"absolute",top:-2,right:-2,fontSize:7,background:esk.color,color:"#000",borderRadius:2,padding:"0 3px",fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>有効!</div>}
                                 {isIceWithEnrage && <div style={{position:"absolute",top:-2,left:-2,fontSize:7,background:C.red,color:"#fff",borderRadius:2,padding:"0 3px",fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:"dngr 0.6s infinite"}}>解除!</div>}
                                 <div style={{fontSize:16}}>{esk.icon}</div>
                                 <div style={{fontSize:9,marginTop:1}}>{esk.label}</div>
                                 <div style={{fontSize:7,color:canAfford?C.muted:"#553333"}}>MP {esk.cost}</div>
-                                {extraEffect && <div style={{fontSize:6,color:isIceWithEnrage?C.red:esk.color,marginTop:1,opacity:0.9}}>{extraEffect}</div>}
+                                {elemCd > 0 && <div style={{fontSize:6,color:C.red,marginTop:1}}>{elemCd}T後</div>}
+                                {elemCd === 0 && extraEffect && <div style={{fontSize:6,color:isIceWithEnrage?C.red:esk.color,marginTop:1,opacity:0.9}}>{extraEffect}</div>}
                               </button>
                             );
                           })}
@@ -2333,10 +2880,57 @@ export default function ArcadiaCh2() {
                           ← 戻る
                         </button>
                       </div>
+                    ) : showSpecMenu ? (
+                      /* ── 特殊スキルサブメニュー（エルツ・リンス） ── */
+                      (() => {
+                        const SPEC_DEF = {
+                          provoke:  { icon:"👊", label:"挑発",       color:"#f97316", cd:provokeCooldown,  desc:"敵行動を3T強攻に変換" },
+                          takedown: { icon:"🦵", label:"テイクダウン", color:"#ef4444", cd:takedownCooldown, desc:"敵を1T行動不能" },
+                          overheal: { icon:"💚", label:"オーバーヒール",color:"#22c55e", cd:0,               desc:"全員HP+80（最遅）" },
+                          sleep:    { icon:"😴", label:"スリープ",    color:"#a78bfa", cd:sleepCooldown,    desc:"敵を1T眠らせ行動不能" },
+                        };
+                        return (
+                          <div>
+                            <div style={{fontSize:9,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,textAlign:"center",marginBottom:4}}>
+                              特殊スキルを選択
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:4}}>
+                              {currentCmdMember.specialSkills.map(spId => {
+                                const def = SPEC_DEF[spId];
+                                if (!def) return null;
+                                const cd = def.cd;
+                                const canUse = cd === 0;
+                                const stl = canUse
+                                  ? { padding:"6px 4px", background:C.panel, border:`1px solid ${def.color}66`, color:def.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:"'Noto Serif JP',serif", position:"relative" }
+                                  : { padding:"6px 4px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:"'Noto Serif JP',serif", opacity:0.5, position:"relative" };
+                                return (
+                                  <button key={spId} onClick={() => canUse && onSelectCommand(spId)} style={stl}>
+                                    {cd > 0 && <div style={{position:"absolute",top:-2,right:-2,fontSize:7,background:C.red,color:"#fff",borderRadius:2,padding:"0 3px",fontFamily:"'Share Tech Mono',monospace"}}>CD{cd}</div>}
+                                    <div style={{fontSize:18}}>{def.icon}</div>
+                                    <div style={{fontSize:9,marginTop:2,fontWeight:700}}>{def.label}</div>
+                                    <div style={{fontSize:7,color:canUse?`${def.color}bb`:C.muted,marginTop:2,lineHeight:1.3}}>{def.desc}</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <button onClick={() => setShowSpecMenu(false)} style={{width:"100%",padding:"4px",background:"transparent",border:`1px solid ${C.border}44`,color:C.muted,fontSize:9,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+                              ← 戻る
+                            </button>
+                          </div>
+                        );
+                      })()
                     ) : (
-                      /* 通常アクションボタン（全員5列：通常4+属性スキル1） */
+                      /* ── 通常アクションボタン ── */
                       <div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:4,marginBottom:4}}>
+                        {(() => {
+                          const baseCols = 4;
+                          const elemCol = currentCmdMember.allowedElemSkills.length > 0 ? 1 : 0;
+                          // 特殊スキルがある場合は「スキル」ボタン1個に集約
+                          const specCol = currentCmdMember.specialSkills.length > 0 ? 1 : 0;
+                          const totalCols = baseCols + elemCol + specCol;
+                          const gtc = Array(totalCols).fill("1fr").join(" ");
+                          return (
+                        <div style={{display:"grid",gridTemplateColumns:gtc,gap:4,marginBottom:4}}>
                           {BATTLE_SKILLS.map(sk => {
                             const memberMp = currentCmdMember.id === "eltz" ? mp : (partyMp[currentCmdMember.id] ?? 0);
                             const canAfford = sk.cost === 0 || memberMp >= sk.cost;
@@ -2352,14 +2946,34 @@ export default function ArcadiaCh2() {
                               </button>
                             );
                           })}
-                          {/* 属性スキルボタン：全メンバー共通 */}
-                          <button
-                            onClick={() => inputPhase === "command" && setShowElemMenu(true)}
-                            style={{padding:"5px 3px",background:C.panel,border:`1px solid #a855f744`,color:inputPhase==="command"?"#a855f7":C.muted,fontSize:10,cursor:inputPhase==="command"?"pointer":"not-allowed",borderRadius:4,fontFamily:"'Noto Serif JP',serif",opacity:inputPhase==="command"?1:0.5}}>
-                            <div style={{fontSize:16}}>✨</div>
-                            <div style={{fontSize:9,marginTop:2}}>スキル</div>
-                          </button>
+                          {/* 属性スキルボタン（スウィフト・チョッパー） */}
+                          {currentCmdMember.allowedElemSkills.length > 0 && (
+                            <button
+                              onClick={() => inputPhase === "command" && setShowElemMenu(true)}
+                              style={{padding:"5px 3px",background:C.panel,border:`1px solid #a855f744`,color:inputPhase==="command"?"#a855f7":C.muted,fontSize:10,cursor:inputPhase==="command"?"pointer":"not-allowed",borderRadius:4,fontFamily:"'Noto Serif JP',serif",opacity:inputPhase==="command"?1:0.5}}>
+                              <div style={{fontSize:16}}>✨</div>
+                              <div style={{fontSize:9,marginTop:2}}>スキル</div>
+                            </button>
+                          )}
+                          {/* 特殊スキルボタン（エルツ・リンス）→ サブメニューを開く */}
+                          {currentCmdMember.specialSkills.length > 0 && (() => {
+                            const hasCdAll = currentCmdMember.specialSkills.every(spId => {
+                              const cdMap = { provoke:provokeCooldown, takedown:takedownCooldown, overheal:0, sleep:sleepCooldown };
+                              return (cdMap[spId] ?? 0) > 0;
+                            });
+                            const canOpen = inputPhase === "command";
+                            return (
+                              <button
+                                onClick={() => canOpen && setShowSpecMenu(true)}
+                                style={{padding:"5px 3px",background:C.panel,border:`1px solid ${hasCdAll?"#55555566":"#00ffcc44"}`,color:canOpen?(hasCdAll?C.muted:C.accent2):C.muted,fontSize:10,cursor:canOpen?"pointer":"not-allowed",borderRadius:4,fontFamily:"'Noto Serif JP',serif",opacity:canOpen?1:0.5}}>
+                                <div style={{fontSize:16}}>🌟</div>
+                                <div style={{fontSize:9,marginTop:2}}>スキル</div>
+                              </button>
+                            );
+                          })()}
                         </div>
+                          ); // IIFEのreturn終わり
+                          })()}
                         {/* キャンセルボタン */}
                         {cmdInputIdx > 0 && inputPhase === "command" && (
                           <button onClick={onCancelCommand} style={{width:"100%",padding:"3px",background:"transparent",border:`1px solid ${C.border}44`,color:C.muted,fontSize:8,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
