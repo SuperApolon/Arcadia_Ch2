@@ -2687,6 +2687,9 @@ export default function ArcadiaCh2() {
           ) : (
             /* ── 単体敵表示（縦フル3段） ─────────────────────────────────── */
             <>
+             {/* ── 単体敵エリア：relative コンテナ内に画像・UI を absolute 重ね ── */}
+             <div style={{position:"relative",flex:1,width:"100%",minHeight:0,overflow:"hidden"}}>
+
             {/* コンボ（絶対配置オーバーレイ） */}
             {noDmgStreak >= 3 && (
               <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%, -50%)",zIndex:10,pointerEvents:"none",textAlign:"center",animation:"comboPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both"}}>
@@ -2698,94 +2701,98 @@ export default function ArcadiaCh2() {
               </div>
             )}
 
-            {/* ── 上段：BOSSラベル + 属性インジケーター ── */}
-            <div style={{width:"100%",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,paddingTop:4,zIndex:2}}>
-              {isBoss && (
-                <div style={{fontSize:11,letterSpacing:6,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite",whiteSpace:"nowrap"}}>─── BOSS ───</div>
-              )}
-              {currentElemInfo && (
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(5,13,20,0.78)",border:`1px solid ${currentElemInfo.color}88`,borderRadius:6,padding:"4px 14px",minWidth:130}}>
-                  <div style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>CURRENT ELEMENT</div>
-                  <div style={{fontSize:15,fontWeight:900,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,textShadow:`0 0 12px ${currentElemInfo.color}`}}>
-                    {currentElemInfo.icon} {currentElemInfo.label}
-                  </div>
-                  <div style={{width:"100%",height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${elemBarPct}%`,background:`linear-gradient(90deg,${currentElemInfo.color}88,${currentElemInfo.color})`,transition:"width 0.3s",borderRadius:2}}/>
-                  </div>
-                  <div style={{fontSize:8,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
-                    蓄積 {elemDmgAccum}/{ELEMENT_BREAK_THRESHOLD}
-                  </div>
-                </div>
-              )}
-            </div>
+               {/* 背面：エネミー画像 */}
+               <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+                 {enemyImgUrl
+                   ? <img src={enemyImgUrl} alt={ed.name} style={{
+                       width:"auto",
+                       height:"clamp(120px, 63vh, 500px)",
+                       maxWidth:"96%",
+                       maxHeight:"100%",
+                       objectFit:"contain",
+                       animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
+                       filter:isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))",
+                       transform:btlAnimEnemy?"scale(1.05)":"scale(1)", transition:"transform 0.1s",
+                     }} />
+                   : <div style={{
+                       fontSize:"clamp(60px, 10vh, 140px)",
+                       lineHeight:1,
+                       animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
+                       filter:isBoss?`drop-shadow(0 0 24px ${C.red})`:"none",
+                       transform:btlAnimEnemy?"scale(1.08)":"scale(1)", transition:"transform 0.1s",
+                     }}>{ed.em}</div>
+                 }
+               </div>
 
-            {/* ── 中段：エネミー画像（flex:1 で縦を最大利用、上限clampで画面内に収める） ── */}
-            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minHeight:0,padding:"4px 0",overflow:"hidden"}}>
-              {enemyImgUrl
-                ? <img src={enemyImgUrl} alt={ed.name} style={{
-                    width:"auto",
-                    height:"clamp(120px, 63vh, 500px)",
-                    maxWidth:"96%",
-                    objectFit:"contain",
-                    animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
-                    filter:isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))",
-                    transform:btlAnimEnemy?"scale(1.05)":"scale(1)", transition:"transform 0.1s",
-                  }} />
-                : <div style={{
-                    fontSize:"clamp(60px, 10vh, 140px)",
-                    lineHeight:1,
-                    animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
-                    filter:isBoss?`drop-shadow(0 0 24px ${C.red})`:"none",
-                    transform:btlAnimEnemy?"scale(1.08)":"scale(1)", transition:"transform 0.1s",
-                  }}>{ed.em}</div>
-              }
-            </div>
+               {/* 前面上段：BOSSラベル + 属性インジケーター（top固定） */}
+               <div style={{position:"absolute",top:4,left:0,right:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,zIndex:2,pointerEvents:"none"}}>
+                 {isBoss && (
+                   <div style={{fontSize:11,letterSpacing:6,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite",whiteSpace:"nowrap"}}>─── BOSS ───</div>
+                 )}
+                 {currentElemInfo && (
+                   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(5,13,20,0.84)",border:`1px solid ${currentElemInfo.color}88`,borderRadius:6,padding:"4px 14px",minWidth:130}}>
+                     <div style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>CURRENT ELEMENT</div>
+                     <div style={{fontSize:15,fontWeight:900,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,textShadow:`0 0 12px ${currentElemInfo.color}`}}>
+                       {currentElemInfo.icon} {currentElemInfo.label}
+                     </div>
+                     <div style={{width:"100%",height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden"}}>
+                       <div style={{height:"100%",width:`${elemBarPct}%`,background:`linear-gradient(90deg,${currentElemInfo.color}88,${currentElemInfo.color})`,transition:"width 0.3s",borderRadius:2}}/>
+                     </div>
+                     <div style={{fontSize:8,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+                       蓄積 {elemDmgAccum}/{ELEMENT_BREAK_THRESHOLD}
+                     </div>
+                   </div>
+                 )}
+               </div>
 
-            {/* ── 下段：名前 + デバフ + HPバー + NEXTバッジ ── */}
-            <div style={{width:"92%",flexShrink:0,zIndex:2,display:"flex",flexDirection:"column",gap:4,paddingBottom:6}}>
-              <div style={{background:"rgba(5,13,20,0.72)",padding:"5px 10px",borderRadius:4,display:"flex",flexDirection:"column",gap:3}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
-                  <span style={{color:C.white,fontSize:13,fontWeight:700,letterSpacing:1,textShadow:"0 1px 4px #000"}}>{ed.name}</span>
-                  {enrageCount > 0 && (
-                    <span style={{fontSize:9,color:C.red,fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,50,50,0.18)",border:`1px solid ${C.red}66`,borderRadius:3,padding:"1px 5px",animation:"dngr 0.8s infinite",whiteSpace:"nowrap"}}>
-                      🔴 怒り×2 残{enrageCount}T
-                    </span>
-                  )}
-                </div>
-                {(enemyAtkDebuff > 0 || partySpdBuff > 0) && (
-                  <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap"}}>
-                    {enemyAtkDebuff > 0 && (
-                      <span style={{fontSize:8,color:"#ff9944",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,120,50,0.15)",border:"1px solid #ff994466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
-                        🔥 ATK½ 残{enemyAtkDebuff}T
-                      </span>
-                    )}
-                    {partySpdBuff > 0 && (
-                      <span style={{fontSize:8,color:"#ffee44",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,238,50,0.12)",border:"1px solid #ffee4466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
-                        ⚡ 味方SPD+3 残{partySpdBuff}T
-                      </span>
-                    )}
-                  </div>
-                )}
-                <div style={{width:"100%",height:8,background:C.panel2,borderRadius:4,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:`${enemyPct}%`,background:isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:4,boxShadow:enrageCount>0?`0 0 8px ${C.red}`:"none"}}/>
-                </div>
-                <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>{enemyHp} / {ed.maxHp}</div>
-              </div>
-              {!victory && !defeat && enemyNextAction && (() => {
-                const eLabel = ENEMY_ACTION_LABEL[enemyNextAction];
-                const isUnavoidable = enemyNextAction === "unavoidable";
-                const previewColor = isUnavoidable ? C.red : enemyNextAction === "counter" ? "#f97316" : enemyNextAction === "dodge" ? C.muted : "#60a5fa";
-                return (
-                  <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:`${previewColor}11`,border:`1px solid ${previewColor}44`,borderRadius:5}}>
-                    <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>NEXT</span>
-                    <span style={{fontSize:10,color:previewColor,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:isUnavoidable?"dngr 0.8s infinite":"none",flex:1,textAlign:"center"}}>
-                      {eLabel?.icon} {eLabel?.text}
-                    </span>
-                    {isUnavoidable && <span style={{fontSize:8,color:C.red,whiteSpace:"nowrap"}}>⚠ 必中</span>}
-                  </div>
-                );
-              })()}
-            </div>
+               {/* 前面下段：名前 + デバフ + HPバー + NEXTバッジ（bottom固定） */}
+               <div style={{position:"absolute",bottom:0,left:0,right:0,zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",gap:4,paddingBottom:6}}>
+                 <div style={{width:"92%",display:"flex",flexDirection:"column",gap:4}}>
+                   <div style={{background:"rgba(5,13,20,0.82)",padding:"5px 10px",borderRadius:4,display:"flex",flexDirection:"column",gap:3}}>
+                     <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
+                       <span style={{color:C.white,fontSize:13,fontWeight:700,letterSpacing:1,textShadow:"0 1px 4px #000"}}>{ed.name}</span>
+                       {enrageCount > 0 && (
+                         <span style={{fontSize:9,color:C.red,fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,50,50,0.18)",border:`1px solid ${C.red}66`,borderRadius:3,padding:"1px 5px",animation:"dngr 0.8s infinite",whiteSpace:"nowrap"}}>
+                           🔴 怒り×2 残{enrageCount}T
+                         </span>
+                       )}
+                     </div>
+                     {(enemyAtkDebuff > 0 || partySpdBuff > 0) && (
+                       <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap"}}>
+                         {enemyAtkDebuff > 0 && (
+                           <span style={{fontSize:8,color:"#ff9944",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,120,50,0.15)",border:"1px solid #ff994466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
+                             🔥 ATK½ 残{enemyAtkDebuff}T
+                           </span>
+                         )}
+                         {partySpdBuff > 0 && (
+                           <span style={{fontSize:8,color:"#ffee44",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,238,50,0.12)",border:"1px solid #ffee4466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
+                             ⚡ 味方SPD+3 残{partySpdBuff}T
+                           </span>
+                         )}
+                       </div>
+                     )}
+                     <div style={{width:"100%",height:8,background:C.panel2,borderRadius:4,overflow:"hidden"}}>
+                       <div style={{height:"100%",width:`${enemyPct}%`,background:isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:4,boxShadow:enrageCount>0?`0 0 8px ${C.red}`:"none"}}/>
+                     </div>
+                     <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>{enemyHp} / {ed.maxHp}</div>
+                   </div>
+                   {!victory && !defeat && enemyNextAction && (() => {
+                     const eLabel = ENEMY_ACTION_LABEL[enemyNextAction];
+                     const isUnavoidable = enemyNextAction === "unavoidable";
+                     const previewColor = isUnavoidable ? C.red : enemyNextAction === "counter" ? "#f97316" : enemyNextAction === "dodge" ? C.muted : "#60a5fa";
+                     return (
+                       <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:`${previewColor}11`,border:`1px solid ${previewColor}44`,borderRadius:5}}>
+                         <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>NEXT</span>
+                         <span style={{fontSize:10,color:previewColor,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:isUnavoidable?"dngr 0.8s infinite":"none",flex:1,textAlign:"center"}}>
+                           {eLabel?.icon} {eLabel?.text}
+                         </span>
+                         {isUnavoidable && <span style={{fontSize:8,color:C.red,whiteSpace:"nowrap"}}>⚠ 必中</span>}
+                       </div>
+                     );
+                   })()}
+                 </div>
+               </div>
+             </div>
             </>
           )}
           </div>
