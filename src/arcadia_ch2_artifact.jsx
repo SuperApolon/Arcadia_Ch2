@@ -73,6 +73,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#010610","#050e28","#0a1840"], isBoss:true, isFloating:false, isGround:true,
     pattern:["atk","counter","unavoidable","atk","dodge","unavoidable","counter","unavoidable"],
     unavoidableAtk:[30,45],
+    elementCycle:["ice","thunder","fire","earth","none"],
   },
 
   // ── 第二章専用ボス ─────────────────────────────────────────────────────────
@@ -316,7 +317,8 @@ const BATTLE_BG_MAP = {
   shamerlot:     "battle/bg_cave",
   shamerlot_lv3: "battle/bg_cave",
   shamerlot_lv5: "battle/bg_cave",
-  simuluu:       "battle/bg_cave",
+  simuluu:       "scenes/s26_cave_blue",
+  simuluu_ch2:   "scenes/s27_cave_deep",
 };
 
 // @@SECTION:BATTLE_BG_STYLE ─────────────────────────────────────────────────
@@ -329,7 +331,8 @@ const BATTLE_BG_STYLE = {
   shamerlot:     { size: "contain", position: "top center" },
   shamerlot_lv3: { size: "contain", position: "top center" },
   shamerlot_lv5: { size: "contain", position: "top center" },
-  simuluu:       { size: "contain", position: "top center" },
+  simuluu:       { size: "cover",   position: "center" },
+  simuluu_ch2:   { size: "cover",   position: "center" },
 };
 
 // @@SECTION:SCENE_BG_STYLE ──────────────────────────────────────────────────
@@ -2546,7 +2549,7 @@ export default function ArcadiaCh2() {
         <div style={{flex:1,display:"flex",flexDirection:"row",overflow:"hidden",minHeight:0}}>
 
           {/* 左カラム：エネミー表示 */}
-          <div style={{flex:"0 0 62%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 8px",position:"relative",overflow:"hidden",gap:8}}>
+          <div style={{flex:"0 0 62%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"8px",position:"relative",overflow:"hidden",gap:0}}>
 
           {multiEnemies ? (
             /* ── マルチ敵表示 ─────────────────────────────────────────────── */
@@ -2558,8 +2561,8 @@ export default function ArcadiaCh2() {
                 </div>
               )}
 
-              {/* 3敵カード横並び */}
-              <div style={{display:"flex",flexDirection:"row",alignItems:"flex-end",justifyContent:"center",gap:6,width:"100%",paddingTop:pendingTargetSelect ? 28 : 0}}>
+              {/* 3敵カード横並び -- stretch で縦余白を排除 */}
+              <div style={{display:"flex",flexDirection:"row",alignItems:"stretch",justifyContent:"center",gap:5,width:"100%",flex:1,minHeight:0,paddingTop:pendingTargetSelect ? 28 : 0}}>
                 {multiEnemies.map((me, idx) => {
                   const meDef = me.def;
                   const isSimuluuSlot = me.type === "simuluu" || me.type === "simuluu_ch2";
@@ -2570,74 +2573,101 @@ export default function ArcadiaCh2() {
                   const meLabel = ENEMY_ACTION_LABEL[meNextAction];
                   const meIsUnavoidable = meNextAction === "unavoidable" || meNextAction === "unavoidable_lite";
                   const meColor = meIsUnavoidable ? C.red : meNextAction === "counter" ? "#f97316" : meNextAction === "dodge" ? C.muted : "#60a5fa";
-                  // ターゲット選択モードで選択可能かどうか
                   const isTargetable = !!pendingTargetSelect && !me.defeated;
                   const cardBorder = isTargetable ? `2px solid ${C.accent}` : `1px solid ${C.border}44`;
-                  const cardBg = meIsBoss ? "rgba(20,5,10,0.85)" : "rgba(5,13,20,0.8)";
+                  const cardBg = meIsBoss ? "rgba(20,5,10,0.88)" : "rgba(5,13,20,0.82)";
+                  // ── 属性情報（elementCycle 持ちの敵のみ表示） ──
+                  const meElemCycle = meDef.elementCycle || null;
+                  const meElemKey   = meElemCycle ? meElemCycle[enemyElementIdx % meElemCycle.length] : null;
+                  const meElemInfo  = meElemKey ? ELEMENT_NAMES[meElemKey] : null;
 
                   return (
                     <div
                       key={me.slot}
                       onClick={() => isTargetable && onSelectTarget(idx)}
                       style={{
-                        flex: meIsBoss ? "0 0 44%" : "0 0 26%",
+                        flex: meIsBoss ? "2 0 0" : "1 0 0",
                         display:"flex", flexDirection:"column", alignItems:"center",
-                        gap:3, padding:"6px 4px",
+                        justifyContent:"space-between",
+                        gap:0, padding:"6px 5px 8px",
                         background: cardBg,
                         border: cardBorder,
-                        borderRadius:6,
+                        borderRadius:8,
                         cursor: isTargetable ? "pointer" : "default",
                         opacity: me.defeated ? 0.3 : 1,
                         transition:"border 0.15s, opacity 0.3s",
-                        position:"relative",
+                        position:"relative", overflow:"hidden",
+                        boxShadow: meIsBoss ? "0 0 18px rgba(255,68,102,0.2)" : "none",
                       }}>
-                      {/* ボスラベル */}
-                      {meIsBoss && !me.defeated && (
-                        <div style={{fontSize:8,letterSpacing:4,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite"}}>BOSS</div>
+
+                      {/* ── 上部：BOSSラベル or 倒れ ── */}
+                      <div style={{width:"100%",textAlign:"center",flexShrink:0,minHeight:14}}>
+                        {meIsBoss && !me.defeated && (
+                          <div style={{fontSize:8,letterSpacing:3,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite"}}>BOSS</div>
+                        )}
+                        {me.defeated && (
+                          <div style={{fontSize:meIsBoss?36:24,lineHeight:1,marginTop:8}}>💀</div>
+                        )}
+                      </div>
+
+                      {/* ── 中央：エネミー画像（flex:1 で縦最大） ── */}
+                      {!me.defeated && (
+                        <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minHeight:0,padding:"3px 0"}}>
+                          {meImg
+                            ? <img src={meImg} alt={meDef.name} style={{
+                                width:"100%", maxWidth: meIsBoss ? 160 : 86,
+                                height:"100%", maxHeight: meIsBoss ? 200 : 120,
+                                objectFit:"contain",
+                                animation: meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite",
+                                filter: meIsBoss
+                                  ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
+                                  : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))",
+                                transform: btlAnimEnemy ? "scale(1.07)" : "scale(1)",
+                                transition:"transform 0.1s",
+                              }} />
+                            : <div style={{
+                                fontSize: meIsBoss ? "clamp(48px,8vw,72px)" : "clamp(28px,5vw,44px)",
+                                lineHeight:1,
+                                animation: meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite",
+                                filter: meIsBoss ? "drop-shadow(0 0 12px #ff4466)" : "none",
+                              }}>{meDef.em}</div>
+                          }
+                        </div>
                       )}
-                      {/* 倒れた敵 */}
-                      {me.defeated && (
-                        <div style={{fontSize:28,lineHeight:1}}>💀</div>
-                      )}
-                      {/* 生存中の敵画像 */}
-                      {!me.defeated && (meImg
-                        ? <img src={meImg} alt={meDef.name} style={{
-                            width: meIsBoss ? 90 : 56, height: meIsBoss ? 90 : 56,
-                            objectFit:"contain",
-                            animation: meIsBoss ? "bossFloat 2s infinite" : "idle 2s infinite",
-                            filter: meIsBoss ? `drop-shadow(0 0 12px ${C.red})` : "drop-shadow(0 2px 8px rgba(0,0,0,0.6))",
-                            transform: btlAnimEnemy ? "scale(1.08)" : "scale(1)", transition:"transform 0.1s",
-                          }} />
-                        : <div style={{fontSize: meIsBoss ? 40 : 28, lineHeight:1, animation: meIsBoss ? "bossFloat 2s infinite" : "idle 2s infinite"}}>
-                            {meDef.em}
+
+                      {/* ── 下部：属性・名前・HP・行動バッジ ── */}
+                      {!me.defeated && (
+                        <div style={{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}>
+                          {/* 属性バッジ（elementCycle 持ちのみ） */}
+                          {meElemInfo && (
+                            <div style={{display:"flex",alignItems:"center",gap:2,background:`${meElemInfo.color}18`,border:`1px solid ${meElemInfo.color}55`,borderRadius:3,padding:"1px 6px"}}>
+                              <span style={{fontSize:9}}>{meElemInfo.icon}</span>
+                              <span style={{fontSize:8,color:meElemInfo.color,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,letterSpacing:1,textShadow:`0 0 8px ${meElemInfo.color}`}}>{meElemInfo.label}</span>
+                            </div>
+                          )}
+                          {/* 敵名 */}
+                          <div style={{fontSize:8,color:C.white,fontFamily:"'Share Tech Mono',monospace",textAlign:"center",lineHeight:1.2,width:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 2px"}}>
+                            {meDef.name.replace("Simuluu ─ ","").replace("シャメロット ","Lv").replace(" 試練の主","")}
                           </div>
-                      )}
-                      {/* 敵名（短縮） */}
-                      {!me.defeated && (
-                        <div style={{fontSize:8,color:C.white,fontFamily:"'Share Tech Mono',monospace",textAlign:"center",lineHeight:1.2,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                          {meDef.name.replace("Simuluu ─ ","").replace("シャメロット ","Lv").replace(" 試練の主","")}
+                          {/* HPバー */}
+                          <div style={{width:"92%",height:4,background:C.panel2,borderRadius:2,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${meHpPct}%`,background: meIsBoss ? `linear-gradient(90deg,${C.red},#ff8844)` : `linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:2}}/>
+                          </div>
+                          <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>{me.hp}/{meDef.maxHp}</div>
+                          {/* NEXT行動バッジ */}
+                          {!victory && !defeat && (
+                            <div style={{width:"94%",padding:"2px 3px",background:`${meColor}11`,border:`1px solid ${meColor}44`,borderRadius:3,textAlign:"center"}}>
+                              <span style={{fontSize:8,color:meColor,fontFamily:"'Share Tech Mono',monospace",animation:meIsUnavoidable?"dngr 0.8s infinite":"none",whiteSpace:"nowrap"}}>
+                                {meLabel?.icon} {meLabel?.text}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
-                      {/* HPバー */}
-                      {!me.defeated && (
-                        <div style={{width:"90%",height:5,background:C.panel2,borderRadius:3,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:`${meHpPct}%`,background: meIsBoss ? `linear-gradient(90deg,${C.red},#ff8844)` : `linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:3}}/>
-                        </div>
-                      )}
-                      {!me.defeated && (
-                        <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>{me.hp}/{meDef.maxHp}</div>
-                      )}
-                      {/* NEXT行動バッジ */}
-                      {!me.defeated && !victory && !defeat && (
-                        <div style={{width:"90%",padding:"2px 4px",background:`${meColor}11`,border:`1px solid ${meColor}44`,borderRadius:3,textAlign:"center"}}>
-                          <span style={{fontSize:8,color:meColor,fontFamily:"'Share Tech Mono',monospace",animation:meIsUnavoidable?"dngr 0.8s infinite":"none"}}>
-                            {meLabel?.icon} {meLabel?.text}
-                          </span>
-                        </div>
-                      )}
-                      {/* ターゲット選択中の👆アイコン */}
+
+                      {/* ターゲット選択中の👆 */}
                       {isTargetable && (
-                        <div style={{position:"absolute",bottom:-10,left:"50%",transform:"translateX(-50%)",fontSize:14,animation:"idle 0.8s infinite"}}>👆</div>
+                        <div style={{position:"absolute",bottom:-12,left:"50%",transform:"translateX(-50%)",fontSize:16,animation:"idle 0.8s infinite"}}>👆</div>
                       )}
                     </div>
                   );
@@ -2652,28 +2682,9 @@ export default function ArcadiaCh2() {
               )}
             </>
           ) : (
-            /* ── 単体敵表示（従来） ────────────────────────────────────────── */
+            /* ── 単体敵表示（縦フル3段） ─────────────────────────────────── */
             <>
-            {isBoss && <div style={{position:"absolute",top:10,left:"50%",transform:"translateX(-50%)",fontSize:11,letterSpacing:6,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite",whiteSpace:"nowrap",zIndex:2}}>─── BOSS ───</div>}
-
-            {/* 属性インジケーター（elementCycleを持つボス専用） */}
-            {currentElemInfo && (
-              <div style={{position:"absolute",top:28,left:"50%",transform:"translateX(-50%)",zIndex:3,display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"rgba(5,13,20,0.75)",border:`1px solid ${currentElemInfo.color}88`,borderRadius:6,padding:"4px 14px",minWidth:130}}>
-                <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>CURRENT ELEMENT</div>
-                <div style={{fontSize:16,fontWeight:900,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,textShadow:`0 0 12px ${currentElemInfo.color}`}}>
-                  {currentElemInfo.icon} {currentElemInfo.label}
-                </div>
-                {/* 属性蓄積ゲージ */}
-                <div style={{width:"100%",height:5,background:"rgba(255,255,255,0.1)",borderRadius:3,overflow:"hidden",marginTop:2}}>
-                  <div style={{height:"100%",width:`${elemBarPct}%`,background:`linear-gradient(90deg,${currentElemInfo.color}88,${currentElemInfo.color})`,transition:"width 0.3s",borderRadius:3}}/>
-                </div>
-                <div style={{fontSize:8,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
-                  蓄積 {elemDmgAccum}/{ELEMENT_BREAK_THRESHOLD}
-                </div>
-              </div>
-            )}
-
-            {/* コンボ表示（3ターン以上継続時） */}
+            {/* コンボ（絶対配置オーバーレイ） */}
             {noDmgStreak >= 3 && (
               <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%, -50%)",zIndex:10,pointerEvents:"none",textAlign:"center",animation:"comboPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both"}}>
                 <div style={{fontSize:"clamp(36px, 8vw, 64px)",fontWeight:900,fontFamily:"'Share Tech Mono',monospace",color:C.gold,letterSpacing:2,lineHeight:1,animation:"comboPulse 1s infinite",WebkitTextStroke:`1px #ffffff44`}}>
@@ -2684,72 +2695,93 @@ export default function ArcadiaCh2() {
               </div>
             )}
 
-            {/* エネミー画像 / 絵文字フォールバック */}
-            {enemyImgUrl
-              ? <img src={enemyImgUrl} alt={ed.name} style={{
-                  ...(enemySizeMode === "auto"
-                    ? { width:"auto", height:`${enemyImgPct}%`, maxWidth:"95%", flexShrink:0 }
-                    : { width:enemyImgSize, height:enemyImgSize, maxWidth:"95%", maxHeight:"80%", flexShrink:0 }),
-                  objectFit:"contain",
-                  animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
-                  filter:isBoss?`drop-shadow(0 0 20px ${C.red})`:"drop-shadow(0 4px 16px rgba(0,0,0,0.6))",
-                  transform:btlAnimEnemy?"scale(1.05)":"scale(1)", transition:"transform 0.1s",
-                }} />
-              : <div style={{
-                  fontSize: enemySizeMode === "auto" ? "clamp(60px, 12vw, 120px)" : Math.round(enemyImgSize * 0.5),
-                  lineHeight:1,
-                  animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
-                  filter:isBoss?`drop-shadow(0 0 20px ${C.red})`:"none",
-                  transform:btlAnimEnemy?"scale(1.1)":"scale(1)", transition:"transform 0.1s",
-                  flexShrink:0,
-                }}>{ed.em}</div>
-            }
-
-            {/* エネミー名＋HPバー（画像の直下） */}
-            <div style={{width:"88%",flexShrink:0,zIndex:2,background:"rgba(5,13,20,0.6)",padding:"6px 10px",borderRadius:4}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginBottom:4,flexWrap:"wrap"}}>
-                <span style={{color:C.white,fontSize:13,fontWeight:700,letterSpacing:1,textShadow:"0 1px 4px #000"}}>{ed.name}</span>
-                {enrageCount > 0 && (
-                  <span style={{fontSize:9,color:C.red,fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,50,50,0.18)",border:`1px solid ${C.red}66`,borderRadius:3,padding:"1px 5px",animation:"dngr 0.8s infinite",whiteSpace:"nowrap"}}>
-                    🔴 怒り×2 残{enrageCount}T
-                  </span>
-                )}
-              </div>
-              {(enemyAtkDebuff > 0 || partySpdBuff > 0) && (
-                <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap",marginBottom:4}}>
-                  {enemyAtkDebuff > 0 && (
-                    <span style={{fontSize:8,color:"#ff9944",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,120,50,0.15)",border:"1px solid #ff994466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
-                      🔥 ATK½ 残{enemyAtkDebuff}T
-                    </span>
-                  )}
-                  {partySpdBuff > 0 && (
-                    <span style={{fontSize:8,color:"#ffee44",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,238,50,0.12)",border:"1px solid #ffee4466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
-                      ⚡ 味方SPD+3 残{partySpdBuff}T
-                    </span>
-                  )}
+            {/* ── 上段：BOSSラベル + 属性インジケーター ── */}
+            <div style={{width:"100%",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,paddingTop:4,zIndex:2}}>
+              {isBoss && (
+                <div style={{fontSize:11,letterSpacing:6,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite",whiteSpace:"nowrap"}}>─── BOSS ───</div>
+              )}
+              {currentElemInfo && (
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(5,13,20,0.78)",border:`1px solid ${currentElemInfo.color}88`,borderRadius:6,padding:"4px 14px",minWidth:130}}>
+                  <div style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>CURRENT ELEMENT</div>
+                  <div style={{fontSize:15,fontWeight:900,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,textShadow:`0 0 12px ${currentElemInfo.color}`}}>
+                    {currentElemInfo.icon} {currentElemInfo.label}
+                  </div>
+                  <div style={{width:"100%",height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${elemBarPct}%`,background:`linear-gradient(90deg,${currentElemInfo.color}88,${currentElemInfo.color})`,transition:"width 0.3s",borderRadius:2}}/>
+                  </div>
+                  <div style={{fontSize:8,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+                    蓄積 {elemDmgAccum}/{ELEMENT_BREAK_THRESHOLD}
+                  </div>
                 </div>
               )}
-              <div style={{width:"100%",height:8,background:C.panel2,borderRadius:4,overflow:"hidden"}}>
-                <div style={{height:"100%",width:`${enemyPct}%`,background:isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:4,boxShadow:enrageCount>0?`0 0 8px ${C.red}`:"none"}}/>
-              </div>
-              <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center",marginTop:3}}>{enemyHp} / {ed.maxHp}</div>
             </div>
 
-            {/* 敵の次ターン行動予告（左カラム・エネミーHPバー直下） */}
-            {!victory && !defeat && enemyNextAction && (() => {
-              const eLabel = ENEMY_ACTION_LABEL[enemyNextAction];
-              const isUnavoidable = enemyNextAction === "unavoidable";
-              const previewColor = isUnavoidable ? C.red : enemyNextAction === "counter" ? "#f97316" : enemyNextAction === "dodge" ? C.muted : "#60a5fa";
-              return (
-                <div style={{width:"88%",flexShrink:0,zIndex:2,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:`${previewColor}11`,border:`1px solid ${previewColor}44`,borderRadius:5}}>
-                  <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>NEXT</span>
-                  <span style={{fontSize:10,color:previewColor,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:isUnavoidable?"dngr 0.8s infinite":"none",flex:1,textAlign:"center"}}>
-                    {eLabel?.icon} {eLabel?.text}
-                  </span>
-                  {isUnavoidable && <span style={{fontSize:8,color:C.red,whiteSpace:"nowrap"}}>⚠ 必中</span>}
+            {/* ── 中段：エネミー画像（flex:1 で縦を最大利用） ── */}
+            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minHeight:0,padding:"4px 0"}}>
+              {enemyImgUrl
+                ? <img src={enemyImgUrl} alt={ed.name} style={{
+                    width:"auto", height:"100%",
+                    maxWidth:"96%", maxHeight:"100%",
+                    objectFit:"contain",
+                    animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
+                    filter:isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))",
+                    transform:btlAnimEnemy?"scale(1.05)":"scale(1)", transition:"transform 0.1s",
+                  }} />
+                : <div style={{
+                    fontSize:"clamp(80px, 14vw, 160px)",
+                    lineHeight:1,
+                    animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
+                    filter:isBoss?`drop-shadow(0 0 24px ${C.red})`:"none",
+                    transform:btlAnimEnemy?"scale(1.08)":"scale(1)", transition:"transform 0.1s",
+                  }}>{ed.em}</div>
+              }
+            </div>
+
+            {/* ── 下段：名前 + デバフ + HPバー + NEXTバッジ ── */}
+            <div style={{width:"92%",flexShrink:0,zIndex:2,display:"flex",flexDirection:"column",gap:4,paddingBottom:6}}>
+              <div style={{background:"rgba(5,13,20,0.72)",padding:"5px 10px",borderRadius:4,display:"flex",flexDirection:"column",gap:3}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
+                  <span style={{color:C.white,fontSize:13,fontWeight:700,letterSpacing:1,textShadow:"0 1px 4px #000"}}>{ed.name}</span>
+                  {enrageCount > 0 && (
+                    <span style={{fontSize:9,color:C.red,fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,50,50,0.18)",border:`1px solid ${C.red}66`,borderRadius:3,padding:"1px 5px",animation:"dngr 0.8s infinite",whiteSpace:"nowrap"}}>
+                      🔴 怒り×2 残{enrageCount}T
+                    </span>
+                  )}
                 </div>
-              );
-            })()}
+                {(enemyAtkDebuff > 0 || partySpdBuff > 0) && (
+                  <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap"}}>
+                    {enemyAtkDebuff > 0 && (
+                      <span style={{fontSize:8,color:"#ff9944",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,120,50,0.15)",border:"1px solid #ff994466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
+                        🔥 ATK½ 残{enemyAtkDebuff}T
+                      </span>
+                    )}
+                    {partySpdBuff > 0 && (
+                      <span style={{fontSize:8,color:"#ffee44",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,238,50,0.12)",border:"1px solid #ffee4466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
+                        ⚡ 味方SPD+3 残{partySpdBuff}T
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div style={{width:"100%",height:8,background:C.panel2,borderRadius:4,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${enemyPct}%`,background:isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:4,boxShadow:enrageCount>0?`0 0 8px ${C.red}`:"none"}}/>
+                </div>
+                <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>{enemyHp} / {ed.maxHp}</div>
+              </div>
+              {!victory && !defeat && enemyNextAction && (() => {
+                const eLabel = ENEMY_ACTION_LABEL[enemyNextAction];
+                const isUnavoidable = enemyNextAction === "unavoidable";
+                const previewColor = isUnavoidable ? C.red : enemyNextAction === "counter" ? "#f97316" : enemyNextAction === "dodge" ? C.muted : "#60a5fa";
+                return (
+                  <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:`${previewColor}11`,border:`1px solid ${previewColor}44`,borderRadius:5}}>
+                    <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>NEXT</span>
+                    <span style={{fontSize:10,color:previewColor,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:isUnavoidable?"dngr 0.8s infinite":"none",flex:1,textAlign:"center"}}>
+                      {eLabel?.icon} {eLabel?.text}
+                    </span>
+                    {isUnavoidable && <span style={{fontSize:8,color:C.red,whiteSpace:"nowrap"}}>⚠ 必中</span>}
+                  </div>
+                );
+              })()}
+            </div>
             </>
           )}
           </div>
