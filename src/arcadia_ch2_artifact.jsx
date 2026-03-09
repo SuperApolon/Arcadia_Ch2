@@ -2574,8 +2574,8 @@ export default function ArcadiaCh2() {
                   const meIsUnavoidable = meNextAction === "unavoidable" || meNextAction === "unavoidable_lite";
                   const meColor = meIsUnavoidable ? C.red : meNextAction === "counter" ? "#f97316" : meNextAction === "dodge" ? C.muted : "#60a5fa";
                   const isTargetable = !!pendingTargetSelect && !me.defeated;
-                  const cardBorder = isTargetable ? `2px solid ${C.accent}` : `1px solid ${C.border}44`;
-                  const cardBg = meIsBoss ? "rgba(20,5,10,0.88)" : "rgba(5,13,20,0.82)";
+                  const cardBorder = isTargetable ? `2px solid ${C.accent}` : meIsBoss ? `1px solid ${C.red}44` : `1px solid transparent`;
+                  const cardBg = "transparent";
                   // ── 属性情報（elementCycle 持ちの敵のみ表示） ──
                   const meElemCycle = meDef.elementCycle || null;
                   const meElemKey   = meElemCycle ? meElemCycle[enemyElementIdx % meElemCycle.length] : null;
@@ -2637,7 +2637,7 @@ export default function ArcadiaCh2() {
 
                       {/* ── 下部：属性・名前・HP・行動バッジ ── */}
                       {!me.defeated && (
-                        <div style={{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}>
+                        <div style={{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0,background:"rgba(5,13,20,0.72)",borderRadius:"0 0 6px 6px",padding:"4px 2px 2px"}}>
                           {/* 属性バッジ（elementCycle 持ちのみ） */}
                           {meElemInfo && (
                             <div style={{display:"flex",alignItems:"center",gap:2,background:`${meElemInfo.color}18`,border:`1px solid ${meElemInfo.color}55`,borderRadius:3,padding:"1px 6px"}}>
