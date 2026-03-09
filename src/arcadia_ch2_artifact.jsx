@@ -2523,7 +2523,7 @@ export default function ArcadiaCh2() {
     const effectiveEnemySpdDisp = Math.max(1, 12 - (enemySpdDebuff > 0 ? 5 : 0));
 
     return (
-      <div style={{width:"100%",height:"100%",minHeight:"600px",display:"flex",flexDirection:"column",background:battleBg,fontFamily:"'Noto Serif JP',serif",userSelect:"none",position:"relative",overflow:"hidden"}}>
+      <div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",background:battleBg,fontFamily:"'Noto Serif JP',serif",userSelect:"none",position:"relative",overflow:"hidden"}}>
         <style>{keyframes}</style>
         {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease"}}>{notif}</div>}
 
@@ -2790,7 +2790,7 @@ export default function ArcadiaCh2() {
           <div style={{flex:"0 0 38%",display:"flex",flexDirection:"column",background:"rgba(5,13,20,0.82)",borderLeft:`1px solid ${C.border}44`,overflow:"hidden"}}>
 
             {/* すくみガイド */}
-            <div style={{padding:"4px 10px",borderBottom:`1px solid ${C.border}33`,display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center",flexShrink:0}}>
+            <div style={{padding:"3px 8px",borderBottom:`1px solid ${C.border}33`,display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center",flexShrink:0}}>
               <span style={{fontSize:8,color:"#00ffcc88",fontFamily:"'Share Tech Mono',monospace"}}>⚔→🔄負 </span>
               <span style={{fontSize:8,color:"#f9731688",fontFamily:"'Share Tech Mono',monospace"}}>🔄→💨負 </span>
               <span style={{fontSize:8,color:"#a78bfa88",fontFamily:"'Share Tech Mono',monospace"}}>💨→⚔負 </span>
@@ -2805,7 +2805,7 @@ export default function ArcadiaCh2() {
             </div>
 
             {/* 右カラム下部：パーティー＋アクション */}
-            <div style={{padding:"8px 12px",background:"rgba(10,26,38,0.95)",borderTop:`1px solid ${C.border}`,flexShrink:0}}>
+            <div style={{padding:"5px 10px",background:"rgba(10,26,38,0.95)",borderTop:`1px solid ${C.border}`,flexShrink:0,overflowY:"auto"}}>
 
               {/* ── パーティーメンバーリスト（右カラム） ── */}
               {/* コマンド選択中の1人だけスプライトをハイライト表示 */}
@@ -2819,9 +2819,9 @@ export default function ArcadiaCh2() {
                   const cmHpColor = cmHpPct <= 25 ? C.red : cmHpPct <= 50 ? C.gold : C.accent2;
                   const cmMpPct = Math.max(0, cm.mp / cm.mmp * 100);
                   return (
-                    <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"6px 8px",marginBottom:5,background:`linear-gradient(90deg,${C.accent}18,transparent)`,border:`1px solid ${C.accent}55`,borderRadius:6}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"4px 6px",marginBottom:4,background:`linear-gradient(90deg,${C.accent}18,transparent)`,border:`1px solid ${C.accent}55`,borderRadius:6}}>
                       {/* スプライト: 下半身欠けOK・頭が見えるよう object-position:top */}
-                      <div style={{flexShrink:0,width:52,height:72,overflow:"hidden",borderRadius:5,border:`1px solid ${C.accent}66`,background:"rgba(0,200,255,0.06)",filter:`drop-shadow(0 0 8px ${C.accent}55)`}}>
+                      <div style={{flexShrink:0,width:44,height:60,overflow:"hidden",borderRadius:4,border:`1px solid ${C.accent}66`,background:"rgba(0,200,255,0.06)",filter:`drop-shadow(0 0 8px ${C.accent}55)`}}>
                         {cmSprUrl
                           ? <img src={cmSprUrl} alt={cm.name} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top center"}} />
                           : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>{cm.icon}</div>
@@ -2962,7 +2962,7 @@ export default function ArcadiaCh2() {
                           const totalCols = baseCols + elemCol + specCol;
                           const gtc = Array(totalCols).fill("1fr").join(" ");
                           return (
-                        <div style={{display:"grid",gridTemplateColumns:gtc,gap:4,marginBottom:4}}>
+                        <div style={{display:"grid",gridTemplateColumns:gtc,gap:3,marginBottom:3}}>
                           {BATTLE_SKILLS.map(sk => {
                             const memberMp = currentCmdMember.id === "eltz" ? mp : (partyMp[currentCmdMember.id] ?? 0);
                             const canAfford = sk.cost === 0 || memberMp >= sk.cost;
