@@ -2192,75 +2192,21 @@ export default function ArcadiaCh2() {
               <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center",marginTop:3}}>{enemyHp} / {ed.maxHp}</div>
             </div>
 
-            {/* パーティーHPパネル（強化版） */}
-            <div style={{width:"88%",flexShrink:0,zIndex:2,background:"rgba(5,13,20,0.82)",padding:"6px 8px",borderRadius:6,border:`1px solid ${C.border}55`}}>
-              <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:3,marginBottom:5,textAlign:"center"}}>── PARTY ──</div>
-              {partyMembers.map((m, mi) => {
-                const hpPct = Math.max(0, m.hp / m.mhp * 100);
-                const mpPct = Math.max(0, m.mp / m.mmp * 100);
-                const hpColor = hpPct <= 25 ? C.red : hpPct <= 50 ? C.gold : C.accent2;
-                const isCmdDone = !victory && !defeat && mi < cmdInputIdx;
-                const isCmdCurrent = !victory && !defeat && inputPhase === "command" && mi === cmdInputIdx;
-                const cmd = pendingCommands[m.key];
-                const cmdSk = BATTLE_SKILLS.find(s=>s.id===cmd) || ELEMENT_SKILL_DEFS.find(s=>s.id===cmd);
-                const sprKey = SPRITE_MAP[m.icon];
-                const sprUrl = sprKey ? assetUrl(sprKey) : null;
-
-                const rowBg = isCmdCurrent
-                  ? `linear-gradient(90deg,${C.accent}22,${C.accent}08)`
-                  : isCmdDone
-                  ? `${C.accent2}08`
-                  : "transparent";
-                const rowBorder = isCmdCurrent ? C.accent : isCmdDone ? `${C.accent2}55` : `${C.border}33`;
-
-                return (
-                  <div key={m.key} style={{
-                    display:"flex", alignItems:"center", gap:6, marginBottom:4,
-                    padding:"4px 6px", borderRadius:5,
-                    background:rowBg, border:`1px solid ${rowBorder}`,
-                    transition:"all 0.25s",
-                  }}>
-                    {/* キャラアイコン（画像 or 絵文字） */}
-                    <div style={{position:"relative",flexShrink:0,width:26,height:26}}>
-                      {sprUrl
-                        ? <img src={sprUrl} alt={m.name} style={{width:26,height:26,objectFit:"cover",borderRadius:4,border:`1px solid ${isCmdCurrent?C.accent:C.border}55`,filter:isCmdCurrent?`drop-shadow(0 0 4px ${C.accent})`:"none"}} />
-                        : <div style={{width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,borderRadius:4,border:`1px solid ${isCmdCurrent?C.accent:C.border}55`,background:isCmdCurrent?`${C.accent}18`:"rgba(255,255,255,0.04)",filter:isCmdCurrent?`drop-shadow(0 0 4px ${C.accent})`:"none"}}>{m.icon}</div>
-                      }
-                      {/* コマンド選択中インジケーター */}
-                      {isCmdCurrent && (
-                        <div style={{position:"absolute",top:-3,right:-3,width:8,height:8,borderRadius:"50%",background:C.accent,animation:"dngr 0.6s infinite",border:"1px solid #000"}}/>
-                      )}
-                      {/* コマンド確定済みアイコン */}
-                      {isCmdDone && cmdSk && (
-                        <div style={{position:"absolute",bottom:-3,right:-3,fontSize:8,background:"rgba(5,13,20,0.9)",borderRadius:"50%",width:12,height:12,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.accent2}55`}}>{cmdSk.icon}</div>
-                      )}
-                    </div>
-
-                    {/* 名前 + HP/MPバー */}
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:3}}>
-                        <span style={{fontSize:9,color:isCmdCurrent?C.white:C.muted,fontFamily:"'Noto Serif JP',serif",fontWeight:isCmdCurrent?700:400,letterSpacing:0.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:52}}>
-                          {isCmdCurrent && <span style={{color:C.accent,marginRight:2}}>▶</span>}
-                          {m.name}
-                        </span>
-                        <div style={{display:"flex",gap:4,flexShrink:0}}>
-                          <span style={{fontSize:8,color:hpColor,fontFamily:"'Share Tech Mono',monospace",lineHeight:1}}>{m.hp}<span style={{fontSize:6,color:C.muted,opacity:0.7}}>/{m.mhp}</span></span>
-                          <span style={{fontSize:7,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace",lineHeight:1,opacity:0.8}}>{m.mp}</span>
-                        </div>
-                      </div>
-                      {/* HPバー */}
-                      <div style={{height:4,background:"rgba(255,255,255,0.07)",borderRadius:2,overflow:"hidden",marginBottom:2}}>
-                        <div style={{height:"100%",width:`${hpPct}%`,background:hpColor,transition:"width 0.35s",borderRadius:2,boxShadow:hpPct<=25?`0 0 4px ${C.red}`:"none"}}/>
-                      </div>
-                      {/* MPバー */}
-                      <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:2,overflow:"hidden"}}>
-                        <div style={{height:"100%",width:`${mpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.35s",borderRadius:2}}/>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {/* 敵の次ターン行動予告（左カラム・エネミーHPバー直下） */}
+            {!victory && !defeat && enemyNextAction && (() => {
+              const eLabel = ENEMY_ACTION_LABEL[enemyNextAction];
+              const isUnavoidable = enemyNextAction === "unavoidable";
+              const previewColor = isUnavoidable ? C.red : enemyNextAction === "counter" ? "#f97316" : enemyNextAction === "dodge" ? C.muted : "#60a5fa";
+              return (
+                <div style={{width:"88%",flexShrink:0,zIndex:2,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:`${previewColor}11`,border:`1px solid ${previewColor}44`,borderRadius:5}}>
+                  <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>NEXT</span>
+                  <span style={{fontSize:10,color:previewColor,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:isUnavoidable?"dngr 0.8s infinite":"none",flex:1,textAlign:"center"}}>
+                    {eLabel?.icon} {eLabel?.text}
+                  </span>
+                  {isUnavoidable && <span style={{fontSize:8,color:C.red,whiteSpace:"nowrap"}}>⚠ 必中</span>}
+                </div>
+              );
+            })()}
           </div>
 
           {/* 右カラム：ログ＋ステータス＋ボタン */}
@@ -2281,78 +2227,56 @@ export default function ArcadiaCh2() {
               ))}
             </div>
 
-            {/* 現在コマンド選択中メンバーのステータス（または全体ターン表示） */}
+            {/* 右カラム下部：パーティー＋アクション */}
             <div style={{padding:"8px 12px",background:"rgba(10,26,38,0.95)",borderTop:`1px solid ${C.border}`,flexShrink:0}}>
-              {!victory && !defeat && inputPhase === "command" ? (() => {
-                const cm = partyMembers[cmdInputIdx];
-                const cmHpPct = Math.max(0, cm.hp / cm.mhp * 100);
-                const cmMpPct = Math.max(0, cm.mp / cm.mmp * 100);
-                const cmHpColor = cmHpPct <= 25 ? C.red : cmHpPct <= 50 ? C.gold : C.accent2;
-                const cmSprKey = SPRITE_MAP[cm.icon];
-                const cmSprUrl = cmSprKey ? assetUrl(cmSprKey) : null;
-                return (
-                  <div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                      {cmSprUrl
-                        ? <img src={cmSprUrl} alt={cm.name} style={{width:28,height:28,objectFit:"cover",borderRadius:4,border:`1px solid ${C.accent}66`,flexShrink:0,filter:`drop-shadow(0 0 5px ${C.accent}66)`}} />
-                        : <div style={{width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,borderRadius:4,border:`1px solid ${C.accent}66`,background:`${C.accent}18`,flexShrink:0}}>{cm.icon}</div>
-                      }
+
+              {/* ── パーティーメンバーリスト（右カラム） ── */}
+              {/* コマンド選択中の1人だけスプライトをハイライト表示 */}
+              <div style={{marginBottom:6}}>
+                {/* コマンド選択中メンバーのスプライト大表示 */}
+                {!victory && !defeat && inputPhase === "command" && (() => {
+                  const cm = partyMembers[cmdInputIdx];
+                  const cmSprKey = SPRITE_MAP[cm.icon];
+                  const cmSprUrl = cmSprKey ? assetUrl(cmSprKey) : null;
+                  const cmHpPct = Math.max(0, cm.hp / cm.mhp * 100);
+                  const cmHpColor = cmHpPct <= 25 ? C.red : cmHpPct <= 50 ? C.gold : C.accent2;
+                  const cmMpPct = Math.max(0, cm.mp / cm.mmp * 100);
+                  return (
+                    <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"6px 8px",marginBottom:5,background:`linear-gradient(90deg,${C.accent}18,transparent)`,border:`1px solid ${C.accent}55`,borderRadius:6}}>
+                      {/* スプライト: 下半身欠けOK・頭が見えるよう object-position:top */}
+                      <div style={{flexShrink:0,width:52,height:72,overflow:"hidden",borderRadius:5,border:`1px solid ${C.accent}66`,background:"rgba(0,200,255,0.06)",filter:`drop-shadow(0 0 8px ${C.accent}55)`}}>
+                        {cmSprUrl
+                          ? <img src={cmSprUrl} alt={cm.name} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top center"}} />
+                          : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>{cm.icon}</div>
+                        }
+                      </div>
+                      {/* 名前・HP・MP */}
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <span style={{fontSize:11,color:C.white,fontFamily:"'Noto Serif JP',serif",fontWeight:700}}>
-                            <span style={{color:C.accent,marginRight:3}}>▶</span>{cm.name}
-                          </span>
-                          <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>Turn {turn}　{cmdInputIdx+1}/{PARTY_DEFS.length}</span>
+                        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4}}>
+                          <span style={{color:C.accent,fontSize:9}}>▶</span>
+                          <span style={{fontSize:11,color:C.white,fontFamily:"'Noto Serif JP',serif",fontWeight:700}}>{cm.name}</span>
+                          <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginLeft:"auto"}}>T{turn} {cmdInputIdx+1}/{PARTY_DEFS.length}</span>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                          <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
+                          <span style={{fontSize:10,color:cmHpColor,fontFamily:"'Share Tech Mono',monospace",animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{cm.hp}<span style={{fontSize:8,color:C.muted}}>/{cm.mhp}</span></span>
+                        </div>
+                        <div style={{height:4,background:C.panel2,borderRadius:2,marginBottom:3,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:`${cmHpPct}%`,background:`linear-gradient(90deg,${cmHpColor}99,${cmHpColor})`,transition:"width 0.4s",borderRadius:2}}/>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                          <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
+                          <span style={{fontSize:10,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{cm.mp}<span style={{fontSize:8,color:C.muted}}>/{cm.mmp}</span></span>
+                        </div>
+                        <div style={{height:3,background:C.panel2,borderRadius:2,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:`${cmMpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.4s",borderRadius:2}}/>
                         </div>
                       </div>
                     </div>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                      <div style={{display:"flex",alignItems:"center",gap:5}}>
-                        <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
-                        <span style={{fontSize:12,color:cmHpColor,fontFamily:"'Share Tech Mono',monospace",animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{cm.hp}<span style={{fontSize:9,color:C.muted}}>/{cm.mhp}</span></span>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:5}}>
-                        <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
-                        <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{cm.mp}<span style={{fontSize:9,color:C.muted}}>/{cm.mmp}</span></span>
-                      </div>
-                    </div>
-                    <div style={{height:4,background:C.panel2,borderRadius:2,marginBottom:3,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${cmHpPct}%`,background:`linear-gradient(90deg,${cmHpColor}99,${cmHpColor})`,transition:"width 0.4s",borderRadius:2,boxShadow:cmHpPct<=25?`0 0 6px ${C.red}`:"none"}}/>
-                    </div>
-                    <div style={{height:3,background:C.panel2,borderRadius:2,marginBottom:6,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${cmMpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.4s",borderRadius:2}}/>
-                    </div>
-                  </div>
-                );
-              })() : (
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <div style={{display:"flex",alignItems:"center",gap:5}}>
-                    <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
-                    <span style={{fontSize:12,color:playerPct<=25?C.red:C.accent2,fontFamily:"'Share Tech Mono',monospace",animation:playerPct<=25?"dngr 0.8s infinite":"none"}}>{hp}/{mhp}</span>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:5}}>
-                    <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
-                    <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{mp}/{mmp}</span>
-                  </div>
-                  <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>Turn {turn}</div>
-                </div>
-              )}
+                  );
+                })()}
 
-              {/* 敵の次ターン行動予告 */}
-              {!victory && !defeat && enemyNextAction && (() => {
-                const eLabel = ENEMY_ACTION_LABEL[enemyNextAction];
-                const isUnavoidable = enemyNextAction === "unavoidable";
-                const previewColor = isUnavoidable ? C.red : enemyNextAction === "counter" ? "#f97316" : enemyNextAction === "dodge" ? C.muted : "#60a5fa";
-                return (
-                  <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",background:`${previewColor}11`,border:`1px solid ${previewColor}44`,borderRadius:4,marginBottom:6}}>
-                    <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>次のターン</span>
-                    <span style={{fontSize:10,color:previewColor,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:isUnavoidable?"dngr 0.8s infinite":"none"}}>
-                      {eLabel?.icon} {ed.name}：{eLabel?.text}
-                    </span>
-                    {isUnavoidable && <span style={{fontSize:8,color:C.red}}>⚠ 回避不能</span>}
-                  </div>
-                );
-              })()}
+              </div>
 
               {/* ── アクションボタン / スキルサブメニュー / 勝敗結果 ── */}
               <div style={{flexShrink:0}}>
