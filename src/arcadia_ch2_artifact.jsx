@@ -2552,7 +2552,7 @@ export default function ArcadiaCh2() {
         <div style={{flex:1,display:"flex",flexDirection:"row",overflow:"hidden",minHeight:0}}>
 
           {/* 左カラム：エネミー表示 */}
-          <div style={{flex:"0 0 62%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:multiEnemies?"stretch":"flex-start",padding:"8px",position:"relative",overflow:"hidden",gap:0}}>
+          <div style={{flex:"0 0 62%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:multiEnemies?"stretch":"flex-start",padding:multiEnemies?"8px":0,position:"relative",overflow:"hidden",gap:0}}>
 
           {multiEnemies ? (
             /* ── マルチ敵表示 ─────────────────────────────────────────────── */
@@ -2688,7 +2688,7 @@ export default function ArcadiaCh2() {
             /* ── 単体敵表示（縦フル3段） ─────────────────────────────────── */
             <>
              {/* ── 単体敵エリア：relative コンテナ内に画像・UI を absolute 重ね ── */}
-             <div style={{position:"relative",flex:1,width:"100%",minHeight:0,overflow:"hidden"}}>
+             <div style={{position:"absolute",inset:0,overflow:"hidden"}}>
 
             {/* コンボ（絶対配置オーバーレイ） */}
             {noDmgStreak >= 3 && (
