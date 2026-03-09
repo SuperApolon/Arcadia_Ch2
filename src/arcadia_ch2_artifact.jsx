@@ -2600,7 +2600,7 @@ export default function ArcadiaCh2() {
                         opacity: me.defeated ? 0.3 : 1,
                         transition:"border 0.15s, opacity 0.3s",
                         position:"relative", overflow:"hidden",
-                        boxShadow: meIsBoss ? "0 0 18px rgba(255,68,102,0.2)" : "none",
+                        boxShadow: "none",
                       }}>
 
                       {/* ── 上部：BOSSラベル or 倒れ ── */}
