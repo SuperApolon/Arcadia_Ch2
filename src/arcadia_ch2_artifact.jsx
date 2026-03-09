@@ -2499,9 +2499,12 @@ export default function ArcadiaCh2() {
     const enemyImgPct   = _sizeConf.pct  ?? 80;
 
     const bgSt = BATTLE_BG_STYLE[currentEnemyType] ?? { size: "cover", position: "center" };
-    const battleBg = battleBgUrl
-      ? `url(${battleBgUrl}) ${bgSt.position}/${bgSt.size} no-repeat, linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`
-      : `linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`;
+    const multiBgUrl = "https://superapolon.github.io/Arcadia_Assets/scenes/s26_cave_blue.webp";
+    const battleBg = multiEnemies
+      ? `url(${multiBgUrl}) center/cover no-repeat`
+      : battleBgUrl
+        ? `url(${battleBgUrl}) ${bgSt.position}/${bgSt.size} no-repeat, linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`
+        : `linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`;
 
     // ── 属性システム表示用データ ────────────────────────────────────────────
     const elementCycle = ed.elementCycle || null;
@@ -2574,7 +2577,7 @@ export default function ArcadiaCh2() {
                   const meIsUnavoidable = meNextAction === "unavoidable" || meNextAction === "unavoidable_lite";
                   const meColor = meIsUnavoidable ? C.red : meNextAction === "counter" ? "#f97316" : meNextAction === "dodge" ? C.muted : "#60a5fa";
                   const isTargetable = !!pendingTargetSelect && !me.defeated;
-                  const cardBorder = isTargetable ? `2px solid ${C.accent}` : meIsBoss ? `1px solid ${C.red}44` : `1px solid transparent`;
+                  const cardBorder = isTargetable ? `2px solid ${C.accent}` : "none";
                   const cardBg = "transparent";
                   // ── 属性情報（elementCycle 持ちの敵のみ表示） ──
                   const meElemCycle = meDef.elementCycle || null;
