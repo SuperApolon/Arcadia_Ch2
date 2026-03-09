@@ -2716,19 +2716,20 @@ export default function ArcadiaCh2() {
               )}
             </div>
 
-            {/* ── 中段：エネミー画像（flex:1 で縦を最大利用） ── */}
-            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minHeight:0,padding:"4px 0"}}>
+            {/* ── 中段：エネミー画像（flex:1 で縦を最大利用、上限clampで画面内に収める） ── */}
+            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minHeight:0,padding:"4px 0",overflow:"hidden"}}>
               {enemyImgUrl
                 ? <img src={enemyImgUrl} alt={ed.name} style={{
-                    width:"auto", height:"100%",
-                    maxWidth:"96%", maxHeight:"100%",
+                    width:"auto",
+                    height:"clamp(120px, 63vh, 500px)",
+                    maxWidth:"96%",
                     objectFit:"contain",
                     animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
                     filter:isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))",
                     transform:btlAnimEnemy?"scale(1.05)":"scale(1)", transition:"transform 0.1s",
                   }} />
                 : <div style={{
-                    fontSize:"clamp(80px, 14vw, 160px)",
+                    fontSize:"clamp(60px, 10vh, 140px)",
                     lineHeight:1,
                     animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
                     filter:isBoss?`drop-shadow(0 0 24px ${C.red})`:"none",
