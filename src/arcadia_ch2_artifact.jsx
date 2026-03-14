@@ -354,18 +354,18 @@ const ASSET_STATUS = {
   "skills/guard":            false,
   "skills/item":             false,
   // ── 第二章 新シーン背景 ─────────────────────────────────────────────────
-  "scenes/ch2_port":         false,   // スティアルーフ 港
-  "scenes/ch2_arcade":       false,   // スティアルーフ 繁華街
-  "scenes/ch2_square":       false,   // スティアルーフ 中央広場
-  "scenes/ch2_community":    false,   // コミュニティセンター
-  "scenes/ch2_wg_room":      false,   // WHITEGARDENルーム
-  "scenes/ch2_diflore":      false,   // レストランDIFORE
-  "scenes/ch2_lunalee":      false,   // 魔法店LUNALEE
-  "scenes/ch2_bb_inn":       false,   // B&B宿屋
-  "scenes/ch2_guild_lexia":  false,   // レクシアギルド
-  "scenes/ch2_west_gate":    false,   // 白亜の門（西門）
-  "scenes/ch2_eivis_plains": false,   // エイビス平原（西）
-  "scenes/ch2_eivis_forest": false,   // エイビス平原（東・森）
+  "scenes/ch2_s01_stiarroof_port":         true,   // スティアルーフ 港
+  "scenes/ch2_s02_stiarroof_arcade":       true,   // スティアルーフ 繁華街
+  "scenes/ch2_s03_central_square":       true,   // スティアルーフ 中央広場
+  "scenes/ch2_s04_community_center":    true,   // コミュニティセンター
+  "scenes/ch2_s05_wg_room":      true,   // WHITEGARDENルーム
+  "scenes/ch2_s06_diflore":      true,   // レストランDIFORE
+  "scenes/ch2_s07_lunalee":      true,   // 魔法店LUNALEE
+  "scenes/ch2_s08_bb_inn":       true,   // B&B宿屋
+  "scenes/ch2_s09_guild_lexia":  true,   // レクシアギルド
+  "scenes/ch2_s10_west_gate":    true,   // 白亜の門（西門）
+  "scenes/ch2_s11_eivis_plains": true,   // エイビス平原（西）
+  "scenes/ch2_s12_eivis_forest": true,   // エイビス平原（東・森）
   "scenes/ch2_armory":       false,   // スティアルーフ 武器防具屋
   // ── 第二章 新エネミー画像 ──────────────────────────────────────────────────
   "enemies/woopy":           false,
