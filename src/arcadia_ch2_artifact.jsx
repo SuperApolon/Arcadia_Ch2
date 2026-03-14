@@ -4070,7 +4070,7 @@ export default function ArcadiaCh2() {
             </div>
 
             {/* バトルログ */}
-            <div style={{flex:1,overflowY:"auto",padding:"8px 12px",minHeight:0}}>
+            <div style={{flex:1,overflowY:"auto",padding:"5px 10px",minHeight:0}}>
               {btlLogs.map((l,i) => (
                 <div key={i} style={{fontSize:11,color:i===btlLogs.length-1?C.white:C.muted,lineHeight:1.7,animation:i===btlLogs.length-1?"slideUp 0.3s ease":"none"}}>{l}</div>
               ))}
@@ -4091,34 +4091,34 @@ export default function ArcadiaCh2() {
                   const cmHpColor = cmHpPct <= 25 ? C.red : cmHpPct <= 50 ? C.gold : C.accent2;
                   const cmMpPct = Math.max(0, cm.mp / cm.mmp * 100);
                   return (
-                    <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"4px 6px",marginBottom:4,background:`linear-gradient(90deg,${C.accent}18,transparent)`,border:`1px solid ${C.accent}55`,borderRadius:6}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"6px 8px",marginBottom:4,background:`linear-gradient(90deg,${C.accent}18,transparent)`,border:`1px solid ${C.accent}55`,borderRadius:6}}>
                       {/* スプライト: 下半身欠けOK・頭が見えるよう object-position:top */}
-                      <div style={{flexShrink:0,width:44,height:60,overflow:"hidden",borderRadius:4,border:`1px solid ${C.accent}66`,background:"rgba(0,200,255,0.06)",filter:`drop-shadow(0 0 8px ${C.accent}55)`}}>
+                      <div style={{flexShrink:0,width:88,height:120,overflow:"hidden",borderRadius:4,border:`1px solid ${C.accent}66`,background:"rgba(0,200,255,0.06)",filter:`drop-shadow(0 0 8px ${C.accent}55)`}}>
                         {cmSprUrl
                           ? <img src={cmSprUrl} alt={cm.name} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top center"}} />
-                          : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>{cm.icon}</div>
+                          : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:56}}>{cm.icon}</div>
                         }
                       </div>
                       {/* 名前・HP・MP */}
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4}}>
-                          <span style={{color:C.accent,fontSize:9}}>▶</span>
-                          <span style={{fontSize:11,color:C.white,fontFamily:"'Noto Serif JP',serif",fontWeight:700}}>{cm.name}</span>
-                          <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginLeft:"auto"}}>T{turn} {cmdInputIdx+1}/{PARTY_DEFS.length}</span>
+                        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:6}}>
+                          <span style={{color:C.accent,fontSize:10}}>▶</span>
+                          <span style={{fontSize:13,color:C.white,fontFamily:"'Noto Serif JP',serif",fontWeight:700}}>{cm.name}</span>
+                          <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginLeft:"auto"}}>T{turn} {cmdInputIdx+1}/{PARTY_DEFS.length}</span>
                         </div>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
-                          <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
-                          <span style={{fontSize:10,color:cmHpColor,fontFamily:"'Share Tech Mono',monospace",animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{cm.hp}<span style={{fontSize:8,color:C.muted}}>/{cm.mhp}</span></span>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                          <span style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
+                          <span style={{fontSize:12,color:cmHpColor,fontFamily:"'Share Tech Mono',monospace",animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{cm.hp}<span style={{fontSize:10,color:C.muted}}>/{cm.mhp}</span></span>
                         </div>
-                        <div style={{height:4,background:C.panel2,borderRadius:2,marginBottom:3,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:`${cmHpPct}%`,background:`linear-gradient(90deg,${cmHpColor}99,${cmHpColor})`,transition:"width 0.4s",borderRadius:2}}/>
+                        <div style={{height:6,background:C.panel2,borderRadius:3,marginBottom:6,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:`${cmHpPct}%`,background:`linear-gradient(90deg,${cmHpColor}99,${cmHpColor})`,transition:"width 0.4s",borderRadius:3}}/>
                         </div>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
-                          <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
-                          <span style={{fontSize:10,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{cm.mp}<span style={{fontSize:8,color:C.muted}}>/{cm.mmp}</span></span>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                          <span style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
+                          <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{cm.mp}<span style={{fontSize:10,color:C.muted}}>/{cm.mmp}</span></span>
                         </div>
-                        <div style={{height:3,background:C.panel2,borderRadius:2,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:`${cmMpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.4s",borderRadius:2}}/>
+                        <div style={{height:5,background:C.panel2,borderRadius:3,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:`${cmMpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.4s",borderRadius:3}}/>
                         </div>
                       </div>
                     </div>
