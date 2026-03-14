@@ -1320,6 +1320,20 @@ export default function ArcadiaCh2() {
   const [editorSelKey, setEditorSelKey] = useState("seagull");
   const [showExport, setShowExport] = useState(false);
 
+  // ── iOS viewport高さ修正（回転時の白エリア対策） ──────────────────────────
+  useEffect(() => {
+    const setVh = () => {
+      document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+    };
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", () => setTimeout(setVh, 100));
+    return () => {
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
+    };
+  }, []);
+
   // @@SECTION:STATE_PLAYER
   const [hp, setHp] = useState(100);
   const [mhp, setMhp] = useState(100);
@@ -3147,7 +3161,7 @@ export default function ArcadiaCh2() {
     const hasComboBonus = comboMult > 1.0;
 
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(180deg,#020608 0%,#050d14 40%,#0a1420 100%)",fontFamily:"'Noto Serif JP',serif",overflow:"hidden",userSelect:"none"}}>
+      <div style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(180deg,#020608 0%,#050d14 40%,#0a1420 100%)",fontFamily:"'Noto Serif JP',serif",overflow:"hidden",userSelect:"none"}}>
         <style>{keyframes}</style>
 
         {fade && <div style={{position:"absolute",inset:0,background:"#050d14",zIndex:50}}/>}
@@ -3313,7 +3327,7 @@ export default function ArcadiaCh2() {
 
   if (phase === "load") return (
     <div
-      style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1020 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32,overflow:"hidden"}}
+      style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1020 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32,overflow:"hidden"}}
       onDragOver={e => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0]); }}
@@ -3363,7 +3377,7 @@ export default function ArcadiaCh2() {
     const p = saveFile.player;
     const savedDate = saveFile.savedAt ? new Date(saveFile.savedAt).toLocaleString("ja-JP") : "不明";
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32}}>
+      <div style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32}}>
         <style>{loadKeyframes}</style>
         <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:480,animation:"fadeIn 0.6s ease"}}>
           <div style={{fontSize:11,letterSpacing:6,color:C.accent2,marginBottom:16,fontFamily:"'Share Tech Mono',monospace"}}>── SAVE DATA LOADED ──</div>
@@ -3400,7 +3414,7 @@ export default function ArcadiaCh2() {
 
   // @@SECTION:RENDER_TITLE
   if (phase === "title") return (
-    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
+    <div style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
       <style>{keyframes}</style>
       {/* Scanline effect */}
       <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.015) 2px,rgba(0,200,255,0.015) 4px)",pointerEvents:"none",zIndex:1}}/>
@@ -3498,7 +3512,7 @@ export default function ArcadiaCh2() {
     };
 
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 50%,#0a1828 100%)`,fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
+      <div style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 50%,#0a1828 100%)`,fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
         <style>{keyframes}</style>
         <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
 
@@ -3590,7 +3604,7 @@ export default function ArcadiaCh2() {
       setPhase("game");
     };
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",background:"#000",overflow:"hidden"}}>
+      <div style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",background:"#000",overflow:"hidden"}}>
         <style>{keyframes}</style>
         <video
           src={url}
@@ -3670,7 +3684,7 @@ export default function ArcadiaCh2() {
     };
 
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#030a06 0%,#0a1a0a 50%,#0d2010 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:40}}>
+      <div style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#030a06 0%,#0a1a0a 50%,#0d2010 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:40}}>
         <style>{keyframes}</style>
         <div style={{animation:"fadeIn 2s ease",maxWidth:480,width:"100%"}}>
           <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:20,fontFamily:"'Share Tech Mono',monospace"}}>─ EPISODE 2 END ─</div>
@@ -3774,7 +3788,7 @@ export default function ArcadiaCh2() {
     const effectiveEnemySpdDisp = Math.max(1, 12 - (enemySpdDebuff > 0 ? 5 : 0));
 
     return (
-      <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:battleBg,fontFamily:"'Noto Serif JP',serif",userSelect:"none",overflow:"hidden"}}>
+      <div style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",display:"flex",flexDirection:"column",background:battleBg,fontFamily:"'Noto Serif JP',serif",userSelect:"none",overflow:"hidden"}}>
         <style>{keyframes}</style>
         {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease"}}>{notif}</div>}
 
@@ -4321,7 +4335,7 @@ export default function ArcadiaCh2() {
   const isHpLow = hp / mhp <= 0.25;
 
   return (
-    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",...bgStyle,fontFamily:"'Noto Serif JP',serif",userSelect:"none",overflow:"hidden",transition:"background 1s"}}>
+    <div style={{position:"fixed",inset:0,width:"100dvw",height:"var(--app-height,100dvh)",display:"flex",flexDirection:"column",...bgStyle,fontFamily:"'Noto Serif JP',serif",userSelect:"none",overflow:"hidden",transition:"background 1s"}}>
       <style>{keyframes}</style>
 
       {/* Overlay fade */}
