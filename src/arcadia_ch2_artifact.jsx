@@ -65,6 +65,7 @@ const INITIAL_BATTLE_DEFS = {
     maxHp:200, atk:[14,24], elk:80, exp:70, lv:5, spd:11,
     bg:["#0a1808","#1a2808","#301008"], isFloating:false, isGround:true,
     pattern:["counter","atk","unavoidable_lite","dodge","atk","counter","atk","dodge"],
+    elementCycle:["ice"],
   },
 
   simuluu: {
@@ -1217,6 +1218,8 @@ export default function ArcadiaCh2() {
   const [inputPhase, setInputPhase] = useState("command"); // "command" | "execute"
   const [pendingCommands, setPendingCommands] = useState({}); // { eltz,swift,linz,chopper → skillId }
   const [cmdInputIdx, setCmdInputIdx] = useState(0); // 0=エルツ,1=スウィフト,2=リンス,3=チョッパー
+  // ターン実行キュー: { mode:"multi"|"single", cmds, targets } が入ったらuseEffectで実行
+  const [pendingExecution, setPendingExecution] = useState(null);
 
   // ── SPDデバフ管理 ──────────────────────────────────────────────────────
   // 大地斬を使ったターンの次ターン、敵SPDを-5する残りターン数
@@ -1783,7 +1786,8 @@ export default function ArcadiaCh2() {
     if (sk.cost > 0 && currentMp < sk.cost) { showNotif(`${member.name}のMPが足りない！`); return; }
 
     // 複数敵バトル かつ 攻撃系スキル → ターゲット選択モードへ
-    const needsTarget = !!multiEnemies && skillId !== "heal" && skillId !== "dodge";
+    const SPECIAL_IDS_NO_TARGET = ["heal","dodge","provoke","takedown","overheal","sleep"];
+    const needsTarget = !!multiEnemies && !SPECIAL_IDS_NO_TARGET.includes(skillId);
     if (needsTarget) {
       setPendingCommands(prev => ({ ...prev, [member.id]: skillId }));
       setPendingTargetSelect({ memberIdx: cmdInputIdx, skillId });
@@ -1805,11 +1809,9 @@ export default function ArcadiaCh2() {
       if (multiEnemies) setPendingTargets({});
       setCmdInputIdx(0);
       setInputPhase("execute");
-      if (multiEnemies) {
-        executeMultiTurn(newCmds, newTargets);
-      } else {
-        executePartyTurn(newCmds);
-      }
+      setPendingExecution(multiEnemies
+        ? { mode:"multi", cmds:newCmds, targets:newTargets }
+        : { mode:"single", cmds:newCmds, targets:null });
     }
   }, [victory, defeat, inputPhase, cmdInputIdx, pendingCommands, pendingTargets, mp, partyMp, showNotif, multiEnemies, provokeCooldown, takedownCooldown, sleepCooldown, elemCooldowns]);
 
@@ -1831,7 +1833,7 @@ export default function ArcadiaCh2() {
       setPendingTargets({});
       setCmdInputIdx(0);
       setInputPhase("execute");
-      executeMultiTurn(newCmds, newTargets);
+      setPendingExecution({ mode:"multi", cmds:newCmds, targets:newTargets });
     }
   }, [pendingTargetSelect, pendingTargets, pendingCommands, multiEnemies]);
 
@@ -1872,6 +1874,11 @@ export default function ArcadiaCh2() {
     let iceSlashUsed = false;
     let thunderSlashUsed = false;
     let fireSlashUsed = false;
+    let provokeUsed = false;
+    let takedownUsed = false;
+    let sleepUsed = false;
+    let elemBreakTriggered = false;
+    let newElemAccum = elemDmgAccum;
 
     // SPD順行動リスト表示
     const spdLine = actors.map(a => `${a.icon}${a.spd}`).join(">");
@@ -1882,7 +1889,8 @@ export default function ArcadiaCh2() {
         const skillId = actor.skill;
         const elemSk = ELEMENT_SKILL_DEFS.find(s => s.id === skillId);
         const baseSk = BATTLE_SKILLS.find(s => s.id === skillId);
-        const sk = elemSk || baseSk;
+        const specialSk = ["provoke","takedown","overheal","sleep"].includes(skillId) ? { id:skillId, cost:0, dmg:[0,0] } : null;
+        const sk = elemSk || baseSk || specialSk;
         const isEltz = actor.id === "eltz";
 
         if (sk && sk.cost > 0) {
@@ -1901,7 +1909,22 @@ export default function ArcadiaCh2() {
           logs.push(`${actor.icon}${actor.name} 💨 回避態勢`);
           continue;
         }
-
+        // 特殊スキル（provoke/takedown/overheal/sleep）はターゲット不要・攻撃なし
+        if (["provoke","takedown","overheal","sleep"].includes(skillId)) {
+          if (skillId === "provoke") {
+            provokeUsed = true;
+            logs.push(`${actor.icon}${actor.name} 👊 挑発！ 全敵の行動を強制的に強攻へ変換！（3ターン）`);
+          } else if (skillId === "takedown") {
+            takedownUsed = true;
+            logs.push(`${actor.icon}${actor.name} 🦵 テイクダウン！ 全敵を1ターン行動不能にした！`);
+          } else if (skillId === "sleep") {
+            sleepUsed = true;
+            logs.push(`${actor.icon}${actor.name} 😴 スリープ！ 全敵を2ターン眠らせた！`);
+          } else {
+            logs.push(`${actor.icon}${actor.name} ✨ ${skillId}`);
+          }
+          continue;
+        }
         // 攻撃先を決定（倒されていたら生存中の先頭にフォールバック）
         let tIdx = actor.targetIdx;
         if (!curEnemies[tIdx] || curEnemies[tIdx].defeated) {
@@ -1922,7 +1945,24 @@ export default function ArcadiaCh2() {
         if (elemSk) {
           curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - rawDmg);
           if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
-          logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} ${rawDmg}ダメージ！`);
+          // 弱点属性チェック（isBoss敵のみenemyElementIdx使用、それ以外は固定[0]）
+          const tElemCycle = tEnemy.def.elementCycle ?? null;
+          const tElemIdx = (tElemCycle && tEnemy.def.isBoss) ? enemyElementIdx : 0;
+          const tCurElemKey = tElemCycle ? tElemCycle[tElemIdx % tElemCycle.length] : null;
+          const isWeakHit = tCurElemKey && elemSk.targetElement === tCurElemKey;
+          if (isWeakHit && !elemBreakTriggered) {
+            newElemAccum += rawDmg;
+            logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} 弱点ヒット！ ${rawDmg} dmg [蓄積:${Math.min(newElemAccum, ELEMENT_BREAK_THRESHOLD)}/${ELEMENT_BREAK_THRESHOLD}]`);
+            if (newElemAccum >= ELEMENT_BREAK_THRESHOLD) {
+              elemBreakTriggered = true;
+              newElemAccum = 0;
+              logs.push(`💥 ELEMENT BREAK！ ${tEnemy.def.em}${tEnemy.def.name}の行動を無効化した！`);
+              setElemBreakAnim(true);
+              setTimeout(() => setElemBreakAnim(false), 1500);
+            }
+          } else {
+            logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} ${rawDmg}ダメージ！`);
+          }
         } else {
           const rps = judgeRPS(skillId, eAction);
           if (skillId === "atk" && rps === "lose") {
@@ -1945,7 +1985,22 @@ export default function ArcadiaCh2() {
         const slot = actor.enemySlot;
         const e = curEnemies.find(e => e.slot === slot);
         if (!e || e.defeated) continue;
-        const eAction = actor.skill;
+
+        // 行動不能チェック（テイクダウン/スリープ/属性ブレイク）
+        if (elemBreakTriggered || takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0) {
+          const stunLabel = (takedownUsed || takedownActive > 0) ? "🦵 テイクダウン" : "😴 スリープ";
+          logs.push(`${e.def.em}${e.def.name} ${stunLabel}で行動不能！`);
+          const slotIdx = curEnemies.findIndex(en => en.slot === slot);
+          if (slotIdx >= 0) curEnemies[slotIdx].turnIdx = (e.turnIdx + 1) % e.def.pattern.length;
+          continue;
+        }
+
+        // 挑発中は強攻に強制変換 - 全体効果
+        const rawEAction = actor.skill;
+        const eAction = (provokeUsed || provokeActive > 0) ? "atk" : rawEAction;
+        if ((provokeUsed || provokeActive > 0) && rawEAction !== "atk") {
+          logs.push(`👊 挑発中！ ${e.def.name}の行動を強制的に強攻に変換！`);
+        }
 
         const isEnraged = enrageCount > 0 && !iceSlashUsed;
         const atkHalf = enemyAtkDebuff > 0;
@@ -1996,20 +2051,38 @@ export default function ArcadiaCh2() {
       }
     }
 
-    // コンボ判定
+    // コンボ判定（メンバーごとに被弾しなければ+1、最大4加算）
+    const safeCount = Object.values(memberHit).filter(v => !v).length;
     const anyHit = Object.values(memberHit).some(v => v);
-    const newStreak = anyHit ? 0 : noDmgStreak + PARTY_DEFS.length;
-    if (!anyHit) {
+    const newStreak = anyHit ? 0 : noDmgStreak + safeCount;
+    if (safeCount > 0 && !anyHit) {
       const gain = 5 + newStreak;
       curMp = Math.min(curMp + gain, mmp);
       for (const k of Object.keys(curPartyMp)) curPartyMp[k] = Math.min((curPartyMp[k] ?? 0) + gain, partyMmp[k] ?? 0);
       if (newStreak >= 3) logs.push(`✨PARTY COMBO ${newStreak}! 全員MP+${gain}！`);
     }
 
+    // 属性チェンジログ（isBossかつelementCycle持ちの敵のみ）
+    const simuluuEnemy = curEnemies.find(e => e.def.isBoss && e.def.elementCycle && !e.defeated) ?? null;
+    const simuluuEnemyDef = simuluuEnemy?.def ?? null;
+    const multiElemCycle = simuluuEnemyDef?.elementCycle ?? null;
+    const multiNextElemIdx = multiElemCycle ? (enemyElementIdx + 1) % multiElemCycle.length : 0;
+    if (multiElemCycle) {
+      const nextKey = multiElemCycle[multiNextElemIdx];
+      const nextInfo = ELEMENT_NAMES[nextKey];
+      logs.push(`🔮 ${simuluuEnemyDef.name}が属性チェンジ！ 次の属性: ${nextInfo.icon} ${nextInfo.label}`);
+    }
+
     // バフ・デバフ更新
     const nextEnrageCount = iceSlashUsed ? 0 : Math.max(0, enrageCount - 1);
     const nextAtkDebuff = fireSlashUsed ? 3 : Math.max(0, enemyAtkDebuff - 1);
     const nextSpdBuff = thunderSlashUsed ? 3 : Math.max(0, partySpdBuff - 1);
+    const nextProvokeCooldown  = provokeUsed  ? 3 : Math.max(0, provokeCooldown  - 1);
+    const nextProvokeActive    = provokeUsed  ? 3 : Math.max(0, provokeActive    - 1);
+    const nextTakedownCooldown = takedownUsed ? 3 : Math.max(0, takedownCooldown - 1);
+    const nextTakedownActive   = takedownUsed ? 1 : Math.max(0, takedownActive   - 1);
+    const nextSleepCooldown    = sleepUsed    ? 3 : Math.max(0, sleepCooldown    - 1);
+    const nextSleepActive      = sleepUsed    ? 2 : Math.max(0, sleepActive      - 1);
 
     // ステート一括更新
     setHp(Math.min(curHp, mhp));
@@ -2017,12 +2090,20 @@ export default function ArcadiaCh2() {
     setPartyHp(curPartyHp);
     setPartyMp(curPartyMp);
     setMultiEnemies(curEnemies);
+    setElemDmgAccum(newElemAccum);
+    if (multiElemCycle) setEnemyElementIdx(multiNextElemIdx);
     setTurn(t => t + 1);
     setNoDmgStreak(newStreak);
     setEnemySpdDebuff(prev => earthSlashUsed ? 1 : Math.max(0, prev - 1));
     setEnrageCount(nextEnrageCount);
     setEnemyAtkDebuff(nextAtkDebuff);
     setPartySpdBuff(nextSpdBuff);
+    setProvokeCooldown(nextProvokeCooldown);
+    setProvokeActive(nextProvokeActive);
+    setTakedownCooldown(nextTakedownCooldown);
+    setTakedownActive(nextTakedownActive);
+    setSleepCooldown(nextSleepCooldown);
+    setSleepActive(nextSleepActive);
     setBtlAnimEnemy(true); setTimeout(() => setBtlAnimEnemy(false), 400);
     setBtlLogs(prev => [...prev, ...logs].slice(-20));
 
@@ -2052,6 +2133,7 @@ export default function ArcadiaCh2() {
   }, [
     multiEnemies, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, partySpdBuff, enemySpdDebuff, enrageCount, enemyAtkDebuff,
+    provokeCooldown, provokeActive, takedownCooldown, takedownActive, sleepCooldown, sleepActive,
     noDmgStreak, turn, lv, showNotif, handleExpGain,
   ]);
 
@@ -2385,10 +2467,11 @@ export default function ArcadiaCh2() {
       }
     }
 
-    // ── コンボ判定 ────────────────────────────────────────────────────────
+    // ── コンボ判定（メンバーごとに被弾しなければ+1、最大4加算）────────────
+    const safeCount = Object.values(memberHit).filter(v => !v).length;
     const anyoneHit = Object.values(memberHit).some(v => v);
-    const newStreak = anyoneHit ? 0 : noDmgStreak + PARTY_DEFS.length;
-    if (!anyoneHit && noDmgStreak >= 0) {
+    const newStreak = anyoneHit ? 0 : noDmgStreak + safeCount;
+    if (safeCount > 0 && !anyoneHit) {
       const gain = 5 + newStreak;
       curMp = Math.min(curMp + gain, mmp);
       for (const key of Object.keys(curPartyMp)) {
@@ -2421,9 +2504,9 @@ export default function ArcadiaCh2() {
     // テイクダウン更新（使用した次ターンに1T行動不能、CD=3）
     const nextTakedownCooldown = takedownUsed ? 3 : Math.max(0, takedownCooldown - 1);
     const nextTakedownActive   = takedownUsed ? 1 : Math.max(0, takedownActive   - 1);
-    // スリープ更新（使用した次ターンに1T行動不能、CD=3）
+    // スリープ更新（使用した次ターンに2T行動不能、CD=3）
     const nextSleepCooldown    = sleepUsed    ? 3 : Math.max(0, sleepCooldown    - 1);
-    const nextSleepActive      = sleepUsed    ? 1 : Math.max(0, sleepActive      - 1);
+    const nextSleepActive      = sleepUsed    ? 2 : Math.max(0, sleepActive      - 1);
     // 属性スキルCD更新（使用した場合3をセット、毎ターン減算）
     const nextElemCooldowns = {
       elem_fire:    elemUsed.elem_fire    ? 3 : Math.max(0, elemCooldowns.elem_fire    - 1),
@@ -2496,6 +2579,19 @@ export default function ArcadiaCh2() {
     statAlloc, weaponPatk, noDmgStreak, lv,
     showNotif, handleExpGain, turn,
   ]);
+
+  // ─── pendingExecution → ターン実行（クロージャ問題の解決） ─────────────────
+  // onCommand/onSelectTargetから直接execute*を呼ぶと古いクロージャを参照する場合がある。
+  // stateにキューイングしてuseEffectで実行することで常に最新のexecute*を使う。
+  useEffect(() => {
+    if (!pendingExecution) return;
+    setPendingExecution(null);
+    if (pendingExecution.mode === "multi") {
+      executeMultiTurn(pendingExecution.cmds, pendingExecution.targets);
+    } else {
+      executePartyTurn(pendingExecution.cmds);
+    }
+  }, [pendingExecution, executeMultiTurn, executePartyTurn]);
 
   // コマンドキャンセル（最後に選んだメンバーの選択を1つ戻す）
   const onCancelCommand = useCallback(() => {
@@ -3299,8 +3395,10 @@ export default function ArcadiaCh2() {
                   const cardBorder = isTargetable ? `2px solid ${C.accent}` : "none";
                   const cardBg = "transparent";
                   // ── 属性情報（elementCycle 持ちの敵のみ表示） ──
+                  // isBoss(シムルー)はenemyElementIdx使用、それ以外(シャメロット等)は固定[0]
                   const meElemCycle = meDef.elementCycle || null;
-                  const meElemKey   = meElemCycle ? meElemCycle[enemyElementIdx % meElemCycle.length] : null;
+                  const meElemIdxToUse = (meElemCycle && meDef.isBoss) ? enemyElementIdx : 0;
+                  const meElemKey   = meElemCycle ? meElemCycle[meElemIdxToUse % meElemCycle.length] : null;
                   const meElemInfo  = meElemKey ? ELEMENT_NAMES[meElemKey] : null;
 
                   return (
@@ -3401,6 +3499,17 @@ export default function ArcadiaCh2() {
                 <button onClick={onCancelCommand} style={{marginTop:16,padding:"5px 24px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:9,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
                   ← スキル選択に戻る
                 </button>
+              )}
+
+              {/* コンボ（マルチ敵・絶対配置オーバーレイ） */}
+              {noDmgStreak >= 3 && (
+                <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%, -50%)",zIndex:10,pointerEvents:"none",textAlign:"center",animation:"comboPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both"}}>
+                  <div style={{fontSize:"clamp(36px, 8vw, 64px)",fontWeight:900,fontFamily:"'Share Tech Mono',monospace",color:C.gold,letterSpacing:2,lineHeight:1,animation:"comboPulse 1s infinite",WebkitTextStroke:`1px #ffffff44`}}>
+                    {noDmgStreak}
+                    <span style={{fontSize:"0.45em",letterSpacing:4,display:"block",marginTop:2,color:"#ffe08a"}}>COMBO</span>
+                  </div>
+                  <div style={{fontSize:10,color:"#ffe08a",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:4,opacity:0.85}}>MP +{5 + noDmgStreak} / turn</div>
+                </div>
               )}
             </>
           ) : (
