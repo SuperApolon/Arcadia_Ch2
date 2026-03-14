@@ -714,20 +714,20 @@ const LOC_TO_SCENE_IMG = {
   "試練の洞窟 ─ 青の洞窟":  "scenes/s26_cave_blue",
   "試練の洞窟 ─ 最深部":    "scenes/s27_cave_deep",
   // ── 第二章 ────────────────────────────────────────────────────────────────
-  "スティアルーフ 港":                  "scenes/ch2_port",
-  "スティアルーフ 繁華街":              "scenes/ch2_arcade",
-  "スティアルーフ 中央広場":            "scenes/ch2_square",
-  "スティアルーフ コミュニティセンター": "scenes/ch2_community",
-  "スティアルーフ コミュニティルーム":   "scenes/ch2_wg_room",
-  "スティアルーフ 繁華街 武器防具屋":   "scenes/ch2_armory",
-  "スティアルーフ レストランDIFORE":    "scenes/ch2_diflore",
-  "スティアルーフ 魔法店LUNALEE":       "scenes/ch2_lunalee",
-  "スティアルーフ B&B宿屋":            "scenes/ch2_bb_inn",
-  "スティアルーフ 西門":               "scenes/ch2_west_gate",
-  "エイビス平原 西":                   "scenes/ch2_eivis_plains",
-  "エイビス平原 東":                   "scenes/ch2_eivis_forest",
-  "スティアルーフ ギルド":             "scenes/ch2_guild_lexia",   // ギルド専用背景
-  "スティアルーフ 中央広場 屋台市":    "scenes/ch2_square",        // 中央広場背景を流用
+  "スティアルーフ 港":                  "scenes/ch2_s01_stiarroof_port",
+  "スティアルーフ 繁華街":              "scenes/ch2_s02_stiarroof_arcade",
+  "スティアルーフ 中央広場":            "scenes/ch2_s03_central_square",
+  "スティアルーフ コミュニティセンター": "scenes/ch2_s04_community_center",
+  "スティアルーフ コミュニティルーム":   "scenes/ch2_s05_wg_room",
+  "スティアルーフ 繁華街 武器防具屋":   "scenes/ch2_s07_lunalee",
+  "スティアルーフ レストランDIFORE":    "scenes/ch2_s06_diflore",
+  "スティアルーフ 魔法店LUNALEE":       "scenes/ch2_s07_lunalee",
+  "スティアルーフ B&B宿屋":            "scenes/ch2_s08_bb_inn",
+  "スティアルーフ 西門":               "scenes/ch2_s10_west_gate",
+  "エイビス平原 西":                   "scenes/ch2_s11_eivis_plains",
+  "エイビス平原 東":                   "scenes/ch2_s12_eivis_forest",
+  "スティアルーフ ギルド":             "scenes/ch2_s09_guild_lexia",   // ギルド専用背景
+  "スティアルーフ 中央広場 屋台市":    "scenes/ch2_s03_central_square",        // 中央広場背景を流用
 };
 
 // 勝利画面ボタン -- 1回目押下でファンファーレ開始、2回目押下でシーン遷移
