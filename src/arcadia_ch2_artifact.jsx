@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 
 // @@SECTION:PALETTE
 const C = {
@@ -23,7 +23,7 @@ const C = {
 const BATTLE_SKILLS = [
   { id:"atk",     label:"強攻",      icon:"⚔",  color:"#00ffcc", cost:0,  dmg:[14,22] },
   { id:"counter", label:"カウンター", icon:"🔄", color:"#f97316", cost:10, dmg:[18,28] },
-  { id:"dodge",   label:"回避",      icon:"💨",  color:"#a78bfa", cost:8,  dmg:[0,0]   },
+  { id:"dodge",   label:"回避",      icon:"💨",  color:"#a78bfa", cost:8,  dmg:[12,20]  },
   { id:"heal",    label:"回復",      icon:"🧪",  color:"#f0c040", cost:0,  dmg:[0,0]   },
 ];
 
@@ -64,7 +64,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"シャメロット Lv.5", em:"🦀",
     maxHp:200, atk:[14,24], elk:80, exp:70, lv:5, spd:11,
     bg:["#0a1808","#1a2808","#301008"], isFloating:false, isGround:true,
-    pattern:["counter","atk","unavoidable_lite","dodge","atk","counter","atk","dodge"],
+    pattern:["counter","atk","atk","dodge","atk","counter","atk","dodge"],
     elementCycle:["ice"],
   },
 
@@ -87,23 +87,23 @@ const INITIAL_BATTLE_DEFS = {
 
   moocat: {
     name:"ムーキャット", em:"🐱",
-    maxHp:90, atk:[10,16], elk:35, exp:30, lv:4, spd:20,
+    maxHp:99, atk:[10,16], elk:35, exp:30, lv:4, spd:20,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","dodge","counter","atk","dodge","atk","counter","dodge"],
   },
 
   mandragora: {
     name:"マンドラゴラ", em:"🌿",
-    maxHp:110, atk:[8,14], elk:57, exp:35, lv:4, spd:6,
+    maxHp:165, atk:[8,14], elk:57, exp:35, lv:4, spd:6,
     bg:["#0a1808","#184018","#203020"], isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","counter"],
   },
 
   cocatris: {
     name:"コカトリス", em:"🐔",
-    maxHp:130, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
+    maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["atk","counter","atk","dodge","atk","counter","unavoidable_lite"],
+    pattern:["atk","counter","atk","dodge","atk","counter","atk"],
     unavoidableAtk:[18,26],
   },
 
@@ -121,15 +121,15 @@ const INITIAL_BATTLE_DEFS = {
   // ドナテロ（槍使い・Lv18）
   pvp_donatello: {
     name:"ドナテロ", em:"🎭",
-    maxHp:180, atk:[16,24], elk:0, exp:0, lv:18, spd:14,
+    maxHp:500, atk:[16,24], elk:0, exp:0, lv:18, spd:14,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
-    pattern:["atk","counter","atk","dodge","unavoidable_lite","atk","counter"],
+    pattern:["atk","counter","atk","dodge","atk","atk","counter"],
     unavoidableAtk:[22,32],
   },
   // ケヴィン（魔法剣士・Lv8）
   pvp_kevin: {
     name:"ケヴィン", em:"🧔",
-    maxHp:130, atk:[12,18], elk:0, exp:0, lv:8, spd:13,
+    maxHp:200, atk:[12,18], elk:0, exp:0, lv:8, spd:13,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","counter","atk"],
     unavoidableAtk:[0,0],
@@ -137,41 +137,63 @@ const INITIAL_BATTLE_DEFS = {
   // チョッパー（短剣使い・Lv3）
   pvp_chopper: {
     name:"チョッパー", em:"👦",
-    maxHp:80, atk:[8,14], elk:0, exp:0, lv:3, spd:16,
+    maxHp:100, atk:[8,14], elk:0, exp:0, lv:3, spd:16,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
     pattern:["atk","dodge","atk","atk","counter","atk"],
     unavoidableAtk:[0,0],
   },
 
+   // ── アリエス・カルマとのコカトリス3体 ──────────────────────────────────
+   cocatris_carma_a: {
+    name:"コカトリス Lv.5", em:"🐔",
+    maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
+    bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
+    pattern:["atk","counter","atk","dodge","atk","counter","atk"],
+    unavoidableAtk:[18,26],
+  },
+  cocatris_carma_b: {
+    name:"コカトリス Lv.5", em:"🐔",
+    maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
+    bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
+    pattern:["dodge","atk","counter","atk","atk","dodge","counter"],
+    unavoidableAtk:[18,26],
+  },
+  cocatris_carma_c: {
+    name:"コカトリス Lv.5", em:"🐔",
+    maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
+    bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
+    pattern:["atk","atk","counter","dodge","atk","atk","counter"],
+    unavoidableAtk:[18,26],
+  },
   // ── ポンキチ・ペルシアとのコカトリス3体 ──────────────────────────────────
   cocatris_ponki_a: {
     name:"コカトリス Lv.5", em:"🐔",
-    maxHp:130, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
+    maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["atk","counter","atk","dodge","atk","counter","unavoidable_lite"],
+    pattern:["atk","counter","atk","dodge","atk","counter","atk"],
     unavoidableAtk:[18,26],
   },
   cocatris_ponki_b: {
     name:"コカトリス Lv.5", em:"🐔",
-    maxHp:130, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
+    maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["dodge","atk","counter","atk","atk","dodge","counter"],
     unavoidableAtk:[18,26],
   },
   cocatris_ponki_c: {
     name:"コカトリス Lv.5", em:"🐔",
-    maxHp:130, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
+    maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["atk","atk","counter","dodge","unavoidable_lite","atk","counter"],
+    pattern:["atk","atk","counter","dodge","atk","atk","counter"],
     unavoidableAtk:[18,26],
   },
 
   // ── オルガ：最終話手合わせ ────────────────────────────────────────────────
   orga: {
     name:"オルガ", em:"⚔️",
-    maxHp:500, atk:[20,32], elk:0, exp:0, lv:23, spd:13,
+    maxHp:1450, atk:[20,32], elk:0, exp:0, lv:23, spd:13,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:true, isFloating:false, isGround:true,
-    pattern:["atk","counter","dodge","unavoidable_lite","atk","counter","atk","dodge","unavoidable_lite","counter"],
+    pattern:["atk","counter","dodge","atk","atk_all","counter","unavoidable","dodge","counter","atk_all",],
     unavoidableAtk:[28,40],
   },
 
@@ -205,15 +227,15 @@ const EXP_TABLE = [0,30,80,160,280,450,700];
 // ── 全キャラクター定義 ────────────────────────────────────────────────────────
 const ALL_CHAR_DEFS = {
   eltz:    { id:"eltz",    name:"エルツ",    icon:"\u{1F9D1}",   spd:12, mhp:100, mmp:80,  allowedElemSkills:[],  specialSkills:["biker_slash","sansanka"]   },
-  swift:   { id:"swift",   name:"スウィフト", icon:"\u{1F9D1}\u200D\u{1F9B1}", spd:15, mhp:80,  mmp:60,  allowedElemSkills:["elem_ice","elem_thunder"],   specialSkills:[]                    },
-  linz:    { id:"linz",    name:"リンス",    icon:"\u{1F469}",   spd:11, mhp:70,  mmp:70,  allowedElemSkills:[],                           specialSkills:["overheal","sleep"]   },
-  chopper: { id:"chopper", name:"チョッパー", icon:"\u{1F466}",   spd:9,  mhp:65,  mmp:50,  allowedElemSkills:["elem_fire","elem_earth"],    specialSkills:[]                    },
-  aries:   { id:"aries",   name:"アリエス",  icon:"\u{1F30A}",   spd:13, mhp:75,  mmp:80,  allowedElemSkills:[],  specialSkills:["water_sphere"]              },
-  karma:   { id:"karma",   name:"カルマ",    icon:"\u{1F624}",   spd:16, mhp:80,  mmp:50,  allowedElemSkills:[],                           specialSkills:["provoke"]           },
-  frank:   { id:"frank",   name:"フランク",  icon:"\u{1F535}",   spd:10, mhp:90,  mmp:55,  allowedElemSkills:[],                           specialSkills:["provoke","takedown"] },
-  will:    { id:"will",    name:"ウィル",    icon:"\u{1F624}",   spd:18, mhp:60,  mmp:65,  allowedElemSkills:["elem_thunder","elem_earth"], specialSkills:[]                    },
-  ponkiti: { id:"ponkiti", name:"ポンキチ",  icon:"\u{1F5E1}\uFE0F", spd:17, mhp:75,  mmp:55,  allowedElemSkills:[],  specialSkills:["stinger_bite"]              },
-  persia:  { id:"persia",  name:"ペルシア",  icon:"\u{1F338}",  spd:14, mhp:70,  mmp:75,  allowedElemSkills:[],  specialSkills:["straight_shot","arrow_rain"] },
+  swift:   { id:"swift",   name:"スウィフト", icon:"\u{1F9D1}\u200D\u{1F9B1}", spd:15, mhp:100,  mmp:60,  allowedElemSkills:["elem_ice","elem_thunder"],   specialSkills:[]                    },
+  linz:    { id:"linz",    name:"リンス",    icon:"\u{1F469}",   spd:11, mhp:100,  mmp:70,  allowedElemSkills:[],                           specialSkills:["overheal","sleep"]   },
+  chopper: { id:"chopper", name:"チョッパー", icon:"\u{1F466}",   spd:9,  mhp:90,  mmp:50,  allowedElemSkills:["elem_fire","elem_earth"],    specialSkills:[]                    },
+  aries:   { id:"aries",   name:"アリエス",  icon:"\u{1F30A}",   spd:13, mhp:100,  mmp:80,  allowedElemSkills:[],  specialSkills:["water_sphere"]              },
+  karma:   { id:"karma",   name:"カルマ",    icon:"\u{1F624}",   spd:16, mhp:100,  mmp:50,  allowedElemSkills:[],                           specialSkills:["provoke"]           },
+  frank:   { id:"frank",   name:"フランク",  icon:"\u{1F535}",   spd:10, mhp:200,  mmp:110,  allowedElemSkills:[],                           specialSkills:["provoke","takedown"] },
+  will:    { id:"will",    name:"ウィル",    icon:"\u{1F624}",   spd:18, mhp:90,  mmp:65,  allowedElemSkills:["elem_thunder","elem_earth"], specialSkills:[]                    },
+  ponkiti: { id:"ponkiti", name:"ポンキチ",  icon:"\u{1F5E1}\uFE0F", spd:17, mhp:110,  mmp:55,  allowedElemSkills:[],  specialSkills:["stinger_bite"]              },
+  persia:  { id:"persia",  name:"ペルシア",  icon:"\u{1F338}",  spd:14, mhp:100,  mmp:75,  allowedElemSkills:[],  specialSkills:["straight_shot","arrow_rain"] },
 };
 
 // ── パーティ初期値ビルダー（コンポーネント外 - バトル突入処理から呼び出せるよう外出し）──
@@ -235,7 +257,9 @@ const BATTLE_PARTY_MAP = {
   moocat:           ["eltz","swift","linz","chopper"],
   mandragora:       ["eltz","swift","linz","chopper"],
   cocatris:         ["eltz","aries","karma"],
-  cocatris_ponki:   ["eltz","ponkiti","persia"],
+  cocatris_carma_a: ["eltz","aries","karma"],
+  cocatris_carma_b: ["eltz","aries","karma"],
+  cocatris_carma_c: ["eltz","aries","karma"],
   cocatris_ponki_a: ["eltz","ponkiti","persia"],
   cocatris_ponki_b: ["eltz","ponkiti","persia"],
   cocatris_ponki_c: ["eltz","ponkiti","persia"],
@@ -366,7 +390,8 @@ const ASSET_STATUS = {
   "scenes/ch2_s10_west_gate":    true,   // 白亜の門（西門）
   "scenes/ch2_s11_eivis_plains": true,   // エイビス平原（西）
   "scenes/ch2_s12_eivis_forest": true,   // エイビス平原（東・森）
-  "scenes/ch2_armory":       false,   // スティアルーフ 武器防具屋
+  "scenes/ch2_armory":       true,   // スティアルーフ 武器防具屋
+  "scenes/ch2_foodcourt":       true,   // 中央広場屋台市
   // ── 第二章 新エネミー画像 ──────────────────────────────────────────────────
   "enemies/woopy":           false,
   "enemies/moocat":          false,
@@ -618,17 +643,20 @@ const BATTLE_BG_MAP = {
   simuluu:       "scenes/s26_cave_blue",
   simuluu_ch2:   "scenes/s27_cave_deep",
   // ── 第二章 ────────────────────────────────────────────────────────────────
-  woopy:         "scenes/ch2_eivis_plains",
-  moocat:        "scenes/ch2_eivis_plains",
-  mandragora:    "scenes/ch2_eivis_forest",
-  cocatris:           "scenes/ch2_eivis_forest",
-  cocatris_ponki_a:    "scenes/ch2_eivis_forest",
-  cocatris_ponki_b:    "scenes/ch2_eivis_forest",
-  cocatris_ponki_c:    "scenes/ch2_eivis_forest",
-  pvp_donatello:       "scenes/ch2_plaza_night",
-  pvp_kevin:           "scenes/ch2_plaza_night",
-  pvp_chopper:         "scenes/ch2_plaza_night",
-  orga:                "scenes/ch2_plaza_night",
+  woopy:         "scenes/ch2_s11_eivis_plains",
+  moocat:        "scenes/ch2_s11_eivis_plains",
+  mandragora:    "scenes/ch2_s12_eivis_forest",
+  cocatris:           "scenes/ch2_s11_eivis_plains",
+  cocatris_carma_a:    "scenes/ch2_s11_eivis_plains",
+  cocatris_carma_b:    "scenes/ch2_s11_eivis_plains",
+  cocatris_carma_c:    "scenes/ch2_s11_eivis_plains",
+  cocatris_ponki_a:    "scenes/ch2_s11_eivis_plains",
+  cocatris_ponki_b:    "scenes/ch2_s11_eivis_plains",
+  cocatris_ponki_c:    "scenes/ch2_s11_eivis_plains",
+  pvp_donatello:       "scenes/ch2_s03_central_square",
+  pvp_kevin:           "scenes/ch2_s03_central_square",
+  pvp_chopper:         "scenes/ch2_s03_central_square",
+  orga:                "scenes/ch2_s03_central_square",
 };
 
 // @@SECTION:BATTLE_BG_STYLE ─────────────────────────────────────────────────
@@ -719,7 +747,7 @@ const LOC_TO_SCENE_IMG = {
   "スティアルーフ 中央広場":            "scenes/ch2_s03_central_square",
   "スティアルーフ コミュニティセンター": "scenes/ch2_s04_community_center",
   "スティアルーフ コミュニティルーム":   "scenes/ch2_s05_wg_room",
-  "スティアルーフ 繁華街 武器防具屋":   "scenes/ch2_s07_lunalee",
+  "スティアルーフ 繁華街 武器防具屋":   "scenes/ch2_armory",
   "スティアルーフ レストランDIFORE":    "scenes/ch2_s06_diflore",
   "スティアルーフ 魔法店LUNALEE":       "scenes/ch2_s07_lunalee",
   "スティアルーフ B&B宿屋":            "scenes/ch2_s08_bb_inn",
@@ -727,7 +755,7 @@ const LOC_TO_SCENE_IMG = {
   "エイビス平原 西":                   "scenes/ch2_s11_eivis_plains",
   "エイビス平原 東":                   "scenes/ch2_s12_eivis_forest",
   "スティアルーフ ギルド":             "scenes/ch2_s09_guild_lexia",   // ギルド専用背景
-  "スティアルーフ 中央広場 屋台市":    "scenes/ch2_s03_central_square",        // 中央広場背景を流用
+  "スティアルーフ 中央広場 屋台市":    "scenes/ch2_foodcourt",        // 中央広場背景を流用
 };
 
 // 勝利画面ボタン -- 1回目押下でファンファーレ開始、2回目押下でシーン遷移
@@ -783,27 +811,23 @@ const SCENES = [
     { sp:"ナレーション", t:"石畳を抜けると、そこは繁華街だった。\n\n透光板張りのドーム型アーケードの天井から\n差し込む光の下には様々なショップが\n軒を連ねていた。" },
     { sp:"ユミル", t:"「色んなお店があるんですよ。\n高級レストランもあるし、武器防具屋に、\n日常品を売ってる雑貨屋さんまであります」" },
     { sp:"スウィフト", t:"「なんか、あんまりキョロキョロしてると\n田舎者だと思われそうじゃない」" },
-    { sp:"エルツ", t:"「いや、実際、否定できないって」" },
-    { sp:"ナレーション", t:"繁華街を抜けると景色は一変した。\n石畳に囲まれた円形状の緑の芝地が\n広がっていた。" },
-    { sp:"ユミル", t:"「ここがスティアルーフ中央広場です。\nよくＰｖＰ（対人戦）が行われているんですよ」" },
-    { sp:"エルツ", t:"「え、ＰｖＰできるの！？」" },
-    { sp:"ユミル", t:"「ええ、この直径百メートルの広場内では\nいくらダメージを受けてもＨＰは減りません。\n\nあと貸し切ると様々な条件を付加できます。\nたとえばＨＰが０になった者から\n強制排除とか」" },
-    { sp:"ナレーション", t:"正面には黒硝石製の艶のある外観の\n大きな建造物が聳えていた。", next:2 }
+    { sp:"エルツ", t:"「いや、実際、否定できないって」", next:2 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
   // S2: コミュニティセンター（WHITEGARDEN）
   // ─────────────────────────────────────────────────────────────
   { bg:["#1a0e06","#2a1808","#1a1208"], loc:"スティアルーフ コミュニティセンター", sprites:["🧑","🧑‍🦱","👩","👦","👧"], dl:[
+    { sp:"ナレーション", t:"正面には黒硝石製の艶のある外観の\n大きな建造物が聳えていた。" },
     { sp:"ユミル", t:"「あの建物がこの街のギルドですよ。\n右側が宿屋──Ｂ＆Ｂです。\nそして左側が......内緒ですよ。さあ行きましょう」" },
     { sp:"ナレーション", t:"コミュニティセンター。\n真っ赤な絨毯の敷かれた広々としたロビー。\n観葉植物が散りばめられた吹き抜けの空間。\n\n階段を上り、廊下の奥の扉へ向かうと\n他の冒険者達がすうっと透けて消えてゆく──" },
     { sp:"エルツ", t:"「なるほど、そういう事か」" },
     { sp:"ユミル", t:"「それでは、皆さん心の準備はいいですか？\n\nようこそ、ＷＨＩＴＥ ＧＡＲＤＥＮへ」" },
-    { sp:"ナレーション", t:"開かれた扉の向こう──\nカーテンの締め切られた薄暗い室内。\n木目調の壁に囲まれた広い空間に\n優しい木の匂いが漂う。" },
-    { sp:"ケヴィン", t:"「誰だ......？」\n\nソファでとんがり頭が揺れ動き、\n茶髪の青年が起き上がった。" },
-    { sp:"ユミル", t:"「あ、ケヴィンさん居たんですか？\n\nそうだ──紹介遅れてごめんなさい。\nその人達が新しく入ってくれた\nルーキーの皆さんですよ。\nちっこいのが私の弟です」" },
-    { sp:"エルツ", t:"「エルツです。まだわからない事だらけで、\nユミルさんに助けていただきました。\nよろしくお願いします」" },
-    { sp:"ケヴィン", t:"「おお、いやいや！そう畏まんないで。\nこちらこそよろしく！」\n\n「じゃ夕方、歓迎会やろう。\nそれまで街でも観光しといてよ」", next:3 }
+    { sp:"ナレーション", t:"開かれた扉の向こう──\nカーテンの締め切られた薄暗い室内。\n木目調の壁に囲まれた広い空間に\n優しい木の匂いが漂う。", loc:"スティアルーフ コミュニティルーム" },
+    { sp:"ケヴィン", t:"「誰だ......？」\n\nソファでとんがり頭が揺れ動き、\n茶髪の青年が起き上がった。", loc:"スティアルーフ コミュニティルーム" },
+    { sp:"ユミル", t:"「あ、ケヴィンさん居たんですか？\n\nそうだ──紹介遅れてごめんなさい。\nその人達が新しく入ってくれた\nルーキーの皆さんですよ。\nちっこいのが私の弟です」", loc:"スティアルーフ コミュニティルーム" },
+    { sp:"エルツ", t:"「エルツです。まだわからない事だらけで、\nユミルさんに助けていただきました。\nよろしくお願いします」" , loc:"スティアルーフ コミュニティルーム"},
+    { sp:"ケヴィン", t:"「おお、いやいや！そう畏まんないで。\nこちらこそよろしく！」\n\n「じゃ夕方、歓迎会やろう。\nそれまで街でも観光しといてよ」",  loc:"スティアルーフ コミュニティルーム" ,next:3 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -811,6 +835,10 @@ const SCENES = [
   // ─────────────────────────────────────────────────────────────
   { bg:["#0a1206","#1a2a0a","#102010"], loc:"スティアルーフ 中央広場", sprites:["🧑","🧑‍🦱","👩","👦"], dl:[
     { sp:"ナレーション", t:"コミュニティセンターを出た一同は\nまずギルド前の女神像でホームポイントを設定。\n\n歓迎会まで、街を観光することに。" },
+    { sp:"ナレーション", t:"繁華街を抜けると景色は一変した。\n石畳に囲まれた円形状の緑の芝地が\n広がっていた。" },
+    { sp:"ユミル", t:"「ここがスティアルーフ中央広場です。\nよくＰｖＰ（対人戦）が行われているんですよ」" },
+    { sp:"エルツ", t:"「え、ＰｖＰできるの！？」" },
+    { sp:"ユミル", t:"「ええ、この直径百メートルの広場内では\nいくらダメージを受けてもＨＰは減りません。\n\nあと貸し切ると様々な条件を付加できます。\nたとえばＨＰが０になった者から\n強制排除とか」" },
     { sp:"エルツ", t:"「あれ、何かやってる」\n\n芝地に数人の冒険者が散らばっていた。\n互いに距離を取りながら、\n武器を構え振りかざしている。" },
     { sp:"ナレーション", t:"一人の法衣を纏った冒険者が杖を振りかざす。\n\n巨大な炎の玉が五人の中心で爆発する──\n熱風に煽られながら一斉に動き始める冒険者達。" },
     { sp:"スウィフト", t:"「すげぇ、爆発した！？」" },
@@ -879,24 +907,24 @@ const SCENES = [
   // ─────────────────────────────────────────────────────────────
   // S8: WHITEGARDEN 新入歓迎会
   // ─────────────────────────────────────────────────────────────
-  { bg:["#1a0e06","#2a1808","#1a1208"], loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"], dl:[
+  { bg:["#1a0e06","#2a1808","#1a1208"], loc:"スティアルーフ B&B宿屋", sprites:["🧑"], dl:[
     { sp:"ナレーション", t:"── メール受信 ──\n\n差出人: Swift\n宛先: Elz\n\n『何やってんだよエルツ。もう20分も待ったぞ！\n悪いけど先行ってるよ。お前が悪い :D\n後で絶対来いよ』" },
-    { sp:"エルツ", t:"「やばい......！！」\n\nＢ＆Ｂを飛び出したエルツは\n風のような速さでコミュニティセンターへ直行する。\n二百メートル程の距離を全力疾走。" },
-    { sp:"ケヴィン", t:"「お前、遅いよ！」" },
-    { sp:"エルツ", t:"「エルツです。すみません、寝坊しました！\nよろしくお願いします！」" },
-    { sp:"スウィフト", t:"（飲んでいたカクテルを口から零して）\n「お前、本当に寝てたのか！\nマジあり得ないから！」" },
-    { sp:"ドナテロ", t:"「いや、彼は見込みあるな。\n歓迎会遅れてきてこれだけ堂々と\n寝坊ですって自己紹介できる奴は\nそうは居ないんじゃないか」\n\n整った顔立ちの茶髪の男がそう笑った。" },
-    { sp:"スニーピィ", t:"「アタッカーが多いこのコミュニティでは\n貴重な魔法源、スニーピィです。\nＬｖ２０。得意属性は炎。\nドナテロだけには負けません。よろしく！」" },
-    { sp:"ドナテロ", t:"「ドナテロ、Ｌｖ１８。槍以外に剣も使うぜ。\n夜露死苦」" },
-    { sp:"リーベルト", t:"「リーベルトです。Ｌｖ１５。\nメインは弓ですが、短剣も使います」" },
-    { sp:"オルガ", t:"「オルガだ。Ｌｖ２３。\nこのゲームは稼動初期からやっている古参だが、\n人が増えるのはいい事だ。\n新しく入ってきた者には皆\nアドバイスを与えてやってくれ。以上」" },
-    { sp:"ナレーション", t:"宴もたけなわ、そこへ──\n部屋の入口の扉が乱暴に開かれる。" },
-    { sp:"ウィル", t:"「ああー！疲れたー！！\nシュラクのバカー！死ぬ、マジで死ぬよー！」\n\nドタドタと飛び込んできた小さな影が二つ。" },
-    { sp:"ドナテロ", t:"「噂をすればうるせぇ奴が来た」" },
-    { sp:"ウィル", t:"（チョッパーに気づき）\n「お？　誰々！？　誰！！？」\n\nじっとチョッパーを見つめる。\n「よし、お前子分にしてやるよ」" },
-    { sp:"チョッパー", t:"「......チョッパー」" },
-    { sp:"ウィル", t:"「よし、チョッパー今から狩り行くぞ！\nお前の腕を見せてみろ！」" },
-    { sp:"シュラク", t:"「お前、たった今狩り行ってきたばかりだろ！」" },
+    { sp:"エルツ", t:"「やばい......！！」\n\nＢ＆Ｂを飛び出したエルツは\n風のような速さでコミュニティセンターへ直行する。\n二百メートル程の距離を全力疾走。" , loc:"スティアルーフ 中央広場", sprites:["🧑"]},
+    { sp:"ケヴィン", t:"「お前、遅いよ！」" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"エルツ", t:"「エルツです。すみません、寝坊しました！\nよろしくお願いします！」", loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"] },
+    { sp:"スウィフト", t:"（飲んでいたカクテルを口から零して）\n「お前、本当に寝てたのか！\nマジあり得ないから！」", loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"] },
+    { sp:"ドナテロ", t:"「いや、彼は見込みあるな。\n歓迎会遅れてきてこれだけ堂々と\n寝坊ですって自己紹介できる奴は\nそうは居ないんじゃないか」\n\n整った顔立ちの茶髪の男がそう笑った。" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"スニーピィ", t:"「アタッカーが多いこのコミュニティでは\n貴重な魔法源、スニーピィです。\nＬｖ２０。得意属性は炎。\nドナテロだけには負けません。よろしく！」" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"ドナテロ", t:"「ドナテロ、Ｌｖ１８。槍以外に剣も使うぜ。\n夜露死苦」", loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"] },
+    { sp:"リーベルト", t:"「リーベルトです。Ｌｖ１５。\nメインは弓ですが、短剣も使います」" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"オルガ", t:"「オルガだ。Ｌｖ２３。\nこのゲームは稼動初期からやっている古参だが、\n人が増えるのはいい事だ。\n新しく入ってきた者には皆\nアドバイスを与えてやってくれ。以上」" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"ナレーション", t:"宴もたけなわ、そこへ──\n部屋の入口の扉が乱暴に開かれる。" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"ウィル", t:"「ああー！疲れたー！！\nシュラクのバカー！死ぬ、マジで死ぬよー！」\n\nドタドタと飛び込んできた小さな影が二つ。" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"ドナテロ", t:"「噂をすればうるせぇ奴が来た」" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"ウィル", t:"（チョッパーに気づき）\n「お？　誰々！？　誰！！？」\n\nじっとチョッパーを見つめる。\n「よし、お前子分にしてやるよ」" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"チョッパー", t:"「......チョッパー」" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
+    { sp:"ウィル", t:"「よし、チョッパー今から狩り行くぞ！\nお前の腕を見せてみろ！」", loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"] },
+    { sp:"シュラク", t:"「お前、たった今狩り行ってきたばかりだろ！」", loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"] },
     { sp:"ナレーション", t:"ウィルとシュラクがそのままソファの外へ\n掴み合い転がり始める。\n\n「いや、なんていうか賑やかですね」とエルツ。\n「大体いつもこうよ」とスニーピィが笑った。\n\n記念すべき夜の宴は夜明けまで続いた。", next:9 }
   ]},
 
@@ -924,7 +952,7 @@ const SCENES = [
     { sp:"ナレーション", t:"終わってみれば──Ａチーム優勝。\n\nフランクの緻密な指示とウィルの突撃力、\nそしてエルツの動体視力が組み合わさった\n奇跡の勝利だった。" },
     { sp:"オルガ", t:"「それでも、勝ったのだろう。大したものだな」" },
     { sp:"エルツ", t:"「いや、あれは偶然というか。\nフランクさんが居なければ到底勝てなかったし」" },
-    { sp:"ケヴィン", t:"「何で俺負けたんだろ。Ｌｖ差５もあるのに......」" },
+    { sp:"ケヴィン", t:"「何で俺負けたんだろ。Ｌｖ差あるのに......」" },
     { sp:"スニーピィ", t:"「あの時のエルツの動き、\n偶然とは言い切れないよ」" },
     { sp:"ドナテロ", t:"「いずれにせよ、これからが楽しみだな」\n\nその言葉に一同は皆思い思いに頷いた。", next:11 }
   ]},
@@ -963,7 +991,7 @@ const SCENES = [
     { sp:"リンス", t:"「可愛い......」" },
     { sp:"エルツ", t:"「参ったな。あれじゃ攻撃できないよな。\nもっとこう、攻撃しやすい\n不細工なモンスターがいりゃいいんだけど」" },
     { sp:"スウィフト", t:"「猫？」\n\n容姿は猫。体中をオレンジ色の斑点で覆われた\n茶毛の生物がピタリと足を止めた。\n\n「ＭｏｏＭｏｏ！」" },
-    { sp:"エルツ", t:"「ＭｏｏＣａｔ──ムーキャット。\nしかもこいつＬｖ４だって。\nうちらよりＬｖ高いぞ！」" },
+    { sp:"エルツ", t:"「ＭｏｏＣａｔ──ムーキャット。\nしかもこいつＬｖ４だって。」" },
     { sp:"ナレーション", t:"目の前の小さな影が跳躍する──\nアクティブモンスターだ！", battle:true, battleType:"moocat", battleNext:14 }
   ]},
 
@@ -971,10 +999,10 @@ const SCENES = [
   // S14: 金策 / ムーキャット戦後
   // ─────────────────────────────────────────────────────────────
   { bg:["#0a1808","#184010","#283020"], loc:"エイビス平原 西", sprites:["🧑","🧑‍🦱","👩"], dl:[
-    { sp:"ナレーション", t:"あまりの苦戦に一同は思わず尻をついた。\n\n「でも、またパーティ組んでないから\n経験値入らないよ」\n\n幸い一枚のカードを落とした事が\nせめてもの労いとなった。" },
+    { sp:"ナレーション", t:"あまりの苦戦に一同は思わず尻をついた。\n\n幸い一枚のカードを落とした事が\nせめてもの労いとなった。" },
     { sp:"エルツ", t:"「コカトリスはＬｖ５〜６の上に\n数匹で固まってる。リンクしたら全滅だよ」" },
     { sp:"スウィフト", t:"「ウーピィも狩れないし、\nムーキャットはメチャメチャ狩りにくいし......\nエルムの蟹乱獲の方が楽だったね」" },
-    { sp:"エルツ", t:"「でも、きっと何か狩りのパターンはあるんだよ。\n現にＬｖ３付近の冒険者は\n皆ここを目指してくるわけだから。\n\n情報収集が必要だな。\nもう少し周辺を探ってみよう」", next:15 }
+    { sp:"エルツ", t:"「でも、きっと何か狩りのパターンはあるんだよ。\n現に初心者の冒険者は\n皆ここを目指してくるわけだから。\n\n情報収集が必要だな。\nもう少し周辺を探ってみよう」", next:15 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -986,7 +1014,7 @@ const SCENES = [
     { sp:"エルツ", t:"「たった23ELKか。\nこれじゃ昼飯代にもならないな」" },
     { sp:"スウィフト", t:"「やっぱりちゃんと三等分しない？\nそれじゃキツイだろエルツ」" },
     { sp:"エルツ", t:"「まずい、早く金策確立しないと\n破産するよコレ」\n\nとりあえず広場の屋台でフランクフルトと\n果実ジュースで昼食を済ませ、\nエルツはコミュニティＢＢＳを開いた。" },
-    { sp:"SYSTEM", t:"── WhiteGarden BBS ──\n\nALL 金策について / Elz\n\n□投稿者 Elz\nＬｖ３の三人パーティで狩れる\nモンスターって居ますか？\n（ウーピィ以外で）\n\n□返信 Sneepi\n東エイビス平原の森でマンドラゴラ\n狩ってみたら？\nドロップ率3割、単価50G前後。\nただスクリームには要注意！" },
+    { sp:"SYSTEM", t:"── WhiteGarden Line ──\n\nTO ALL 金策について / Elz\nＬｖ３の三人パーティで狩れる\nモンスターって居ますか？\n（ウーピィ以外で）\n\n Sneepi\n東エイビス平原の森でマンドラゴラ\n狩ってみたら？\nドロップ率3割、単価50G前後。\nただスクリームには要注意！" },
     { sp:"スウィフト", t:"「スニーピィさんてほんといい人だね」" },
     { sp:"エルツ", t:"「そっか、じゃあこのマンドラゴラってのを\n狩りに行ってみようか。\n東エイビス平原は広場から逆の方向か」\n\n向う先は東エイビス平原。\n待ち受けるマンドラゴラとはどんな生物なのか。", next:16 }
   ]},
@@ -996,7 +1024,7 @@ const SCENES = [
   // ─────────────────────────────────────────────────────────────
   { bg:["#0a1808","#1a2a08","#182808"], loc:"エイビス平原 東", sprites:["🧑","🧑‍🦱","👩"], dl:[
     { sp:"ナレーション", t:"スティアルーフ東門をくぐり、東エイビス平原へ。\n\n西の広大な原野とは異なり、\n東は小さな森が散開する地形。\n林の中で不可思議な動きをする生物を発見──" },
-    { sp:"スウィフト", t:"「見つけた......」\n\n体長六十センチ、巨大な木の根に蔓がゆらゆら。\nＬｖ５──マンドラゴラだ。" },
+    { sp:"スウィフト", t:"「見つけた......」\n\n体長六十センチ、巨大な木の根に蔓がゆらゆら。\nマンドラゴラだ。" },
     { sp:"エルツ", t:"「あいつって、あそこに生えてるんじゃないの？\n確かめてみるか」\n\n遠距離から銅の矢を撃ち込む。\n矢が命中した途端、マンドラゴラの動きが止まった。" },
     { sp:"ナレーション", t:"「ん......動かないな......どうしたんだ？」\n\n一歩踏み出したその時──\n地を這うように蔓の手を振り回しながら\n突進するマンドラゴラ！\n\n「ぎゃぁぁぁ！」", battle:true, battleType:"mandragora", battleNext:17 }
   ]},
@@ -1019,13 +1047,13 @@ const SCENES = [
   // S18: 経験値ペナルティ〈ExpPenalty〉
   // ─────────────────────────────────────────────────────────────
   { bg:["#1a0e06","#2a1808","#1a1208"], loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","🎭"], dl:[
-    { sp:"ナレーション", t:"マンドラゴラ狩り二日目の夕方──\nエルツがＬｖ４に上がった。\n\nしかしその後、Ｌｖ３のスウィフトとリンスに\n経験値が入らない事が発覚する。" },
+    { sp:"ナレーション", t:"マンドラゴラ狩り二日目の夕方──\n\nしかしその後、Ｌｖ３のスウィフトとリンスに\n経験値が入らない事が発覚する。" },
     { sp:"スウィフト", t:"「あれ、今の経験値入ってない......」" },
     { sp:"リンス", t:"「私も」" },
     { sp:"ナレーション", t:"夜、コミュニティルームでドナテロに話すと──" },
     { sp:"ドナテロ", t:"「そいつは、経験値ペナルティだな」" },
-    { sp:"SYSTEM", t:"── ExpPenalty〈経験値ペナルティ〉──\n\nＬｖ差 → 入手経験値\n０　→ 1 / １ → 2 / ２ → 4\n３ → 8 / ４ → 16 / ５ → 32\n\nパーティの場合、入手経験値は\n【最高Ｌｖプレイヤー】を基準にし、\n人数で割る（端数切捨て）" },
-    { sp:"ドナテロ", t:"「Ｌｖ４のエルツが居る三人パーティで\nＬｖ５のモンスターを狩ると......\n入手経験値2÷3≒0。\nつまりゼロだ」" },
+    { sp:"SYSTEM", t:"── ExpPenalty〈経験値ペナルティ〉──\n\nパーティの場合、入手経験値は\n【最高Ｌｖプレイヤー】を基準にし、\n人数で割る（端数切捨て）" },
+    { sp:"ドナテロ", t:"「Ｌｖの高いエルツが居る三人パーティで\nＬｖ５のモンスターを狩ると......\n入手経験値は下がるよな」" },
     { sp:"エルツ", t:"「そっか、それで経験値が入らなかったのか。\nじゃあ僕はパーティから抜けた方がいいね。\n\n二人でパーティ組む形にすれば\nＬｖ４のモンスターからも経験値が入るよ」" },
     { sp:"スウィフト", t:"「大丈夫、ソロになるって言っても\n離れるわけじゃないし、同じ場所で狩るよね」" },
     { sp:"エルツ", t:"「そう、要はエルムで蟹を狩ってた時と同じだよ」\n\n方針が決まった。\n冒険者達の歯車に、確かな変化が生まれ始めていた。", next:19 }
@@ -1100,7 +1128,7 @@ const SCENES = [
     { sp:"アリエス", t:"「セパレイトパーティというのは\nパーティを組まない状態で組むチームの事です。\n１ＶＳ１の状況を作り出す事が出来ます。\n絶対条件──それぞれが一匹を最初から最後まで\n責任を持って倒す事です」" },
     { sp:"カルマ", t:"「そのくらい事前に調べてくるべきだと思うけど」" },
     { sp:"エルツ", t:"「すみません、事前準備が足りませんでした」" },
-    { sp:"ナレーション", t:"狩場へ着くと、アリエスが釣りを担当。\n三匹のコカトリスに対して三人が散開──\n\n盾でつっつきをいなしながら剣を振るうエルツ。\n初コカトリスで一番早く仕留めたのはエルツだった。\n\nしかし次の群れで事故が起きる──\n隠れていた四匹目が出現！\n「四匹いるぞ！何やってんだバカ！！」", battle:true, battleType:"cocatris", battleNext:25 }
+    { sp:"ナレーション", t:"狩場へ着くと、アリエスが釣りを担当。\n三匹のコカトリスに対して三人が散開──\n\n盾でつっつきをいなしながら剣を振るうエルツ。\n初コカトリスで一番早く仕留めたのはエルツだった。\n\nしかし次の群れで事故が起きる──\n隠れていた四匹目が出現！\n「四匹いるぞ！何やってんだバカ！！」", battle:true, multiEnemyTypes:["cocatris_carma_a","cocatris_carma_b","cocatris_carma_c"],battleNext:25 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -1112,10 +1140,15 @@ const SCENES = [
     { sp:"エルツ", t:"「アリエスさんの責任じゃありませんよ。\nただの事故です」" },
     { sp:"アリエス", t:"「でも、凄いですね。\n初めてのコカ狩りで一人で二匹のリンク処理するなんて」" },
     { sp:"アリエス", t:"「エルツさん、良かったらフレンドになってくれませんか？」" },
-    { sp:"ナレーション", t:"フレンド申請を受諾するエルツ。\n\n翌朝──今度はエルツ自らが\nCityBBSでパーティ募集を立てた。" },
-    { sp:"SYSTEM", t:"── CityBBS パーティのお誘い ──\n\n□投稿者 Elz / コカ狩りのお誘い\n当方Lv5 長剣使い。\n9:00〜12:00 コカ狩り予定。\n3名で先着2名様。初心者・熟練者問わず。\n\n□返信 Toma（槍/Lv5）参加希望\n□返信 Pelsia（弓/Lv5 EXP91）参加希望☆\n□返信 Ponkiti うぁぁ一歩出遅れたぁｗｗｗ" },
-    { sp:"ナレーション", t:"待ち合わせの西門に現れたのは\nツインテールの白銀髪の女の子──ペルシア。\n\n弓を肩に掛け、可愛らしく頭を下げる。\n「お待たせしてすみません。ペルシアです。よろしくお願いします」" },
-    { sp:"ナレーション", t:"狩場でペルシアが見せた技──\n弦を五秒以上溜めて放つ光り輝く矢。\n\n「ＳＴＲＩＮＧ'ＳＳＨＯＴ！」\n\nそれがウェポンアーツ（ＷＡ）の存在を\nエルツに教えてくれた。", next:26 }
+    { sp:"ナレーション", t:"フレンド申請を受諾するエルツ。"},
+    { sp:"ナレーション",t:"翌朝──今度はエルツ自らが\nCityBBSでパーティ募集を立てた。", loc:"エイビス平原 西", sprites:["🧑"] },
+    { sp:"SYSTEM", t:"── CityBBS パーティのお誘い ──\n\n□投稿者 Elz / コカ狩りのお誘い\n当方 長剣使い。\n9:00〜12:00 コカ狩り予定。\n3名で先着2名様。初心者・熟練者問わず。\n\n□返信 Toma（槍/Lv5）参加希望\n□返信 Pelsia（弓/Lv5 EXP91）参加希望☆\n□返信 Ponkiti うぁぁ一歩出遅れたぁｗｗｗ" ,loc:"エイビス平原 西", sprites:["🧑"]},
+    { sp:"ナレーション", t:"待ち合わせの西門に現れたのは\nツインテールの白銀髪の女の子──ペルシア。\n\n弓を肩に掛け、可愛らしく頭を下げる。\n「お待たせしてすみません。ペルシアです。よろしくお願いします」",loc:"エイビス平原 西", sprites:["🧑"] },
+    { sp:"ナレーション",t:"平原には数多くのコカトリスが群れていた", loc:"エイビス平原 西", sprites:["🧑"] },
+    { sp:"トマ", t:"「う～ん、緊張するなぁ。僕は戦闘があまり得意でなくてね。\n君たちの足を引っ張らないといいんだが。」" },
+    { sp:"ペルシア", t:"「大丈夫ですよ、トマさん。\n慎重に立ち回ればそれほど難しい狩りではないですよ」" },
+    { sp:"ナレーション", t:"狩場でペルシアが見せた技──\n弦を五秒以上溜めて放つ光り輝く矢。\n\n「ＳＴＲＩＮＧ'ＳＳＨＯＴ！」\n\nこの女の子、只者ではない" },
+    { sp:"ナレーション", t:"狩りにおけるペルシアの動きは明らかに洗練されており、エルツの自信を打ち砕くには十分だった。", next:26 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -1190,7 +1223,11 @@ const SCENES = [
     { sp:"ナレーション", t:"そうして白亜の門をくぐる三人。\n\nこの世界では「社交性」がプレイヤースキルの一つ。\n無闇なブラックリスト入りを避けるために──\n目指すべきは、なるべく人に悪い印象を与えない存在。\nそれがエルツの信条だった。" },
     { sp:"ポンキチ", t:"「お兄様！　コカトリス三匹の群れ見つけましたよ！\nちょうど良さそうなやつです。\nどうします？やってみます？」" },
     { sp:"ペルシア", t:"「私、釣りやりますね。\nお二人はそれぞれ一匹ずつ担当で！」" },
-    { sp:"エルツ", t:"「よし、行こう！」", battle:true, multiEnemyTypes:["cocatris_ponki_a","cocatris_ponki_b","cocatris_ponki_c"], battleNext:38 }
+    { sp:"ナレーション", t:"それぞれが一匹を担当し、\nほぼ同時に仕留めるという完璧な連携を狙う" },
+    { sp:"エルツ", t:"「よし、行こう！」" },
+    { sp:"ポンキチ", t:"「最高です！お兄様！\nリンク処理も全員ノーダメ！\nこれがセパレイトパーティの真髄ですよ！」" },
+    { sp:"ペルシア", t:"「エルツさん、すごい！\n見てた？最後のやつ、\nカウンターで一発で仕留めてた！」" },
+    { sp:"エルツ", t:"「ペルシアのストリングスショットで\n釣りも完璧だったし、\nポンキチの死角突きが効いてた。\n\nこれが......理想のパーティだ」", battle:true, multiEnemyTypes:["cocatris_ponki_a","cocatris_ponki_b","cocatris_ponki_c"], battleNext:32 },
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -1255,7 +1292,7 @@ const SCENES = [
     { sp:"オルガ", t:"「いい突きだった......今まで受けた中で最高のな。\n\nこれからはこのコミュニティを背負う\n者としての自覚を身に付けて欲しい」" },
     { sp:"ドナテロ", t:"「いずれその後姿、追い越して見せますよ。必ずね」" },
     { sp:"ナレーション", t:"続くスニーピィ、ウィル・シュラク・チョッパーの三人、\nリーベルトとフランクのペア、ユミルとケヴィン──\n皆がオルガと手合わせをした。\n\nそして残るはエルツ、スウィフト、リンスの三名。" },
-    { sp:"エルツ", t:"「オルガさん、行きます！」", battle:true, battleType:"orga", battleNext:37 },
+    { sp:"エルツ", t:"「オルガさん、行きます！」", battle:true, battleType:"orga", battleNext:37 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -1272,20 +1309,6 @@ const SCENES = [
     { sp:"オルガ", t:"「......ありがとう」" },
     { sp:"ナレーション", t:"星明かりの下、\n別れの言葉が夜空に溶けてゆく。\n\nＷＨＩＴＥＧＡＲＤＥＮの柱が去る夜──\nだがここに集う冒険者達の絆は、\nどこにも消えていかない。\n\nアルカディア──\n理想郷の物語は、まだ続く。", ending:true }
   ]},
-
-
-,
-
-  // ─────────────────────────────────────────────────────────────
-  // S38: コカトリス戦後（ポンキチ・ペルシアパーティ）
-  // ─────────────────────────────────────────────────────────────
-  { bg:["#0a1808","#184010","#283020"], loc:"エイビス平原 西", sprites:["🧑","🌸","🗡️"], dl:[
-    { sp:"ナレーション", t:"三匹のコカトリスを見事に撃破！\n\nそれぞれが一匹を担当し、\nほぼ同時に仕留めるという完璧な連携だった。" },
-    { sp:"ポンキチ", t:"「最高です！お兄様！\nリンク処理も全員ノーダメ！\nこれがセパレイトパーティの真髄ですよ！」" },
-    { sp:"ペルシア", t:"「エルツさん、すごい！\n見てた？最後のやつ、\nカウンターで一発で仕留めてた！」" },
-    { sp:"エルツ", t:"「ペルシアのストリングスショットで\n釣りも完璧だったし、\nポンキチの死角突きが効いてた。\n\nこれが......理想のパーティだ」", next:32 },
-  ]},
-
 ];
 
 // @@SECTION:MAIN_COMPONENT
@@ -1730,12 +1753,15 @@ export default function ArcadiaCh2() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [displayText]);
 
-  // ── BGM切り替え（フェーズ・シーン・バトル敵が変わるたびに呼ぶ）──────────
+  // ── BGM切り替え（フェーズ・シーン・ダイアログ行・バトル敵が変わるたびに呼ぶ）──
+  // dl.loc が指定されている場合はそのlocでBGMを解決する
   useEffect(() => {
-    const sceneLoc = SCENES[sceneIdx]?.loc;
+    const sc2   = SCENES[sceneIdx];
+    const dl2   = sc2?.dl[dlIdx];
+    const sceneLoc = dl2?.loc ?? sc2?.loc;
     const nextId   = resolveBgmId(phase, sceneLoc, currentEnemyType);
     switchBgm(nextId);
-  }, [phase, sceneIdx, currentEnemyType, switchBgm]);
+  }, [phase, sceneIdx, dlIdx, currentEnemyType, switchBgm]);
 
   // アンマウント時にBGM・オートタイマーを停止
   useEffect(() => {
@@ -1948,16 +1974,13 @@ export default function ArcadiaCh2() {
       if (playerAction === "counter" || playerAction === "dodge") return "lose_unavoidable";
       return "neutral";
     }
-    if (enemyAction === "unavoidable_lite") {
-      if (playerAction === "dodge") return "lose_unavoidable_lite";
-      return "neutral";
-    }
     if (playerAction === "atk"     && enemyAction === "counter") return "lose";
     if (playerAction === "counter" && enemyAction === "atk")     return "win";
-    if (playerAction === "counter" && enemyAction === "dodge")   return "lose";
-    if (playerAction === "dodge"   && enemyAction === "counter") return "win";
-    if (playerAction === "dodge"   && enemyAction === "atk")     return "lose";
-    if (playerAction === "atk"     && enemyAction === "dodge")   return "neutral";
+    if (playerAction === "counter" && enemyAction === "dodge")   return "lose";   // 敵dodge+反撃
+    if (playerAction === "dodge"   && enemyAction === "counter") return "win";    // dodge+反撃
+    if (playerAction === "dodge"   && enemyAction === "atk")     return "lose";   // 被弾
+    if (playerAction === "atk"     && enemyAction === "dodge")   return "win";    // 直撃
+    if (playerAction === "dodge"   && enemyAction === "dodge")   return "neutral"; // 相殺
     return "neutral";
   }
 
@@ -1966,7 +1989,7 @@ export default function ArcadiaCh2() {
     counter:          { icon:"🔄", text:"カウンター" },
     dodge:            { icon:"💨", text:"回避" },
     unavoidable:      { icon:"💥", text:"回避不能攻撃！" },
-    unavoidable_lite: { icon:"⚡", text:"強化攻撃！" },
+
     atk_all:          { icon:"🌊", text:"全体攻撃！" },
     enrage:           { icon:"🔴", text:"怒り状態！" },
   };
@@ -2012,7 +2035,7 @@ export default function ArcadiaCh2() {
     if (sk.cost > 0 && currentMp < sk.cost) { showNotif(`${member.name}のMPが足りない！`); return; }
 
     // 複数敵バトル かつ 攻撃系スキル → ターゲット選択モードへ
-    const SPECIAL_IDS_NO_TARGET = ["heal","dodge","provoke","takedown","overheal","sleep","arrow_rain","water_sphere"];
+    const SPECIAL_IDS_NO_TARGET = ["heal","dodge","counter","provoke","takedown","overheal","sleep","arrow_rain","water_sphere"];
     const needsTarget = !!multiEnemies && !SPECIAL_IDS_NO_TARGET.includes(skillId);
     if (needsTarget) {
       setPendingCommands(prev => ({ ...prev, [member.id]: skillId }));
@@ -2127,6 +2150,11 @@ export default function ArcadiaCh2() {
       if (!m) return;
       if (memberDodge[k])   logs.push(`${m.icon}${m.name} 💨 回避態勢！（敵の攻撃を待つ）`);
       if (memberCounter[k]) logs.push(`${m.icon}${m.name} 🔄 カウンター構え！（敵の強攻を待つ）`);
+    });
+    aliveEnemies.forEach(e => {
+      const eAction = e.def.pattern[e.turnIdx % e.def.pattern.length];
+      if (eAction === "counter") logs.push(`${e.def.em}${e.def.name} 🔄 カウンター構え！`);
+      if (eAction === "dodge")   logs.push(`${e.def.em}${e.def.name} 💨 回避態勢！`);
     });
     logs.push(`── メインフェイズ ──`);
 
@@ -2261,9 +2289,20 @@ export default function ArcadiaCh2() {
             logs.push(`${actor.icon}${actor.name} 🏹 ストレートショット！ → ${tEnemy.def.em}${tEnemy.def.name} ${ssDmg}ダメージ！ 😵1T行動不能！`);
           } else {
             // atk のみ（counter/dodgeはスキップ済み）
-            curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - rawDmg);
-            if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
-            logs.push(`${actor.icon}${actor.name} ⚔ → ${tEnemy.def.em}${tEnemy.def.name} ${rawDmg}ダメージ！`);
+            if (eActionForPlayer === "counter") {
+              // 敵カウンター中：プレイヤーの攻撃を無効化し反撃ダメージ
+              const csk = BATTLE_SKILLS.find(s => s.id === "counter");
+              const cd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
+              logs.push(`${tEnemy.def.em}${tEnemy.def.name} 🔄 カウンター！ ${actor.icon}${actor.name}の強攻を無効化 → ${actor.icon}${actor.name}に${cd}ダメージ！`);
+              if (actor.id === "eltz") { curHp = Math.max(0, curHp - cd); }
+              else { curPartyHp[actor.id] = Math.max(0, (curPartyHp[actor.id] ?? 0) - cd); }
+              memberDmg[actor.id] = (memberDmg[actor.id] ?? 0) + cd;
+            } else {
+              // dodge中も含め直撃（atk vs dodge はプレイヤー攻撃が通る）
+              curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - rawDmg);
+              if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+              logs.push(`${actor.icon}${actor.name} ⚔ → ${tEnemy.def.em}${tEnemy.def.name} ${rawDmg}ダメージ！`);
+            }
           }
         }
 
@@ -2299,25 +2338,45 @@ export default function ArcadiaCh2() {
         const tid = tMember.id;
         const tDodge   = memberDodge[tid]   ?? false;
         const tCounter = memberCounter[tid] ?? false;
-        const isAtkAll = eAction === "atk_all" || eAction === "unavoidable" || eAction === "unavoidable_lite";
-
         if (eAction === "dodge") {
-          logs.push(`${e.def.em}${e.def.name} 💨 回避！`);
+          if (tCounter) {
+            const csk = BATTLE_SKILLS.find(s => s.id === "counter");
+            const cd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
+            if (tid === "eltz") { curHp = Math.max(0, curHp - cd); }
+            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - cd); }
+            memberDmg[tid] = (memberDmg[tid] ?? 0) + cd;
+            logs.push(`${e.def.em}${e.def.name} 💨 回避！ ${tMember.icon}${tMember.name}のカウンターをかわし → ${tMember.icon}${tMember.name}に${cd}ダメージで反撃！`);
+          } else if (tDodge) {
+            logs.push(`💨 回避相殺！ ${tMember.icon}${tMember.name} vs ${e.def.em}${e.def.name}（互いに無効）`);
+          } else {
+            logs.push(`${e.def.em}${e.def.name} 💨 回避！`);
+          }
         } else if (eAction === "enrage") {
           logs.push(`${e.def.em}${e.def.name} 🔴 怒り状態に！`);
-        } else if (isAtkAll) {
-          // 全体攻撃：回避・カウンター無効
-          const [minD, maxD] = eAction === "unavoidable" ? (e.def.unavoidableAtk ?? [30,45]) : eAction === "unavoidable_lite" ? [18,28] : e.def.atk;
-          const dmg = Math.max(1, Math.floor(randInt(minD, maxD) * totalMult) - defBonus);
-          const label = eAction === "atk_all" ? "🌊全体攻撃" : eAction === "unavoidable" ? "💥回避不能" : "⚡強化攻撃";
-          logs.push(`${e.def.em}${rageLabel}${label}${halfLabel} 全員${dmg}ダメージ！`);
+        } else if (eAction === "atk_all") {
+          // 全体攻撃：回避・カウンター無効、全員にダメージ
+          const dmg = Math.max(1, Math.floor(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - defBonus);
+          const label = isEnraged ? "🔴🌊全体攻撃" : "🌊全体攻撃";
+          logs.push(`${e.def.em}${label}${halfLabel} 全員${dmg}ダメージ！`);
           curHp = Math.max(0, curHp - dmg);
           for (const k of currentPartyKeys.filter(k => k !== "eltz")) curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - dmg);
           Object.keys(memberDmg).forEach(k => memberDmg[k] += dmg);
+        } else if (eAction === "unavoidable") {
+          // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
+          const [minD, maxD] = e.def.unavoidableAtk ?? [30,45];
+          const dmg = Math.max(1, Math.floor(randInt(minD, maxD) * totalMult) - defBonus);
+          logs.push(`${e.def.em}${rageLabel}💥回避不能${halfLabel} ${tMember.icon}${tMember.name}に${dmg}ダメージ！`);
+          if (tid === "eltz") { curHp = Math.max(0, curHp - dmg); }
+          else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg); }
+          memberDmg[tid] = (memberDmg[tid] ?? 0) + dmg;
         } else if (eAction === "counter") {
-          // 敵カウンター：ターゲットの行動で解決
+          // 敵カウンター：tDodge→回避+反撃、tCounter→相殺、その他→被弾
           if (tDodge) {
-            logs.push(`${tMember.icon}${tMember.name} 💨 回避成功！ ${e.def.name}のカウンターをかわした！`);
+            const csk = BATTLE_SKILLS.find(s => s.id === "dodge");
+            const dodgeDmg = Math.max(1, randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0));
+            curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp = Math.max(0, e.hp - dodgeDmg);
+            if (curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp <= 0) curEnemies[curEnemies.findIndex(en => en.slot === slot)].defeated = true;
+            logs.push(`${tMember.icon}${tMember.name} 💨 回避成功！ ${e.def.name}のカウンターをかわし → ${e.def.em}${e.def.name}に${dodgeDmg}ダメージで反撃！`);
           } else if (tCounter) {
             logs.push(`🔄 カウンター相殺！ ${tMember.icon}${tMember.name} vs ${e.def.em}${e.def.name}（互いの攻撃無効化）`);
           } else {
@@ -2328,21 +2387,21 @@ export default function ArcadiaCh2() {
             logs.push(`${e.def.em}${rageLabel}🔄${e.def.name}カウンター！${halfLabel} ${tMember.icon}${tMember.name}に${cd}ダメージ！`);
           }
         } else {
-          // 通常強攻：ターゲットの行動で解決
-          if (tDodge) {
-            logs.push(`${tMember.icon}${tMember.name} 💨 回避成功！ ${e.def.em}${e.def.name}の強攻をかわした！`);
-          } else if (tCounter) {
+          // 通常強攻：counter→反撃×1.5、dodge/atk→被弾
+          if (tCounter) {
             const csk = BATTLE_SKILLS.find(s => s.id === "counter");
             const bd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.5) + (tid === "eltz" ? atkBonus : 0));
             curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp = Math.max(0, e.hp - bd);
             if (curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp <= 0) curEnemies[curEnemies.findIndex(en => en.slot === slot)].defeated = true;
             logs.push(`${tMember.icon}${tMember.name} 🔄カウンター成功！ → ${e.def.em}${e.def.name} ${bd}ダメージ（×1.5）！ ${tMember.name}は被弾を免れた！`);
           } else {
+            // dodge も atk も通常被弾
             const d = Math.max(1, Math.floor(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - defBonus);
             if (tid === "eltz") { curHp = Math.max(0, curHp - d); }
             else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - d); }
             memberDmg[tid] = (memberDmg[tid] ?? 0) + d;
-            logs.push(`${e.def.em}${rageLabel}⚔${e.def.name}！${halfLabel} ${tMember.icon}${tMember.name}に${d}ダメージ！`);
+            const dodgeLabel = tDodge ? "（回避しようとしたが直撃！）" : "";
+            logs.push(`${e.def.em}${rageLabel}⚔${e.def.name}！${halfLabel} ${tMember.icon}${tMember.name}に${d}ダメージ！${dodgeLabel}`);
           }
         }
         const slotIdx = curEnemies.findIndex(en => en.slot === slot);
@@ -2598,6 +2657,8 @@ export default function ArcadiaCh2() {
       if (memberDodge[k])   logs.push(`${m.icon} ${m.name} 💨 回避態勢！（敵の攻撃を待つ）`);
       if (memberCounter[k]) logs.push(`${m.icon} ${m.name} 🔄 カウンター構え！（敵の強攻を待つ）`);
     });
+    if (eAction === "counter") logs.push(`${ed.em} ${ed.name} 🔄 カウンター構え！`);
+    if (eAction === "dodge")   logs.push(`${ed.em} ${ed.name} 💨 回避態勢！`);
     logs.push(`── メインフェイズ ──`);
 
     // ══════════════════════════════════════════════════════════════════
@@ -2716,8 +2777,19 @@ export default function ArcadiaCh2() {
         } else {
           // atk のみ（counter/dodgeはスキップ済み）
           const rawDmg = Math.max(1, randInt(baseSk.dmg[0], baseSk.dmg[1]) + (isEltz ? atkBonus : 0));
-          curEnemyHp = Math.max(0, curEnemyHp - rawDmg);
-          logs.push(`${actor.icon} ${actor.name} ⚔ 強攻 → ${rawDmg} ダメージ！`);
+          if (eAction === "counter") {
+            // 敵カウンター中：プレイヤーの攻撃を無効化し反撃ダメージ
+            const csk = BATTLE_SKILLS.find(s => s.id === "counter");
+            const cd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
+            logs.push(`${ed.em} ${ed.name} 🔄 カウンター！ ${actor.icon} ${actor.name}の強攻を無効化 → ${actor.icon} ${actor.name}に${cd}ダメージ！`);
+            if (actor.id === "eltz") { curHp = Math.max(0, curHp - cd); }
+            else { curPartyHp[actor.id] = Math.max(0, (curPartyHp[actor.id] ?? 0) - cd); }
+            memberDmg[actor.id] = (memberDmg[actor.id] ?? 0) + cd;
+          } else {
+            // dodge中も含め直撃（dodge vs atk はプレイヤー攻撃が通る）
+            curEnemyHp = Math.max(0, curEnemyHp - rawDmg);
+            logs.push(`${actor.icon} ${actor.name} ⚔ 強攻 → ${rawDmg} ダメージ！`);
+          }
         }
 
       } else {
@@ -2764,36 +2836,43 @@ export default function ArcadiaCh2() {
             memberDmg[k] = (memberDmg[k] ?? 0) + dmg;
           }
 
-        } else if (resolvedEAction === "unavoidable" || resolvedEAction === "unavoidable_lite") {
-          // 回避不能：全メンバーに直撃（counter/dodgeも無効）
-          const [minD, maxD] = resolvedEAction === "unavoidable"
-            ? (ed.unavoidableAtk ?? [30, 45]) : [18, 28];
+        } else if (resolvedEAction === "unavoidable") {
+          // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
+          const [minD, maxD] = ed.unavoidableAtk ?? [30, 45];
           const dmg = Math.max(1, Math.floor(randInt(minD, maxD) * totalMult) - defBonus);
-          const label = resolvedEAction === "unavoidable" ? "💥 回避不能攻撃！" : "⚡ 強化攻撃！";
-          logs.push(`${ed.em} ${rageLabel}${label}${halfLabel} 全員に ${dmg} ダメージ！`);
-          currentPartyKeys.forEach(k => {
-            if (k === "eltz") { curHp = Math.max(0, curHp - dmg); }
-            else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - dmg); }
-            memberDmg[k] = (memberDmg[k] ?? 0) + dmg;
-          });
+          logs.push(`${ed.em} ${rageLabel}💥 回避不能攻撃！${halfLabel} ${targetMember.icon} ${targetMember.name}に ${dmg} ダメージ！`);
+          if (tid === "eltz") { curHp = Math.max(0, curHp - dmg); }
+          else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg); }
+          memberDmg[tid] = (memberDmg[tid] ?? 0) + dmg;
 
         } else if (resolvedEAction === "dodge") {
-          logs.push(`${ed.em} ${ed.name} 💨 回避！（行動なし）`);
+          // 敵dodge：counter→敵回避+反撃、dodge→相殺、atk→敵行動なし（プレイヤーは既に直撃済み）
+          if (tCounter) {
+            const csk = BATTLE_SKILLS.find(s => s.id === "counter");
+            const cd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
+            if (tid === "eltz") { curHp = Math.max(0, curHp - cd); }
+            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - cd); }
+            memberDmg[tid] = (memberDmg[tid] ?? 0) + cd;
+            logs.push(`${ed.em} ${ed.name} 💨 回避！ ${targetMember.icon}${targetMember.name}のカウンターをかわし → ${targetMember.icon}${targetMember.name}に${cd}ダメージで反撃！`);
+          } else if (tDodge) {
+            logs.push(`💨 回避相殺！ ${targetMember.icon}${targetMember.name} vs ${ed.em}${ed.name}（互いに無効）`);
+          } else {
+            logs.push(`${ed.em} ${ed.name} 💨 回避！（行動なし）`);
+          }
 
         } else if (resolvedEAction === "counter") {
-          // ── 敵カウンター ──────────────────────────────────────────────────
-          // ターゲットが「強攻」を出していた場合のみ反撃ダメージ発生
-          // ターゲットが「回避」→ 回避成功（被弾なし）
-          // ターゲットが「カウンター」→ 相殺
-          // その他 → カウンター発動・ダメージ
+          // 敵カウンター：攻撃者の行動で解決
+          // tDodge  → 回避成功 + 反撃ダメージ
+          // tCounter→ 相殺（互いに無効）
+          // その他  → 敵カウンター発動、ターゲット被弾
           if (tDodge) {
-            logs.push(`${targetMember.icon} ${targetMember.name} 💨 回避成功！ ${ed.name}のカウンターをかわした！`);
-            // 被弾なし
+            const csk = BATTLE_SKILLS.find(s => s.id === "dodge");
+            const dodgeDmg = Math.max(1, randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0));
+            curEnemyHp = Math.max(0, curEnemyHp - dodgeDmg);
+            logs.push(`${targetMember.icon} ${targetMember.name} 💨 回避成功！ ${ed.name}のカウンターをかわし → ${dodgeDmg} ダメージで反撃！`);
           } else if (tCounter) {
             logs.push(`🔄 カウンター相殺！ ${targetMember.icon}${targetMember.name} vs ${ed.name}（互いの攻撃を無効化）`);
-            // 被弾なし
           } else {
-            // ターゲットが強攻/回復/他 → カウンター発動
             const baseRaw = randInt(ed.atk[0], ed.atk[1]) + Math.floor(ed.atk[1] * 0.3);
             const dmg = Math.max(1, Math.floor(baseRaw * totalMult) - defBonus);
             if (tid === "eltz") {
@@ -2806,31 +2885,24 @@ export default function ArcadiaCh2() {
           }
 
         } else {
-          // ── 敵通常強攻 ──────────────────────────────────────────────────────
-          // ターゲットが「回避」→ 完全回避
-          // ターゲットが「カウンター」→ カウンター成功（ターゲットは被弾しない、敵にダメージ）
-          // その他 → 通常被弾
-          if (tDodge) {
-            logs.push(`${targetMember.icon} ${targetMember.name} 💨 回避成功！ ${ed.name}の強攻をかわした！`);
-            // 被弾なし
-          } else if (tCounter) {
-            // カウンター成功：ターゲットは被弾しない、敵に×1.5ダメージ
-            const baseRaw = randInt(BATTLE_SKILLS.find(s => s.id === "counter").dmg[0], BATTLE_SKILLS.find(s => s.id === "counter").dmg[1]) + (tid === "eltz" ? atkBonus : 0);
-            const bonusDmg = Math.max(1, Math.floor(baseRaw * 1.5));
+          // 敵通常強攻
+          // dodge vs atk → 敵攻撃直撃（被弾）
+          // counter vs atk → カウンター反撃×1.5、被弾なし
+          // atk/other → 通常被弾
+          if (tCounter) {
+            const csk = BATTLE_SKILLS.find(s => s.id === "counter");
+            const bonusDmg = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.5) + (tid === "eltz" ? atkBonus : 0));
             curEnemyHp = Math.max(0, curEnemyHp - bonusDmg);
             logs.push(`${targetMember.icon} ${targetMember.name} 🔄 カウンター成功！ → ${ed.name}に ${bonusDmg} ダメージ（×1.5）！ ${targetMember.name}は被弾を免れた！`);
-            // 被弾なし（memberDmgは加算しない）
           } else {
-            // 通常被弾
+            // dodge も atk も通常被弾
             const baseRaw = randInt(ed.atk[0], ed.atk[1]);
             const dmg = Math.max(1, Math.floor(baseRaw * totalMult) - defBonus);
-            if (tid === "eltz") {
-              curHp = Math.max(0, curHp - dmg);
-            } else {
-              curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg);
-            }
+            if (tid === "eltz") { curHp = Math.max(0, curHp - dmg); }
+            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg); }
             memberDmg[tid] = (memberDmg[tid] ?? 0) + dmg;
-            logs.push(`${ed.em} ${rageLabel}⚔ ${ed.name}強攻！${halfLabel} ${targetMember.icon}${targetMember.name}に ${dmg} ダメージ！`);
+            const dodgeLabel = tDodge ? "（回避しようとしたが直撃！）" : "";
+            logs.push(`${ed.em} ${rageLabel}⚔ ${ed.name}強攻！${halfLabel} ${targetMember.icon}${targetMember.name}に ${dmg} ダメージ！${dodgeLabel}`);
           }
         }
       }
@@ -3079,17 +3151,25 @@ export default function ArcadiaCh2() {
 
   // ──────────── RENDER ────────────
   const sc = SCENES[sceneIdx] || SCENES[0];
-  const bg = sc.bg;
-  const sceneImgKey = LOC_TO_SCENE_IMG[sc.loc];
+  const dl_cur = sc.dl[dlIdx] || sc.dl[0] || {};
+  // ── ダイアログ単位の動的背景・スプライト上書き ──────────────────────────
+  // dl.loc    : この行だけ背景をlocキーで切り替える（LOC_TO_SCENE_IMGと対応）
+  // dl.bg     : この行だけグラデーション配列 [c0,c1,c2] で上書き
+  // dl.sprites: この行だけスプライト配列を上書き
+  const activeLoc = dl_cur.loc ?? sc.loc;
+  const activeBg  = dl_cur.bg  ?? sc.bg;
+  const activeSprites = dl_cur.sprites ?? sc.sprites;
+  const bg = activeBg;
+  const sceneImgKey = LOC_TO_SCENE_IMG[activeLoc];
   const sceneBgUrl = sceneImgKey ? assetUrl(sceneImgKey) : null;
-  const sceneBgSt = SCENE_BG_STYLE[sc.loc] ?? { size: "cover", position: "center" };
+  const sceneBgSt = SCENE_BG_STYLE[activeLoc] ?? { size: "cover", position: "center" };
   const bgStyle = sceneBgUrl
     ? { background: `url(${sceneBgUrl}) ${sceneBgSt.position}/${sceneBgSt.size} no-repeat, linear-gradient(180deg, ${bg[0]} 0%, ${bg[1]} 50%, ${bg[2]} 100%)` }
     : { background: `linear-gradient(180deg, ${bg[0]} 0%, ${bg[1]} 50%, ${bg[2]} 100%)` };
 
   const keyframes = `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Share+Tech+Mono&display=swap');
-    @keyframes idle { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    @keyframes idle { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} } @keyframes dlSprIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     @keyframes blnk { 0%,100%{opacity:1} 50%{opacity:0} }
     @keyframes dngr { 0%,100%{color:#ff4466} 50%{color:#ff9999} }
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
@@ -3747,9 +3827,15 @@ export default function ArcadiaCh2() {
     const enemyImgPct   = _sizeConf.pct  ?? 80;
 
     const bgSt = BATTLE_BG_STYLE[currentEnemyType] ?? { size: "cover", position: "center" };
-    const multiBgUrl = "https://superapolon.github.io/Arcadia_Assets/scenes/s26_cave_blue.webp";
+    // multiEnemies の場合は先頭敵のタイプでBATTLE_BG_MAPを引く
+    const multiBgType = multiEnemies ? multiEnemies[0]?.type : null;
+    const multiBgKey  = multiBgType ? BATTLE_BG_MAP[multiBgType] : null;
+    const multiBgUrl  = multiBgKey ? assetUrl(multiBgKey) : null;
+    const multiBgSt   = BATTLE_BG_STYLE[multiBgType] ?? { size: "cover", position: "center 40%" };
     const battleBg = multiEnemies
-      ? `url(${multiBgUrl}) center/cover no-repeat`
+      ? multiBgUrl
+        ? `url(${multiBgUrl}) ${multiBgSt.position}/${multiBgSt.size} no-repeat, linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`
+        : `linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`
       : battleBgUrl
         ? `url(${battleBgUrl}) ${bgSt.position}/${bgSt.size} no-repeat, linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`
         : `linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`;
@@ -3822,7 +3908,7 @@ export default function ArcadiaCh2() {
                   const meIsBoss = meDef.isBoss;
                   const meNextAction = meDef.pattern[me.turnIdx % meDef.pattern.length];
                   const meLabel = ENEMY_ACTION_LABEL[meNextAction];
-                  const meIsUnavoidable = meNextAction === "unavoidable" || meNextAction === "unavoidable_lite";
+                  const meIsUnavoidable = meNextAction === "unavoidable";
                   const meColor = meIsUnavoidable ? C.red : meNextAction === "counter" ? "#f97316" : meNextAction === "dodge" ? C.muted : "#60a5fa";
                   const isTargetable = !!pendingTargetSelect && !me.defeated;
                   const cardBorder = isTargetable ? `2px solid ${C.accent}` : "none";
@@ -4335,7 +4421,7 @@ export default function ArcadiaCh2() {
 
       {/* HUD top */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 14px",background:"rgba(5,13,20,0.7)",borderBottom:`1px solid ${C.border}`,zIndex:10,position:"relative"}}>
-        <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>{sc.loc}</div>
+        <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>{activeLoc}</div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>
             <span style={{color:isHpLow?C.red:C.accent2,animation:isHpLow?"dngr 0.8s infinite":"none"}}>HP {hp}</span>
@@ -4351,7 +4437,7 @@ export default function ArcadiaCh2() {
       {/* Sprite area */}
       <div style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"20px 20px 0",position:"relative",zIndex:5,minHeight:200}}>
         {/* Scene-specific atmosphere */}
-        {sc.loc.includes("洞窟") && (
+        {activeLoc.includes("洞窟") && (
           <>
             {[...Array(8)].map((_,i) => (
               <div key={i} style={{position:"absolute",width:4,height:4,borderRadius:"50%",background:`rgba(0,100,255,${0.3+Math.random()*0.3})`,left:`${10+Math.random()*80}%`,top:`${Math.random()*80}%`,animation:`idle ${2+Math.random()*3}s ${Math.random()*2}s infinite`}}/>
@@ -4404,7 +4490,7 @@ export default function ArcadiaCh2() {
         )}
 
         <div style={{display:"flex",gap:16,alignItems:"flex-end",justifyContent:"center",flexWrap:"wrap"}}>
-          {sc.sprites.map((sp, i) => {
+          {activeSprites.map((sp, i) => {
             const sprKey = SPRITE_MAP[sp];
             const sprUrl = sprKey ? assetUrl(sprKey) : null;
             const isHero = i === 0;
@@ -4412,8 +4498,8 @@ export default function ArcadiaCh2() {
             const dispH = isHero ? sz.heroHeight : sz.height;
             const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
             return sprUrl
-              ? <img key={i} src={sprUrl} alt={sp} style={{height:dispH,objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite`,filter:heroFilter}} />
-              : <div key={i} style={{fontSize:sz.fallbackSize,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)"}}>{sp}</div>;
+              ? <img key={sp+i} src={sprUrl} alt={sp} style={{height:dispH,objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
+              : <div key={sp+i} style={{fontSize:sz.fallbackSize,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)"}}>{sp}</div>;
           })}
         </div>
       </div>
@@ -4593,7 +4679,7 @@ export default function ArcadiaCh2() {
                   <div>
                     <div style={{background:C.panel,border:`1px solid ${C.border}`,padding:"8px 10px",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
                       <span style={{color:C.accent2}}>📍</span>
-                      <span style={{color:C.white,fontSize:11}}>{sc.loc}</span>
+                      <span style={{color:C.white,fontSize:11}}>{activeLoc}</span>
                     </div>
                     {/* ─ 狩り場エンカウント ─ */}
                     <div style={{color:C.gold,fontSize:10,letterSpacing:2,marginBottom:6}}>── エンカウント ──</div>
@@ -4748,7 +4834,6 @@ export default function ArcadiaCh2() {
             { idx:29, label:"S29 新展開" },
             { idx:30, label:"S30 夕方・一同集合" },
             { idx:31, label:"S31 ペルシア・ポン吉パーティ" },
-            { idx:38, label:"S38 コカトリス3体戦後" },
             { idx:32, label:"S32 三人狩り・高揚感" },
           ]},
           { id:9, label:"送別会", sub:"Chapter 9", scenes:[
