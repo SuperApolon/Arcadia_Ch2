@@ -1485,6 +1485,22 @@ export default function ArcadiaCh2() {
   const pendingBgmRef   = useRef(null);   // アンロック前に要求されたbgmId
   const fanfareRef      = useRef(null);   // ファンファーレ専用Audioインスタンス
   const isFanfareRef    = useRef(false);  // ファンファーレ再生中フラグ
+  const spriteAreaRef   = useRef(null);   // スプライトエリアDOM参照（幅計測用）
+  const [spriteAreaW, setSpriteAreaW] = useState(0); // スプライトエリア実測幅（px）
+
+  // スプライトエリア幅をResizeObserverで実測（スケール計算に使用）
+  useEffect(() => {
+    const el = spriteAreaRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setSpriteAreaW(entry.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    setSpriteAreaW(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
 
   const FADE_OUT_MS = 1000;
   const FADE_IN_MS  = 800;
@@ -4441,7 +4457,7 @@ export default function ArcadiaCh2() {
       </div>
 
       {/* Sprite area */}
-      <div style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"20px 20px 0",position:"relative",zIndex:5,minHeight:200}}>
+      <div ref={spriteAreaRef} style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"20px 20px 0",position:"relative",zIndex:5,minHeight:200}}>
         {/* Scene-specific atmosphere */}
         {activeLoc.includes("洞窟") && (
           <>
@@ -4495,19 +4511,49 @@ export default function ArcadiaCh2() {
           </button>
         )}
 
-        <div style={{display:"flex",gap:16,alignItems:"flex-end",justifyContent:"center",flexWrap:"wrap"}}>
-          {activeSprites.map((sp, i) => {
-            const sprKey = SPRITE_MAP[sp];
-            const sprUrl = sprKey ? assetUrl(sprKey) : null;
-            const isHero = i === 0;
-            const sz = SPRITE_SIZE[sp] ?? { height: 100, heroHeight: 130, offsetY: 0, fallbackSize: 40 };
-            const dispH = isHero ? sz.heroHeight : sz.height;
-            const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
-            return sprUrl
-              ? <img key={sp+i} src={sprUrl} alt={sp} style={{height:dispH,objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
-              : <div key={sp+i} style={{fontSize:sz.fallbackSize,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)"}}>{sp}</div>;
-          })}
-        </div>
+        {(() => {
+          // ── スプライトスケール計算 ──────────────────────────────────────────
+          // 基準: 6体フルキャストのとき width=360px(コンテナ)を想定してSPRITE_SIZEの値を設計
+          // 実際のコンテナ幅に応じて比例拡大し、さらに人数が少ないほど最大1.5倍まで追加拡大する
+          const n = activeSprites.length;
+          const REF_W     = 360;                          // 6体基準幅（px）
+          const containerW = spriteAreaW > 0 ? spriteAreaW : REF_W;
+          const GAP        = 16;                          // flexのgap（px）
+          const PAD        = 40;                          // 左右padding合計（px）
+          const availW     = containerW - PAD;
+          // 幅スケール: 実測幅 / 基準幅
+          const wScale     = availW / (REF_W - PAD);
+          // 人数スケール: 6体=1.0, 1体=1.5（線形補間、上限1.5）
+          const COUNT_MAX  = 6;
+          const SCALE_1    = 1.5;
+          const countScale = n >= COUNT_MAX ? 1.0 : 1.0 + (SCALE_1 - 1.0) * (COUNT_MAX - n) / (COUNT_MAX - 1);
+          // 合成スケール（横幅フィットチェック）
+          const baseScale  = wScale * countScale;
+          // 横幅オーバーフロー抑制: n体並んだとき合計幅がavailWに収まるように上限クランプ
+          // 各スプライトは 128px（仕様基準幅）× baseScale + gap が目安
+          const SPR_BASE_W = 128;
+          const totalFit   = n * SPR_BASE_W * baseScale + Math.max(0, n - 1) * GAP;
+          const overflowScale = totalFit > availW ? availW / (n * SPR_BASE_W * baseScale + Math.max(0, n - 1) * GAP) : 1.0;
+          const finalScale = baseScale * overflowScale;
+
+          return (
+            <div style={{display:"flex",gap:GAP,alignItems:"flex-end",justifyContent:"center"}}>
+              {activeSprites.map((sp, i) => {
+                const sprKey = SPRITE_MAP[sp];
+                const sprUrl = sprKey ? assetUrl(sprKey) : null;
+                const isHero = i === 0;
+                const sz = SPRITE_SIZE[sp] ?? { height: 100, heroHeight: 130, offsetY: 0, fallbackSize: 40 };
+                const baseH = isHero ? sz.heroHeight : sz.height;
+                const dispH = Math.round(baseH * finalScale);
+                const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
+                const fallbackFontSize = Math.round(sz.fallbackSize * finalScale);
+                return sprUrl
+                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{height:dispH,objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,flexShrink:0}} />
+                  : <div key={sp+i} style={{fontSize:fallbackFontSize,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)",flexShrink:0,lineHeight:1}}>{sp}</div>;
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Dialog box -- 5行固定高さ＋スクロール対応 */}
