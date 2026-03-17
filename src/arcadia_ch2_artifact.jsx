@@ -4519,19 +4519,24 @@ export default function ArcadiaCh2() {
           const COUNT_SCALE = [1.00, 1.00, 0.95, 0.90, 0.84, 0.78, 0.72];
           const countMult = COUNT_SCALE[Math.min(count, COUNT_SCALE.length - 1)];
 
-          // ── スプライトエリアの実高さ（maxHeight 天井用）────────────────────
+          // ── スプライトエリアの実高さ ────────────────────────────────────────
           // 全体高さ から HUD(約32px) + ダイアログ(171px+margin 12px) + padding-top(20px) を引いた残り
           const CHROME_H = 32 + 171 + 12 + 20; // 235px
           const areaH = windowSize.h - CHROME_H;
-          // height の絶対上限（はみ出し防止）。width基準描画の補助として機能する
-          const maxHCap = Math.round(areaH * 0.98);
 
-          // ── width基準のスプライト幅を算出 ────────────────────────────────
-          // 1スプライットあたりの枠幅を均等割りし、scale を乗じてキャラ幅を決める
-          // → height:auto にすることで実アスペクト比が反映され、自然な身長差が出る
+          // ── スプライト幅を width/height 両基準の min で決定 ──────────────
+          // スプライト画像のアスペクト比（128×256 = 0.5）
+          const SPR_ASPECT = 0.5; // width / height
+          // height基準: エリア高さの85%をキャラ高さとし、アスペクト比からwidthを逆算
+          const hBasedW = Math.round(areaH * 0.85 * SPR_ASPECT);
+          // width基準: 画面幅を人数で均等割り
           const gapTotal = 16 * (count - 1);
           const availW = windowSize.w - 40; // padding 20px*2
           const perW = Math.floor((availW - gapTotal) / count);
+          // 両基準の小さい方を採用 → 縦長でも横長でもはみ出さない
+          const baseW = Math.min(perW, hBasedW);
+          // height の絶対上限（はみ出し防止）
+          const maxHCap = Math.round(areaH * 0.98);
 
           return (
             <div style={{display:"flex",gap:16,alignItems:"flex-end",justifyContent:"center",flexWrap:"nowrap",width:"100%"}}>
@@ -4541,8 +4546,8 @@ export default function ArcadiaCh2() {
                 const isHero = i === 0;
                 const sz = SPRITE_SIZE[sp] ?? { scale: 0.83, heroScale: 1.00, offsetY: 0, fallbackSize: 40 };
                 const dispScale = isHero ? sz.heroScale : sz.scale;
-                // width = 枠幅 × キャラ固有scale × 人数補正
-                const sprW = Math.round(perW * dispScale * countMult);
+                // width = 基準幅（width/height両基準のmin）× キャラ固有scale × 人数補正
+                const sprW = Math.round(baseW * dispScale * countMult);
                 const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
                 return sprUrl
                   ? <img key={sp+i} src={sprUrl} alt={sp} style={{width:sprW,height:"auto",maxHeight:maxHCap,flexShrink:0,marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
