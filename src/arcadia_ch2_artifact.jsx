@@ -1485,8 +1485,9 @@ export default function ArcadiaCh2() {
   const pendingBgmRef   = useRef(null);   // アンロック前に要求されたbgmId
   const fanfareRef      = useRef(null);   // ファンファーレ専用Audioインスタンス
   const isFanfareRef    = useRef(false);  // ファンファーレ再生中フラグ
-  const spriteAreaRef   = useRef(null);   // スプライトエリアDOM参照（幅計測用）
+  const spriteAreaRef   = useRef(null);   // スプライトエリアDOM参照（幅・高さ計測用）
   const [spriteAreaW, setSpriteAreaW] = useState(0); // スプライトエリア実測幅（px）
+  const [spriteAreaH, setSpriteAreaH] = useState(0); // スプライトエリア実測高さ（px）
 
   // スプライトエリア幅をResizeObserverで実測（スケール計算に使用）
   useEffect(() => {
@@ -1495,10 +1496,12 @@ export default function ArcadiaCh2() {
     const ro = new ResizeObserver(entries => {
       for (const entry of entries) {
         setSpriteAreaW(entry.contentRect.width);
+        setSpriteAreaH(entry.contentRect.height);
       }
     });
     ro.observe(el);
     setSpriteAreaW(el.clientWidth);
+    setSpriteAreaH(el.clientHeight);
     return () => ro.disconnect();
   }, []);
 
@@ -4513,28 +4516,50 @@ export default function ArcadiaCh2() {
 
         {(() => {
           // ── スプライトスケール計算 ──────────────────────────────────────────
-          // 基準: 6体フルキャストのとき width=360px(コンテナ)を想定してSPRITE_SIZEの値を設計
-          // 実際のコンテナ幅に応じて比例拡大し、さらに人数が少ないほど最大1.5倍まで追加拡大する
-          const n = activeSprites.length;
-          const REF_W     = 360;                          // 6体基準幅（px）
-          const containerW = spriteAreaW > 0 ? spriteAreaW : REF_W;
-          const GAP        = 16;                          // flexのgap（px）
-          const PAD        = 40;                          // 左右padding合計（px）
-          const availW     = containerW - PAD;
-          // 幅スケール: 実測幅 / 基準幅
-          const wScale     = availW / (REF_W - PAD);
-          // 人数スケール: 6体=1.0, 1体=1.5（線形補間、上限1.5）
-          const COUNT_MAX  = 6;
-          const SCALE_1    = 1.5;
-          const countScale = n >= COUNT_MAX ? 1.0 : 1.0 + (SCALE_1 - 1.0) * (COUNT_MAX - n) / (COUNT_MAX - 1);
-          // 合成スケール（横幅フィットチェック）
-          const baseScale  = wScale * countScale;
-          // 横幅オーバーフロー抑制: n体並んだとき合計幅がavailWに収まるように上限クランプ
-          // 各スプライトは 128px（仕様基準幅）× baseScale + gap が目安
-          const SPR_BASE_W = 128;
-          const totalFit   = n * SPR_BASE_W * baseScale + Math.max(0, n - 1) * GAP;
-          const overflowScale = totalFit > availW ? availW / (n * SPR_BASE_W * baseScale + Math.max(0, n - 1) * GAP) : 1.0;
-          const finalScale = baseScale * overflowScale;
+          // 方針:
+          //   1. コンテナ実測幅をn体＋gapで等分 → 1体あたりの許容幅を算出
+          //   2. スプライト仕様アスペクト比(128×256 = 1:2)で高さを逆算
+          //   3. 人数が少ない(< 6体)ほど最大1.5倍まで追加拡大
+          //   4. スプライトエリアの実測高さにも収まるよう上限クランプ
+          //   → 常にコンテナを埋め尽くし、絶対にはみ出さない
+          const n = Math.max(1, activeSprites.length);
+          const GAP = 16;                                     // flexのgap（px）
+          const PAD = 40;                                     // 左右padding合計（px）
+          const SPR_W = 128;                                  // スプライト仕様幅（px）
+          const SPR_H = 256;                                  // スプライト仕様高さ（px）
+          const ASPECT = SPR_H / SPR_W;                      // 縦横比 = 2.0
+          const fallbackW = 360;                              // ResizeObserver未計測時のフォールバック幅
+          const fallbackH = 300;
+
+          const areaW = spriteAreaW > 10 ? spriteAreaW : fallbackW;
+          const areaH = spriteAreaH > 10 ? spriteAreaH : fallbackH;
+          const usableW = areaW - PAD;
+          const usableH = areaH - 20;                        // 下部の余白20px確保
+
+          // 6体フル配置のときに幅いっぱいになる1体あたり許容幅
+          const fullCastSlotW = (usableW - GAP * 5) / 6;
+          // 実際のn体配置での1体あたり許容幅
+          const nSlotW = (usableW - GAP * Math.max(0, n - 1)) / n;
+
+          // 人数スケール: 6体=1.0 → 1体=1.5（線形補間）
+          const COUNT_MAX = 6;
+          const SCALE_MIN = 1.0;
+          const SCALE_MAX = 1.5;
+          const countScale = n >= COUNT_MAX
+            ? SCALE_MIN
+            : SCALE_MIN + (SCALE_MAX - SCALE_MIN) * (COUNT_MAX - n) / (COUNT_MAX - 1);
+
+          // 1体あたり表示幅: 6体基準スロット × 人数スケール（ただしnスロット幅を超えない）
+          const targetSlotW = Math.min(fullCastSlotW * countScale, nSlotW);
+
+          // 幅からスケール係数を逆算: targetSlotW / SPR_W
+          const scaleFromW = targetSlotW / SPR_W;
+
+          // 高さからの上限スケール: usableH / SPR_H (最も背の高いキャラはSPR_Hに近い)
+          const scaleFromH = usableH / SPR_H;
+
+          // 両制約の小さい方を採用（絶対にはみ出さない）
+          const finalScale = Math.max(0.3, Math.min(scaleFromW, scaleFromH));
 
           return (
             <div style={{display:"flex",gap:GAP,alignItems:"flex-end",justifyContent:"center"}}>
