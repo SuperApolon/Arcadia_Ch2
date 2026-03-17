@@ -4515,51 +4515,53 @@ export default function ArcadiaCh2() {
         )}
 
         {(() => {
-          // ── スプライトスケール計算 ──────────────────────────────────────────
-          // 方針:
-          //   1. コンテナ実測幅をn体＋gapで等分 → 1体あたりの許容幅を算出
-          //   2. スプライト仕様アスペクト比(128×256 = 1:2)で高さを逆算
-          //   3. 人数が少ない(< 6体)ほど最大1.5倍まで追加拡大
-          //   4. スプライトエリアの実測高さにも収まるよう上限クランプ
-          //   → 常にコンテナを埋め尽くし、絶対にはみ出さない
-          const n = Math.max(1, activeSprites.length);
-          const GAP = 16;                                     // flexのgap（px）
-          const PAD = 40;                                     // 左右padding合計（px）
-          const SPR_W = 128;                                  // スプライト仕様幅（px）
-          const SPR_H = 256;                                  // スプライト仕様高さ（px）
-          const ASPECT = SPR_H / SPR_W;                      // 縦横比 = 2.0
-          const fallbackW = 360;                              // ResizeObserver未計測時のフォールバック幅
-          const fallbackH = 300;
+          // ── スプライト表示高さを直接算出 ─────────────────────────────────────
+          // 設計方針:
+          //   ・スプライト画像仕様: 128w × 256h (アスペクト比 1:2)
+          //   ・SPRITE_SIZE.height は「そのキャラの理想的な相対高さ」---- 基準キャラ(eltz:240)
+          //     との比率でキャラ間の身長差を表す。スケール倍率の乗数として使う。
+          //   ・「6体フル配置で幅を均等分割したときの1スロット幅」を基準スロットとし、
+          //     そこからアスペクト比で基準高さを算出 → SPRITE_SIZE比率を乗じて各キャラの高さへ
+          //   ・人数が減るほど最大1.5倍まで拡大(ただし高さ上限でクランプ)
+          //   ・幅・高さ両方向でオーバーフローしないことを数学的に保証
+          const n         = Math.max(1, activeSprites.length);
+          const GAP       = 14;     // px: flex gap
+          const PAD       = 40;     // px: 左右 padding 合計
+          const SPR_ASPECT = 2.0;   // 仕様: 高さ/幅 = 256/128
+          const REF_H     = 240;    // SPRITE_SIZE 基準値: eltz の height
 
-          const areaW = spriteAreaW > 10 ? spriteAreaW : fallbackW;
-          const areaH = spriteAreaH > 10 ? spriteAreaH : fallbackH;
+          // コンテナ実測値（ResizeObserver が入るまでは window サイズで代替）
+          const areaW = spriteAreaW > 10 ? spriteAreaW : (typeof window !== "undefined" ? window.innerWidth  : 390);
+          const areaH = spriteAreaH > 10 ? spriteAreaH : (typeof window !== "undefined" ? window.innerHeight * 0.55 : 300);
+
           const usableW = areaW - PAD;
-          const usableH = areaH - 20;                        // 下部の余白20px確保
+          const usableH = areaH - 16; // 下端余白
 
-          // 6体フル配置のときに幅いっぱいになる1体あたり許容幅
-          const fullCastSlotW = (usableW - GAP * 5) / 6;
-          // 実際のn体配置での1体あたり許容幅
-          const nSlotW = (usableW - GAP * Math.max(0, n - 1)) / n;
+          // ── 6体フル配置の基準スロット幅を計算 ──
+          const COUNT_BASE = 6;
+          const baseSlotW  = (usableW - GAP * (COUNT_BASE - 1)) / COUNT_BASE;
+          // 基準スロット幅 → 基準高さ（アスペクト比 1:2）
+          const baseH_fromW = baseSlotW * SPR_ASPECT;
 
-          // 人数スケール: 6体=1.0 → 1体=1.5（線形補間）
-          const COUNT_MAX = 6;
-          const SCALE_MIN = 1.0;
-          const SCALE_MAX = 1.5;
-          const countScale = n >= COUNT_MAX
-            ? SCALE_MIN
-            : SCALE_MIN + (SCALE_MAX - SCALE_MIN) * (COUNT_MAX - n) / (COUNT_MAX - 1);
+          // ── 人数補正: 少ないほど大きく（最大1.5倍）──
+          const countScale = n >= COUNT_BASE
+            ? 1.0
+            : 1.0 + 0.5 * (COUNT_BASE - n) / (COUNT_BASE - 1);
 
-          // 1体あたり表示幅: 6体基準スロット × 人数スケール（ただしnスロット幅を超えない）
-          const targetSlotW = Math.min(fullCastSlotW * countScale, nSlotW);
+          // 候補高さ（幅由来）
+          const candidateH = baseH_fromW * countScale;
 
-          // 幅からスケール係数を逆算: targetSlotW / SPR_W
-          const scaleFromW = targetSlotW / SPR_W;
+          // ── 幅オーバーフロー検証: n体並べたとき usableW に収まるか ──
+          // 各スロット幅 = candidateH / SPR_ASPECT
+          const candidateSlotW = candidateH / SPR_ASPECT;
+          const totalW = candidateSlotW * n + GAP * (n - 1);
+          const wClampRatio = totalW > usableW ? usableW / totalW : 1.0;
 
-          // 高さからの上限スケール: usableH / SPR_H (最も背の高いキャラはSPR_Hに近い)
-          const scaleFromH = usableH / SPR_H;
+          // ── 高さ上限クランプ ──
+          const hClampRatio = candidateH > usableH ? usableH / candidateH : 1.0;
 
-          // 両制約の小さい方を採用（絶対にはみ出さない）
-          const finalScale = Math.max(0.3, Math.min(scaleFromW, scaleFromH));
+          // 最終スロット幅（両方向クランプ済み）
+          const finalSlotW = candidateSlotW * Math.min(wClampRatio, hClampRatio);
 
           return (
             <div style={{display:"flex",gap:GAP,alignItems:"flex-end",justifyContent:"center"}}>
@@ -4567,13 +4569,16 @@ export default function ArcadiaCh2() {
                 const sprKey = SPRITE_MAP[sp];
                 const sprUrl = sprKey ? assetUrl(sprKey) : null;
                 const isHero = i === 0;
-                const sz = SPRITE_SIZE[sp] ?? { height: 100, heroHeight: 130, offsetY: 0, fallbackSize: 40 };
-                const baseH = isHero ? sz.heroHeight : sz.height;
-                const dispH = Math.round(baseH * finalScale);
+                const sz     = SPRITE_SIZE[sp] ?? { height: REF_H, heroHeight: REF_H, offsetY: 0, fallbackSize: 40 };
+                // キャラごとの高さ比率: SPRITE_SIZE.height / REF_H
+                const ratio  = (isHero ? sz.heroHeight : sz.height) / REF_H;
+                // 最終表示幅・高さ
+                const dispW  = Math.round(finalSlotW * ratio);
+                const dispH  = Math.round(dispW * SPR_ASPECT);
                 const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
-                const fallbackFontSize = Math.round(sz.fallbackSize * finalScale);
+                const fallbackFontSize = Math.max(12, Math.round(dispH * 0.18));
                 return sprUrl
-                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{height:dispH,objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,flexShrink:0}} />
+                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{width:dispW,height:dispH,objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,flexShrink:0}} />
                   : <div key={sp+i} style={{fontSize:fallbackFontSize,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)",flexShrink:0,lineHeight:1}}>{sp}</div>;
               })}
             </div>
