@@ -1353,6 +1353,9 @@ export default function ArcadiaCh2() {
   const [editorSelKey, setEditorSelKey] = useState("seagull");
   const [showExport, setShowExport] = useState(false);
 
+  // ウィンドウサイズ（リサイズ・回転に動的対応）
+  const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+
   // @@SECTION:STATE_PLAYER
   const [hp, setHp] = useState(100);
   const [mhp, setMhp] = useState(100);
@@ -1779,6 +1782,17 @@ export default function ArcadiaCh2() {
       if (audioRef.current) audioRef.current.pause();
       if (fanfareRef.current) fanfareRef.current.pause();
       if (autoAdvTimerRef.current) clearTimeout(autoAdvTimerRef.current);
+    };
+  }, []);
+
+  // ウィンドウリサイズ・画面回転をトラッキング
+  useEffect(() => {
+    const onResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    if (screen?.orientation) screen.orientation.addEventListener("change", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (screen?.orientation) screen.orientation.removeEventListener("change", onResize);
     };
   }, []);
 
@@ -4504,11 +4518,12 @@ export default function ArcadiaCh2() {
           const COUNT_SCALE = [1.00, 1.00, 0.95, 0.90, 0.84, 0.78, 0.72];
           const count = activeSprites.length;
           const countMult = COUNT_SCALE[Math.min(count, COUNT_SCALE.length - 1)];
-          // vhベース最大高さ計算: 30vh × characterScale × 人数補正
-          // orientation補正: 横向き（landscape）では画面が低いので係数を縮小
-          const isLandscape = typeof window !== "undefined" && window.innerWidth > window.innerHeight;
-          const baseVhPx = (isLandscape ? 0.38 : 0.30) * (typeof window !== "undefined" ? window.innerHeight : 600);
+          // windowSize stateを使うことでリサイズ・回転に動的対応
+          const isLandscape = windowSize.w > windowSize.h;
+          const baseVhPx = (isLandscape ? 0.38 : 0.30) * windowSize.h;
           const calcMaxH = (scale) => Math.round(baseVhPx * scale * countMult);
+          // maxWidth: 各スプライトが横にはみ出さないよう人数で均等分割
+          const maxW = `${Math.floor(100 / count - 1)}%`;
 
           return (
             <div style={{display:"flex",gap:16,alignItems:"flex-end",justifyContent:"center",flexWrap:"wrap"}}>
@@ -4521,8 +4536,8 @@ export default function ArcadiaCh2() {
                 const maxH = calcMaxH(dispScale);
                 const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
                 return sprUrl
-                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{maxHeight:maxH,width:"auto",objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
-                  : <div key={sp+i} style={{fontSize:sz.fallbackSize,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)"}}>{sp}</div>;
+                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{maxHeight:maxH,maxWidth:maxW,width:"auto",objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
+                  : <div key={sp+i} style={{fontSize:sz.fallbackSize,maxWidth:maxW,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)"}}>{sp}</div>;
               })}
             </div>
           );
