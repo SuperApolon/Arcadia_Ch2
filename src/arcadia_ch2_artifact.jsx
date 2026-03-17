@@ -4526,9 +4526,9 @@ export default function ArcadiaCh2() {
 
           // ── スプライト幅を width/height 両基準の min で決定 ──────────────
           // スプライト画像のアスペクト比（128×256 = 0.5）
-          const SPR_ASPECT = 0.5; // width / height
-          // height基準: エリア高さの85%をキャラ高さとし、アスペクト比からwidthを逆算
-          const hBasedW = Math.round(areaH * 0.85 * SPR_ASPECT);
+          const SPR_ASPECT = 0.55; // width / height
+          // height基準: エリア高さの99%をキャラ高さとし、アスペクト比からwidthを逆算
+          const hBasedW = Math.round(areaH * 0.99 * SPR_ASPECT);
           // width基準: 画面幅を人数で均等割り
           const gapTotal = 16 * (count - 1);
           const availW = windowSize.w - 40; // padding 20px*2
