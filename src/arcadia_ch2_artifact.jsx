@@ -4519,24 +4519,19 @@ export default function ArcadiaCh2() {
           const COUNT_SCALE = [1.00, 1.00, 0.95, 0.90, 0.84, 0.78, 0.72];
           const countMult = COUNT_SCALE[Math.min(count, COUNT_SCALE.length - 1)];
 
-          // ── スプライトエリアの実高さを算出 ────────────────────────────────
+          // ── スプライトエリアの実高さ（maxHeight 天井用）────────────────────
           // 全体高さ から HUD(約32px) + ダイアログ(171px+margin 12px) + padding-top(20px) を引いた残り
           const CHROME_H = 32 + 171 + 12 + 20; // 235px
           const areaH = windowSize.h - CHROME_H;
+          // height の絶対上限（はみ出し防止）。width基準描画の補助として機能する
+          const maxHCap = Math.round(areaH * 0.98);
 
-          // ── maxHeight: エリア実高さ × キャラ比率 × 人数補正 ──────────────
-          // landscape では横が広くエリア高さをフルに使える → 係数1.0
-          // portrait  では上部余白などを考慮して 0.85 に抑える
-          const isLandscape = windowSize.w > windowSize.h;
-          const heightCoeff = isLandscape ? 1.0 : 0.85;
-          const calcMaxH = (scale) => Math.round(areaH * heightCoeff * scale * countMult);
-
-          // ── maxWidth: 人数で均等分割（gap=16px を考慮した残り幅の均等割り）─
-          // flexWrap:nowrap なので横溢れはmaxWidthで完全制御
+          // ── width基準のスプライト幅を算出 ────────────────────────────────
+          // 1スプライットあたりの枠幅を均等割りし、scale を乗じてキャラ幅を決める
+          // → height:auto にすることで実アスペクト比が反映され、自然な身長差が出る
           const gapTotal = 16 * (count - 1);
           const availW = windowSize.w - 40; // padding 20px*2
           const perW = Math.floor((availW - gapTotal) / count);
-          const maxW = `${perW}px`;
 
           return (
             <div style={{display:"flex",gap:16,alignItems:"flex-end",justifyContent:"center",flexWrap:"nowrap",width:"100%"}}>
@@ -4546,11 +4541,12 @@ export default function ArcadiaCh2() {
                 const isHero = i === 0;
                 const sz = SPRITE_SIZE[sp] ?? { scale: 0.83, heroScale: 1.00, offsetY: 0, fallbackSize: 40 };
                 const dispScale = isHero ? sz.heroScale : sz.scale;
-                const maxH = calcMaxH(dispScale);
+                // width = 枠幅 × キャラ固有scale × 人数補正
+                const sprW = Math.round(perW * dispScale * countMult);
                 const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
                 return sprUrl
-                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{maxHeight:maxH,maxWidth:maxW,width:"auto",objectFit:"contain",flexShrink:0,marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
-                  : <div key={sp+i} style={{fontSize:sz.fallbackSize,maxWidth:maxW,flexShrink:0,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)"}}>{sp}</div>;
+                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{width:sprW,height:"auto",maxHeight:maxHCap,flexShrink:0,marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
+                  : <div key={sp+i} style={{fontSize:sz.fallbackSize,width:sprW,flexShrink:0,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)"}}>{sp}</div>;
               })}
             </div>
           );
