@@ -1490,20 +1490,23 @@ export default function ArcadiaCh2() {
   const [spriteAreaH, setSpriteAreaH] = useState(0); // スプライトエリア実測高さ（px）
 
   // スプライトエリア幅をResizeObserverで実測（スケール計算に使用）
+  // スプライトエリアのResizeObserver
+  // phaseをdepsに入れることで、game画面に入ったタイミングでRefが確実に取れる
   useEffect(() => {
     const el = spriteAreaRef.current;
     if (!el) return;
+    // 初期値を即設定
+    const rect = el.getBoundingClientRect();
+    setSpriteAreaW(rect.width);
+    setSpriteAreaH(rect.height);
     const ro = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        setSpriteAreaW(entry.contentRect.width);
-        setSpriteAreaH(entry.contentRect.height);
-      }
+      const r = entries[0].contentRect;
+      setSpriteAreaW(r.width);
+      setSpriteAreaH(r.height);
     });
     ro.observe(el);
-    setSpriteAreaW(el.clientWidth);
-    setSpriteAreaH(el.clientHeight);
     return () => ro.disconnect();
-  }, []);
+  }, [phase]); // phaseが変わるたびに再接続（game画面DOM生成後に確実にキャプチャ）
 
   const FADE_OUT_MS = 1000;
   const FADE_IN_MS  = 800;
@@ -4530,9 +4533,12 @@ export default function ArcadiaCh2() {
           const SPR_ASPECT = 2.0;   // 仕様: 高さ/幅 = 256/128
           const REF_H     = 240;    // SPRITE_SIZE 基準値: eltz の height
 
-          // コンテナ実測値（ResizeObserver が入るまでは window サイズで代替）
-          const areaW = spriteAreaW > 10 ? spriteAreaW : (typeof window !== "undefined" ? window.innerWidth  : 390);
-          const areaH = spriteAreaH > 10 ? spriteAreaH : (typeof window !== "undefined" ? window.innerHeight * 0.55 : 300);
+          // コンテナ実測値（ResizeObserver計測前はwindowサイズで即時代替）
+          const winW = typeof window !== "undefined" ? window.innerWidth  : 390;
+          const winH = typeof window !== "undefined" ? window.innerHeight : 844;
+          const areaW = spriteAreaW > 10 ? spriteAreaW : winW;
+          // スプライトエリア高さ: HUD(~28px) + dialog(~175px) + margin(~8px) を除いた残り
+          const areaH = spriteAreaH > 10 ? spriteAreaH : Math.max(160, winH - 211);
 
           const usableW = areaW - PAD;
           const usableH = areaH - 16; // 下端余白
