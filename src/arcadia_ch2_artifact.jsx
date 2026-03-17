@@ -4515,6 +4515,7 @@ export default function ArcadiaCh2() {
 
         {(() => {
           const count = activeSprites.length;
+
           // ── 人数補正 ──────────────────────────────────────────────────────
           const COUNT_SCALE = [1.00, 1.00, 0.95, 0.90, 0.84, 0.78, 0.72];
           const countMult = COUNT_SCALE[Math.min(count, COUNT_SCALE.length - 1)];
@@ -4523,16 +4524,22 @@ export default function ArcadiaCh2() {
           // 全体高さ から HUD(約32px) + ダイアログ(171px+margin 12px) + padding-top(20px) を引いた残り
           const CHROME_H = 32 + 171 + 12 + 20; // 235px
           const areaH = windowSize.h - CHROME_H;
-
-          // ── maxHeight: エリア実高さ × キャラ比率 × 人数補正 ──────────────
-          // landscape では横が広くエリア高さをフルに使える → 係数1.0
-          // portrait  では上部余白などを考慮して 0.85 に抑える
           const isLandscape = windowSize.w > windowSize.h;
           const heightCoeff = isLandscape ? 1.0 : 0.85;
-          const calcMaxH = (scale) => Math.round(areaH * heightCoeff * scale * countMult);
+
+          // ── 各キャラの実効scaleを収集 ─────────────────────────────────────
+          const scales = activeSprites.map((sp, i) => {
+            const sz = SPRITE_SIZE[sp] ?? { scale: 0.83, heroScale: 1.00 };
+            return i === 0 ? sz.heroScale : sz.scale;
+          });
+          // シーン内の最大scaleを基準にして「基準ピクセル高さ」を決める
+          // → 最大キャラがエリアにちょうど収まる高さが baseH
+          const maxScale = Math.max(...scales);
+          const baseH = Math.round(areaH * heightCoeff * countMult);
+          // 各キャラの height = baseH × (自分のscale / 最大scale)
+          // これにより scale比がそのままピクセル比になり、身長差が保たれる
 
           // ── maxWidth: 人数で均等分割（gap=16px を考慮した残り幅の均等割り）─
-          // flexWrap:nowrap なので横溢れはmaxWidthで完全制御
           const gapTotal = 16 * (count - 1);
           const availW = windowSize.w - 40; // padding 20px*2
           const perW = Math.floor((availW - gapTotal) / count);
@@ -4545,11 +4552,13 @@ export default function ArcadiaCh2() {
                 const sprUrl = sprKey ? assetUrl(sprKey) : null;
                 const isHero = i === 0;
                 const sz = SPRITE_SIZE[sp] ?? { scale: 0.83, heroScale: 1.00, offsetY: 0, fallbackSize: 40 };
-                const dispScale = isHero ? sz.heroScale : sz.scale;
-                const maxH = calcMaxH(dispScale);
+                const dispScale = scales[i];
+                // height を直接指定することで身長差を確定させる
+                // maxWidth も指定し、横方向の溢れを防ぐ
+                const sprH = Math.round(baseH * (dispScale / maxScale));
                 const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
                 return sprUrl
-                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{maxHeight:maxH,maxWidth:maxW,width:"auto",objectFit:"contain",flexShrink:0,marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
+                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{height:sprH,maxWidth:maxW,width:"auto",objectFit:"contain",flexShrink:0,marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
                   : <div key={sp+i} style={{fontSize:sz.fallbackSize,maxWidth:maxW,flexShrink:0,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)"}}>{sp}</div>;
               })}
             </div>
