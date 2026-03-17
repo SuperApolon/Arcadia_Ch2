@@ -1484,6 +1484,9 @@ export default function ArcadiaCh2() {
   const textScrollRef = useRef(null);
   const tapStartYRef  = useRef(0);   // スクロール判定用
   const autoAdvTimerRef = useRef(null); // オート進行タイマー
+  const spriteAreaRef = useRef(null); // スプライトエリア実寸計測用
+  const [spriteAreaH, setSpriteAreaH] = useState(300); // ResizeObserverで更新
+  const [spriteAreaW, setSpriteAreaW] = useState(400); // ResizeObserverで更新
 
   // ── BGM制御 ref ────────────────────────────────────────────────────────────
   const audioRef        = useRef(null);   // 現在再生中のAudioインスタンス
@@ -1794,6 +1797,19 @@ export default function ArcadiaCh2() {
       window.removeEventListener("resize", onResize);
       if (screen?.orientation) screen.orientation.removeEventListener("change", onResize);
     };
+  }, []);
+
+  // スプライトエリアの実高さ・幅をResizeObserverで計測
+  useEffect(() => {
+    if (!spriteAreaRef.current) return;
+    const ro = new ResizeObserver(entries => {
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      if (rect.height > 0) setSpriteAreaH(rect.height);
+      if (rect.width  > 0) setSpriteAreaW(rect.width);
+    });
+    ro.observe(spriteAreaRef.current);
+    return () => ro.disconnect();
   }, []);
 
   // @@SECTION:LOGIC_DIALOG_TAP
@@ -4459,7 +4475,7 @@ export default function ArcadiaCh2() {
       </div>
 
       {/* Sprite area */}
-      <div style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"20px 20px 0",position:"relative",zIndex:5,minHeight:200}}>
+      <div ref={spriteAreaRef} style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"20px 20px 0",position:"relative",zIndex:5,minHeight:200}}>
         {/* Scene-specific atmosphere */}
         {activeLoc.includes("洞窟") && (
           <>
@@ -4520,10 +4536,10 @@ export default function ArcadiaCh2() {
           const COUNT_SCALE = [1.00, 1.00, 0.95, 0.90, 0.84, 0.78, 0.72];
           const countMult = COUNT_SCALE[Math.min(count, COUNT_SCALE.length - 1)];
 
-          // ── スプライトエリアの実高さを算出 ────────────────────────────────
-          // 全体高さ から HUD(約32px) + ダイアログ(171px+margin 12px) + padding-top(20px) を引いた残り
-          const CHROME_H = 32 + 171 + 12 + 20; // 235px
-          const areaH = windowSize.h - CHROME_H;
+          // ── スプライトエリアの実高さを使用 ───────────────────────────────
+          // ResizeObserverで計測したスプライトエリアの実高さから
+          // padding-top(20px)を引いた使用可能高さ
+          const areaH = Math.max(spriteAreaH - 20, 100);
           const isLandscape = windowSize.w > windowSize.h;
           const heightCoeff = isLandscape ? 1.0 : 0.85;
 
@@ -4540,8 +4556,9 @@ export default function ArcadiaCh2() {
           // これにより scale比がそのままピクセル比になり、身長差が保たれる
 
           // ── maxWidth: 人数で均等分割（gap=16px を考慮した残り幅の均等割り）─
+          // spriteAreaWはResizeObserverの実測値。padding 20px*2 分を引く
           const gapTotal = 16 * (count - 1);
-          const availW = windowSize.w - 40; // padding 20px*2
+          const availW = spriteAreaW - 40;
           const perW = Math.floor((availW - gapTotal) / count);
           const maxW = `${perW}px`;
 
