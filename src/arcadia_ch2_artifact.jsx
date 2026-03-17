@@ -4515,39 +4515,42 @@ export default function ArcadiaCh2() {
 
         {(() => {
           const count = activeSprites.length;
-          // ── 人数補正 ──────────────────────────────────────────────────────
-          const COUNT_SCALE = [1.00, 1.00, 0.95, 0.90, 0.84, 0.78, 0.72];
-          const countMult = COUNT_SCALE[Math.min(count, COUNT_SCALE.length - 1)];
 
           // ── スプライトエリアの実高さ ────────────────────────────────────────
-          // 全体高さ から HUD(約32px) + ダイアログ(171px+margin 12px) + padding-top(20px) を引いた残り
-          const CHROME_H = 32 + 171 + 12 + 20; // 235px
+          const CHROME_H = 32 + 171 + 12 + 20; // HUD + dialog + margin + padding
           const areaH = windowSize.h - CHROME_H;
+          const maxHCap = Math.round(areaH * 0.99);
 
-          // ── スプライト幅を width/height 両基準の min で決定 ──────────────
-          // スプライト画像のアスペクト比（128×256 = 0.5）
-          const SPR_ASPECT = 0.55; // width / height
-          // height基準: エリア高さの99%をキャラ高さとし、アスペクト比からwidthを逆算
+          // ── 1キャラあたりの幅を画面幅フル活用で算出 ─────────────────────
+          // gap を 4px に詰め、左右パディングも 8px に縮小して余白を最小化
+          const GAP = 4;
+          const PAD = 8;
+          const gapTotal = GAP * (count - 1);
+          const availW = windowSize.w - PAD * 2;
+          // 各キャラのスロット幅（scale=1.00 のキャラが収まる基準幅）
+          // scaleの平均値で正規化することで合計幅が availW に近づく
+          const scales = activeSprites.map((sp, i) => {
+            const sz = SPRITE_SIZE[sp] ?? { scale: 0.83, heroScale: 1.00 };
+            return i === 0 ? sz.heroScale : sz.scale;
+          });
+          const scaleSum = scales.reduce((a, b) => a + b, 0);
+          // height基準: エリア高さ × アスペクト比 で上限を設ける
+          const SPR_ASPECT = 0.55;
           const hBasedW = Math.round(areaH * 0.99 * SPR_ASPECT);
-          // width基準: 画面幅を人数で均等割り
-          const gapTotal = 16 * (count - 1);
-          const availW = windowSize.w - 40; // padding 20px*2
-          const perW = Math.floor((availW - gapTotal) / count);
-          // 両基準の小さい方を採用 → 縦長でも横長でもはみ出さない
-          const baseW = Math.min(perW, hBasedW);
-          // height の絶対上限（はみ出し防止）
-          const maxHCap = Math.round(areaH * 0.98);
 
           return (
-            <div style={{display:"flex",gap:16,alignItems:"flex-end",justifyContent:"center",flexWrap:"nowrap",width:"100%"}}>
+            <div style={{display:"flex",gap:GAP,alignItems:"flex-end",justifyContent:"center",flexWrap:"nowrap",width:"100%",paddingLeft:PAD,paddingRight:PAD,boxSizing:"border-box"}}>
               {activeSprites.map((sp, i) => {
                 const sprKey = SPRITE_MAP[sp];
                 const sprUrl = sprKey ? assetUrl(sprKey) : null;
                 const isHero = i === 0;
                 const sz = SPRITE_SIZE[sp] ?? { scale: 0.83, heroScale: 1.00, offsetY: 0, fallbackSize: 40 };
                 const dispScale = isHero ? sz.heroScale : sz.scale;
-                // width = 基準幅（width/height両基準のmin）× キャラ固有scale × 人数補正
-                const sprW = Math.round(baseW * dispScale * countMult);
+                // 各キャラの幅 = (availW - gapTotal) × (自分のscale / scaleの合計)
+                // → 合計幅がほぼ availW になり、身長差比率も保たれる
+                const wFromScale = Math.round((availW - gapTotal) * dispScale / scaleSum);
+                // height基準の上限（縦長でもはみ出さない）
+                const sprW = Math.min(wFromScale, Math.round(hBasedW * dispScale));
                 const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
                 return sprUrl
                   ? <img key={sp+i} src={sprUrl} alt={sp} style={{width:sprW,height:"auto",maxHeight:maxHCap,flexShrink:0,marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter}} />
