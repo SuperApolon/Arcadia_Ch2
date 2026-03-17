@@ -4463,7 +4463,7 @@ export default function ArcadiaCh2() {
       </div>
 
       {/* Sprite area */}
-      <div ref={spriteAreaRef} style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"20px 20px 0",position:"relative",zIndex:5,minHeight:200}}>
+      <div ref={spriteAreaRef} style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"20px 20px 0",position:"relative",zIndex:5,minHeight:200,paddingBottom:0}}>
         {/* Scene-specific atmosphere */}
         {activeLoc.includes("洞窟") && (
           <>
@@ -4570,7 +4570,7 @@ export default function ArcadiaCh2() {
           const finalSlotW = candidateSlotW * Math.min(wClampRatio, hClampRatio);
 
           return (
-            <div style={{display:"flex",gap:GAP,alignItems:"flex-end",justifyContent:"center"}}>
+            <div style={{position:"absolute",bottom:0,left:0,right:0,display:"flex",gap:GAP,alignItems:"flex-end",justifyContent:"center",pointerEvents:"none"}}>
               {activeSprites.map((sp, i) => {
                 const sprKey = SPRITE_MAP[sp];
                 const sprUrl = sprKey ? assetUrl(sprKey) : null;
