@@ -4462,8 +4462,8 @@ export default function ArcadiaCh2() {
         </div>
       </div>
 
-      {/* Sprite area */}
-      <div ref={spriteAreaRef} style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"20px 20px 0",position:"relative",zIndex:5,minHeight:200,paddingBottom:0}}>
+      {/* Sprite area -- ResizeObserver計測専用コンテナ（スプライット描画はここではしない） */}
+      <div ref={spriteAreaRef} style={{flex:1,position:"relative",zIndex:5,minHeight:200,pointerEvents:"none"}}>
         {/* Scene-specific atmosphere */}
         {activeLoc.includes("洞窟") && (
           <>
@@ -4472,125 +4472,90 @@ export default function ArcadiaCh2() {
             ))}
           </>
         )}
-
-        {/* P.BOOK 幾何学シンボル -- 右上固定 */}
-        {hasPb && (
-          <button
-            onClick={() => setOverlay(overlay==="pb"?null:"pb")}
-            style={{position:"absolute",top:12,right:14,width:52,height:52,background:"transparent",border:"none",padding:0,cursor:"pointer",zIndex:20,animation:"pbGlow 3s ease-in-out infinite"}}
-          >
-            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* 外周リング -- 低速回転 */}
-              <circle cx="26" cy="26" r="24" stroke={overlay==="pb"?C.accent:C.border} strokeWidth="1" fill="none" strokeDasharray="4 3" style={{animation:"pbSpin 18s linear infinite",transformOrigin:"26px 26px"}}/>
-              {/* 内周リング -- 逆回転 */}
-              <circle cx="26" cy="26" r="19" stroke={overlay==="pb"?C.accent+"88":C.border+"66"} strokeWidth="0.8" fill="none" strokeDasharray="2 4" style={{animation:"pbSpinR 12s linear infinite",transformOrigin:"26px 26px"}}/>
-              {/* 六角形フレーム */}
-              <polygon points="26,5 44,15.5 44,36.5 26,47 8,36.5 8,15.5" stroke={overlay==="pb"?C.accent:C.border} strokeWidth="1" fill={overlay==="pb"?"rgba(0,200,255,0.08)":"rgba(10,26,38,0.7)"} />
-              {/* 中央 -- 菱形 */}
-              <polygon points="26,14 34,26 26,38 18,26" stroke={overlay==="pb"?C.accent:C.muted} strokeWidth="1" fill={overlay==="pb"?"rgba(0,200,255,0.15)":"transparent"} />
-              {/* 中心点 */}
-              <circle cx="26" cy="26" r="3" fill={overlay==="pb"?C.accent:C.muted} style={{animation:"pbPulse 2s ease-in-out infinite"}}/>
-              {/* 四方位の小ダイヤ */}
-              {[[26,9],[43,26],[26,43],[9,26]].map(([cx,cy],i) => (
-                <polygon key={i} points={`${cx},${cy-3} ${cx+2},${cy} ${cx},${cy+3} ${cx-2},${cy}`} fill={overlay==="pb"?C.accent:C.border} opacity="0.8"/>
-              ))}
-              {/* P.B テキスト */}
-              <text x="26" y="29" textAnchor="middle" fill={overlay==="pb"?C.accent:C.muted} fontSize="7" fontFamily="'Share Tech Mono',monospace" letterSpacing="1" opacity="0.9">P.B</text>
-            </svg>
-          </button>
-        )}
-
-        {/* LV UP シンボル -- P.BOOKの下 */}
-        {lvUpInfo && (
-          <button
-            onClick={() => setOverlay("lvup")}
-            style={{position:"absolute",top:hasPb?72:12,right:14,width:52,height:52,background:"transparent",border:"none",padding:0,cursor:"pointer",zIndex:20,animation:"lvPulse 1.2s ease-in-out infinite"}}
-          >
-            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* 外周リング */}
-              <circle cx="26" cy="26" r="24" stroke={C.gold} strokeWidth="1" fill="none" strokeDasharray="3 3" style={{animation:"pbSpin 6s linear infinite",transformOrigin:"26px 26px"}}/>
-              {/* 星形 */}
-              <polygon points="26,7 29.5,19.5 42.5,19.5 32,27.5 35.5,40 26,32 16.5,40 20,27.5 9.5,19.5 22.5,19.5" fill={C.gold} opacity="0.85"/>
-              {/* LV テキスト */}
-              <text x="26" y="30" textAnchor="middle" fill={C.bg} fontSize="7" fontFamily="'Share Tech Mono',monospace" letterSpacing="0.5" fontWeight="bold">LV!</text>
-            </svg>
-          </button>
-        )}
-
-        {(() => {
-          // ── スプライト表示高さを直接算出 ─────────────────────────────────────
-          // 設計方針:
-          //   ・スプライト画像仕様: 128w × 256h (アスペクト比 1:2)
-          //   ・SPRITE_SIZE.height は「そのキャラの理想的な相対高さ」---- 基準キャラ(eltz:240)
-          //     との比率でキャラ間の身長差を表す。スケール倍率の乗数として使う。
-          //   ・「6体フル配置で幅を均等分割したときの1スロット幅」を基準スロットとし、
-          //     そこからアスペクト比で基準高さを算出 → SPRITE_SIZE比率を乗じて各キャラの高さへ
-          //   ・人数が減るほど最大1.5倍まで拡大(ただし高さ上限でクランプ)
-          //   ・幅・高さ両方向でオーバーフローしないことを数学的に保証
-          const n         = Math.max(1, activeSprites.length);
-          const GAP       = 14;     // px: flex gap
-          const PAD       = 40;     // px: 左右 padding 合計
-          const SPR_ASPECT = 2.0;   // 仕様: 高さ/幅 = 256/128
-          const REF_H     = 240;    // SPRITE_SIZE 基準値: eltz の height
-
-          // コンテナ実測値（ResizeObserver計測前はwindowサイズで即時代替）
-          const winW = typeof window !== "undefined" ? window.innerWidth  : 390;
-          const winH = typeof window !== "undefined" ? window.innerHeight : 844;
-          const areaW = spriteAreaW > 10 ? spriteAreaW : winW;
-          // スプライトエリア高さ: HUD(~28px) + dialog(~175px) + margin(~8px) を除いた残り
-          const areaH = spriteAreaH > 10 ? spriteAreaH : Math.max(160, winH - 211);
-
-          const usableW = areaW - PAD;
-          const usableH = areaH - 16; // 下端余白
-
-          // ── 6体フル配置の基準スロット幅を計算 ──
-          const COUNT_BASE = 6;
-          const baseSlotW  = (usableW - GAP * (COUNT_BASE - 1)) / COUNT_BASE;
-          // 基準スロット幅 → 基準高さ（アスペクト比 1:2）
-          const baseH_fromW = baseSlotW * SPR_ASPECT;
-
-          // ── 人数補正: 少ないほど大きく（最大1.5倍）──
-          const countScale = n >= COUNT_BASE
-            ? 1.0
-            : 1.0 + 0.5 * (COUNT_BASE - n) / (COUNT_BASE - 1);
-
-          // 候補高さ（幅由来）
-          const candidateH = baseH_fromW * countScale;
-
-          // ── 幅オーバーフロー検証: n体並べたとき usableW に収まるか ──
-          // 各スロット幅 = candidateH / SPR_ASPECT
-          const candidateSlotW = candidateH / SPR_ASPECT;
-          const totalW = candidateSlotW * n + GAP * (n - 1);
-          const wClampRatio = totalW > usableW ? usableW / totalW : 1.0;
-
-          // ── 高さ上限クランプ ──
-          const hClampRatio = candidateH > usableH ? usableH / candidateH : 1.0;
-
-          // 最終スロット幅（両方向クランプ済み）
-          const finalSlotW = candidateSlotW * Math.min(wClampRatio, hClampRatio);
-
-          return (
-            <div style={{position:"absolute",bottom:0,left:0,right:0,display:"flex",gap:GAP,alignItems:"flex-end",justifyContent:"center",pointerEvents:"none"}}>
-              {activeSprites.map((sp, i) => {
-                const sprKey = SPRITE_MAP[sp];
-                const sprUrl = sprKey ? assetUrl(sprKey) : null;
-                const isHero = i === 0;
-                const sz     = SPRITE_SIZE[sp] ?? { height: REF_H, heroHeight: REF_H, offsetY: 0, fallbackSize: 40 };
-                // キャラごとの高さ比率: SPRITE_SIZE.height / REF_H
-                const ratio  = (isHero ? sz.heroHeight : sz.height) / REF_H;
-                // 最終表示幅・高さ
-                const dispW  = Math.round(finalSlotW * ratio);
-                const dispH  = Math.round(dispW * SPR_ASPECT);
-                const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
-                const fallbackFontSize = Math.max(12, Math.round(dispH * 0.18));
-                return sprUrl
-                  ? <img key={sp+i} src={sprUrl} alt={sp} style={{width:dispW,height:dispH,objectFit:"contain",marginBottom:sz.offsetY,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,flexShrink:0}} />
-                  : <div key={sp+i} style={{fontSize:fallbackFontSize,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,marginBottom:sz.offsetY,textShadow:"0 4px 8px rgba(0,0,0,0.5)",flexShrink:0,lineHeight:1}}>{sp}</div>;
-              })}
-            </div>
-          );
-        })()}
       </div>
+
+      {/* P.BOOK 幾何学シンボル -- ルート基準 右上固定 */}
+      {hasPb && (
+        <button
+          onClick={() => setOverlay(overlay==="pb"?null:"pb")}
+          style={{position:"absolute",top:40,right:14,width:52,height:52,background:"transparent",border:"none",padding:0,cursor:"pointer",zIndex:20,animation:"pbGlow 3s ease-in-out infinite"}}
+        >
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="26" r="24" stroke={overlay==="pb"?C.accent:C.border} strokeWidth="1" fill="none" strokeDasharray="4 3" style={{animation:"pbSpin 18s linear infinite",transformOrigin:"26px 26px"}}/>
+            <circle cx="26" cy="26" r="19" stroke={overlay==="pb"?C.accent+"88":C.border+"66"} strokeWidth="0.8" fill="none" strokeDasharray="2 4" style={{animation:"pbSpinR 12s linear infinite",transformOrigin:"26px 26px"}}/>
+            <polygon points="26,5 44,15.5 44,36.5 26,47 8,36.5 8,15.5" stroke={overlay==="pb"?C.accent:C.border} strokeWidth="1" fill={overlay==="pb"?"rgba(0,200,255,0.08)":"rgba(10,26,38,0.7)"} />
+            <polygon points="26,14 34,26 26,38 18,26" stroke={overlay==="pb"?C.accent:C.muted} strokeWidth="1" fill={overlay==="pb"?"rgba(0,200,255,0.15)":"transparent"} />
+            <circle cx="26" cy="26" r="3" fill={overlay==="pb"?C.accent:C.muted} style={{animation:"pbPulse 2s ease-in-out infinite"}}/>
+            {[[26,9],[43,26],[26,43],[9,26]].map(([cx,cy],i) => (
+              <polygon key={i} points={`${cx},${cy-3} ${cx+2},${cy} ${cx},${cy+3} ${cx-2},${cy}`} fill={overlay==="pb"?C.accent:C.border} opacity="0.8"/>
+            ))}
+            <text x="26" y="29" textAnchor="middle" fill={overlay==="pb"?C.accent:C.muted} fontSize="7" fontFamily="'Share Tech Mono',monospace" letterSpacing="1" opacity="0.9">P.B</text>
+          </svg>
+        </button>
+      )}
+
+      {/* LV UP シンボル -- ルート基準 右上固定 */}
+      {lvUpInfo && (
+        <button
+          onClick={() => setOverlay("lvup")}
+          style={{position:"absolute",top:hasPb?100:40,right:14,width:52,height:52,background:"transparent",border:"none",padding:0,cursor:"pointer",zIndex:20,animation:"lvPulse 1.2s ease-in-out infinite"}}
+        >
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="26" r="24" stroke={C.gold} strokeWidth="1" fill="none" strokeDasharray="3 3" style={{animation:"pbSpin 6s linear infinite",transformOrigin:"26px 26px"}}/>
+            <polygon points="26,7 29.5,19.5 42.5,19.5 32,27.5 35.5,40 26,32 16.5,40 20,27.5 9.5,19.5 22.5,19.5" fill={C.gold} opacity="0.85"/>
+            <text x="26" y="30" textAnchor="middle" fill={C.bg} fontSize="7" fontFamily="'Share Tech Mono',monospace" letterSpacing="0.5" fontWeight="bold">LV!</text>
+          </svg>
+        </button>
+      )}
+
+      {/* スプライット表示 -- ルートdiv(position:fixed)基準でdialog上端にぴったり密着 */}
+      {/* dialog: height:171 + margin-bottom:4px = bottom:175px の位置に bottom:0 を合わせる */}
+      {(() => {
+        const n         = Math.max(1, activeSprites.length);
+        const GAP       = 14;
+        const PAD       = 40;
+        const SPR_ASPECT = 2.0;
+        const REF_H     = 240;
+        const DLG_BOTTOM = 175; // dialog height(171) + margin-bottom(4)
+
+        const winW = typeof window !== "undefined" ? window.innerWidth  : 390;
+        const winH = typeof window !== "undefined" ? window.innerHeight : 844;
+        const areaW = spriteAreaW > 10 ? spriteAreaW : winW;
+        const areaH = spriteAreaH > 10 ? spriteAreaH : Math.max(160, winH - 211);
+
+        const usableW = areaW - PAD;
+        const usableH = areaH - 8;
+
+        const COUNT_BASE = 6;
+        const baseSlotW  = (usableW - GAP * (COUNT_BASE - 1)) / COUNT_BASE;
+        const baseH_fromW = baseSlotW * SPR_ASPECT;
+        const countScale = n >= COUNT_BASE ? 1.0 : 1.0 + 0.5 * (COUNT_BASE - n) / (COUNT_BASE - 1);
+        const candidateH = baseH_fromW * countScale;
+        const candidateSlotW = candidateH / SPR_ASPECT;
+        const totalW = candidateSlotW * n + GAP * (n - 1);
+        const wClampRatio = totalW > usableW ? usableW / totalW : 1.0;
+        const hClampRatio = candidateH > usableH ? usableH / candidateH : 1.0;
+        const finalSlotW = candidateSlotW * Math.min(wClampRatio, hClampRatio);
+
+        return (
+          <div style={{position:"absolute",bottom:DLG_BOTTOM,left:0,right:0,display:"flex",gap:GAP,alignItems:"flex-end",justifyContent:"center",pointerEvents:"none",zIndex:6}}>
+            {activeSprites.map((sp, i) => {
+              const sprKey = SPRITE_MAP[sp];
+              const sprUrl = sprKey ? assetUrl(sprKey) : null;
+              const isHero = i === 0;
+              const sz     = SPRITE_SIZE[sp] ?? { height: REF_H, heroHeight: REF_H, offsetY: 0, fallbackSize: 40 };
+              const ratio  = (isHero ? sz.heroHeight : sz.height) / REF_H;
+              const dispW  = Math.round(finalSlotW * ratio);
+              const dispH  = Math.round(dispW * SPR_ASPECT);
+              const heroFilter = isHero ? "drop-shadow(0 0 8px rgba(0,200,255,0.3))" : "none";
+              const fallbackFontSize = Math.max(12, Math.round(dispH * 0.18));
+              return sprUrl
+                ? <img key={sp+i} src={sprUrl} alt={sp} style={{width:dispW,height:dispH,objectFit:"contain",animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,flexShrink:0,display:"block"}} />
+                : <div key={sp+i} style={{fontSize:fallbackFontSize,animation:`idle ${2+i*0.3}s ${i*0.2}s infinite, dlSprIn 0.35s ease`,filter:heroFilter,textShadow:"0 4px 8px rgba(0,0,0,0.5)",flexShrink:0,lineHeight:1}}>{sp}</div>;
+            })}
+          </div>
+        );
+      })()}
 
       {/* Dialog box -- 5行固定高さ＋スクロール対応 */}
       <style>{`
