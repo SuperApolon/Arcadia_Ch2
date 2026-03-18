@@ -325,6 +325,7 @@ const BASE_URL = "https://superapolon.github.io/Arcadia_Assets/";
 
 const ASSET_STATUS = {
   "title/title_bg":          true,
+  "title/title_bg_ch2":      true,
   "movies/ch01_opening":     true,   // ✅ 確認済み 2026-03-05
   "movies/ch02_opening":     false,  // 第二章オープニング（アップロード後 true に変更）
   // ── bgm ──
@@ -3518,7 +3519,7 @@ export default function ArcadiaCh2() {
 
   // @@SECTION:RENDER_TITLE
   if (phase === "title") return (
-    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
+    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg_ch2.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
       <style>{keyframes}</style>
       {/* Scanline effect */}
       <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.015) 2px,rgba(0,200,255,0.015) 4px)",pointerEvents:"none",zIndex:1}}/>
