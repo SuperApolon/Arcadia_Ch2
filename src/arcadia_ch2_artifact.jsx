@@ -144,21 +144,21 @@ const INITIAL_BATTLE_DEFS = {
   },
 
    // ── アリエス・カルマとのコカトリス3体 ──────────────────────────────────
-   cocatris_carma_a: {
+   cocatris_karma_a: {
     name:"コカトリス Lv.5", em:"🐔",
     maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","counter","atk","dodge","atk","counter","atk"],
     unavoidableAtk:[18,26],
   },
-  cocatris_carma_b: {
+  cocatris_karma_b: {
     name:"コカトリス Lv.5", em:"🐔",
     maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["dodge","atk","counter","atk","atk","dodge","counter"],
     unavoidableAtk:[18,26],
   },
-  cocatris_carma_c: {
+  cocatris_karma_c: {
     name:"コカトリス Lv.5", em:"🐔",
     maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
@@ -189,7 +189,7 @@ const INITIAL_BATTLE_DEFS = {
   },
 
   // ── オルガ：最終話手合わせ ────────────────────────────────────────────────
-  orga: {
+  olga: {
     name:"オルガ", em:"⚔️",
     maxHp:1450, atk:[20,32], elk:0, exp:0, lv:23, spd:13,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:true, isFloating:false, isGround:true,
@@ -231,10 +231,10 @@ const ALL_CHAR_DEFS = {
   linz:    { id:"linz",    name:"リンス",    icon:"\u{1F469}",   spd:11, mhp:100,  mmp:70,  allowedElemSkills:[],                           specialSkills:["overheal","sleep"]   },
   chopper: { id:"chopper", name:"チョッパー", icon:"\u{1F466}",   spd:9,  mhp:90,  mmp:50,  allowedElemSkills:["elem_fire","elem_earth"],    specialSkills:[]                    },
   aries:   { id:"aries",   name:"アリエス",  icon:"\u{1F30A}",   spd:13, mhp:100,  mmp:80,  allowedElemSkills:[],  specialSkills:["water_sphere"]              },
-  karma:   { id:"karma",   name:"カルマ",    icon:"\u{1F624}",   spd:16, mhp:100,  mmp:50,  allowedElemSkills:[],                           specialSkills:["provoke"]           },
-  frank:   { id:"frank",   name:"フランク",  icon:"\u{1F535}",   spd:10, mhp:200,  mmp:110,  allowedElemSkills:[],                           specialSkills:["provoke","takedown"] },
+  karma:   { id:"karma",   name:"カルマ",    icon:"\u{1F61C}",   spd:16, mhp:100,  mmp:50,  allowedElemSkills:[],                           specialSkills:["provoke"]           },
+  frank:   { id:"frank",   name:"フランク",  icon:"\u{1F917}",   spd:10, mhp:200,  mmp:110,  allowedElemSkills:[],                           specialSkills:["provoke","takedown"] },
   will:    { id:"will",    name:"ウィル",    icon:"\u{1F624}",   spd:18, mhp:90,  mmp:65,  allowedElemSkills:["elem_thunder","elem_earth"], specialSkills:[]                    },
-  ponkiti: { id:"ponkiti", name:"ポンキチ",  icon:"\u{1F5E1}\uFE0F", spd:17, mhp:110,  mmp:55,  allowedElemSkills:[],  specialSkills:["stinger_bite"]              },
+  ponkiti: { id:"ponkiti", name:"ポンキチ",  icon:"\u{1F929}", spd:17, mhp:110,  mmp:55,  allowedElemSkills:[],  specialSkills:["stinger_bite"]              },
   persia:  { id:"persia",  name:"ペルシア",  icon:"\u{1F338}",  spd:14, mhp:100,  mmp:75,  allowedElemSkills:[],  specialSkills:["straight_shot","arrow_rain"] },
 };
 
@@ -257,9 +257,9 @@ const BATTLE_PARTY_MAP = {
   moocat:           ["eltz","swift","linz"],
   mandragora:       ["eltz","swift","linz"],
   cocatris:         ["eltz","aries","karma"],
-  cocatris_carma_a: ["eltz","aries","karma"],
-  cocatris_carma_b: ["eltz","aries","karma"],
-  cocatris_carma_c: ["eltz","aries","karma"],
+  cocatris_karma_a: ["eltz","aries","karma"],
+  cocatris_karma_b: ["eltz","aries","karma"],
+  cocatris_karma_c: ["eltz","aries","karma"],
   cocatris_ponki_a: ["eltz","ponkiti","persia"],
   cocatris_ponki_b: ["eltz","ponkiti","persia"],
   cocatris_ponki_c: ["eltz","ponkiti","persia"],
@@ -267,7 +267,7 @@ const BATTLE_PARTY_MAP = {
   pvp_donatello:    ["eltz","frank","will"],
   pvp_kevin:        ["eltz","frank","will"],
   pvp_chopper:      ["eltz","frank","will"],
-  orga:             ["eltz","swift","linz"],
+  olga:             ["eltz","swift","linz"],
   simuluu_ch2:      ["eltz","swift","linz","chopper"],
 };
 
@@ -397,10 +397,10 @@ const ASSET_STATUS = {
   "enemies/moocat":          true,
   "enemies/mandragora":      true,
   "enemies/cocatris":        true,
-  "enemies/orga":             false,
-  "enemies/donatello":         true,
-  "enemies/kevin":             true,
-  "enemies/chopper":       true,
+  "enemies/olga":            true,
+  "enemies/donatello":       true,
+  "enemies/kevin":           true,
+  "enemies/chopper":         true,
   "scenes/ch2_plaza_night":   false,
   // ── 第二章 新スプライト ────────────────────────────────────────────────────
   "sprites/kevin":           true,
@@ -414,6 +414,7 @@ const ASSET_STATUS = {
   "sprites/persia":          true,
   "sprites/ponkiti":         true,
   "sprites/will":            true,
+  "sprites/shuraku":         true,
   "sprites/karma":           true,
   "sprites/toma":            true,
   "sprites/mikhail":         false,
@@ -490,13 +491,16 @@ const BATTLE_BGM = {
   mandragora:    "bgm/battle_normal",
   cocatris:      "bgm/battle_normal",
   simuluu_ch2:        "bgm/battle_boss",
+  cocatris_karma_a:    "bgm/battle_normal",
+  cocatris_karma_b:    "bgm/battle_normal",
+  cocatris_karma_c:    "bgm/battle_normal",
   cocatris_ponki_a:    "bgm/battle_normal",
   cocatris_ponki_b:    "bgm/battle_normal",
   cocatris_ponki_c:    "bgm/battle_normal",
   pvp_donatello:       "bgm/battle_normal",
   pvp_kevin:           "bgm/battle_normal",
   pvp_chopper:         "bgm/battle_normal",
-  orga:                "bgm/battle_boss",
+  olga:                "bgm/battle_boss",
 };
 
 function resolveBgmId(phase, sceneLoc, enemyType) {
@@ -523,13 +527,16 @@ const ENEMY_IMG_MAP = {
   moocat:        "enemies/moocat",
   mandragora:    "enemies/mandragora",
   cocatris:           "enemies/cocatris",
+  cocatris_karma_a:    "enemies/cocatris",
+  cocatris_karma_b:    "enemies/cocatris",
+  cocatris_karma_c:    "enemies/cocatris",
   cocatris_ponki_a:    "enemies/cocatris",
   cocatris_ponki_b:    "enemies/cocatris",
   cocatris_ponki_c:    "enemies/cocatris",
   pvp_donatello:       "enemies/donatello",  // 絵文字フォールバック可
   pvp_kevin:           "enemies/kevin",
-  pvp_chopper:         "enemies/chopper_pvp",
-  orga:                "enemies/orga",
+  pvp_chopper:         "enemies/chopper",
+  olga:                "enemies/olga",
 };
 
 const SPRITE_MAP = {
@@ -559,6 +566,7 @@ const SPRITE_MAP = {
   "🤩":     "sprites/ponkiti",     // ポンキチ
   "🤫":     "sprites/toma",        // トマ
   "😤":     "sprites/will",        // ウィル
+  "😄":     "sprites/shuraku",     // シュラク
   "🏨":     "sprites/mikhail",     // ミカエル
   "😜":     "sprites/karma",       // カルマ
 };
@@ -601,6 +609,7 @@ const SPRITE_SIZE = {
   "🤫":           { scale: 1.04, heroScale: 1.04, offsetY:  0, fallbackSize: 50 }, // toma
   "🤩":           { scale: 0.95, heroScale: 0.95, offsetY:  0, fallbackSize: 50 }, // ponkiti
   "😤":           { scale: 0.75, heroScale: 0.75, offsetY:  0, fallbackSize: 42 }, // will
+  "😄":           { scale: 0.75, heroScale: 0.75, offsetY:  0, fallbackSize: 42 }, // shuraku
   "🏨":           { scale: 0.92, heroScale: 1.00, offsetY:  0, fallbackSize: 50 }, // mikhail
 };
 
@@ -634,13 +643,16 @@ const ENEMY_IMG_SIZE = {
   mandragora:    { mode:"fixed", size: 220 },
   cocatris:      { mode:"fixed", size: 360 },
   simuluu_ch2:        { mode:"auto",  pct: 85  },
+  cocatris_karma_a:    { mode:"fixed", size: 330 },
+  cocatris_karma_b:    { mode:"fixed", size: 360 },
+  cocatris_karma_c:    { mode:"fixed", size: 345 },
   cocatris_ponki_a:    { mode:"fixed", size: 330 },
   cocatris_ponki_b:    { mode:"fixed", size: 360 },
   cocatris_ponki_c:    { mode:"fixed", size: 345 },
   pvp_donatello:       { mode:"fixed", size: 480 },
   pvp_kevin:           { mode:"fixed", size: 450 },
   pvp_chopper:         { mode:"fixed", size: 320 },
-  orga:                { mode:"fixed", size: 380 },
+  olga:                { mode:"fixed", size: 380 },
 };
 
 const BATTLE_BG_MAP = {
@@ -656,16 +668,16 @@ const BATTLE_BG_MAP = {
   moocat:        "scenes/ch2_s11_eivis_plains",
   mandragora:    "scenes/ch2_s12_eivis_forest",
   cocatris:           "scenes/ch2_s11_eivis_plains",
-  cocatris_carma_a:    "scenes/ch2_s11_eivis_plains",
-  cocatris_carma_b:    "scenes/ch2_s11_eivis_plains",
-  cocatris_carma_c:    "scenes/ch2_s11_eivis_plains",
+  cocatris_karma_a:    "scenes/ch2_s11_eivis_plains",
+  cocatris_karma_b:    "scenes/ch2_s11_eivis_plains",
+  cocatris_karma_c:    "scenes/ch2_s11_eivis_plains",
   cocatris_ponki_a:    "scenes/ch2_s11_eivis_plains",
   cocatris_ponki_b:    "scenes/ch2_s11_eivis_plains",
   cocatris_ponki_c:    "scenes/ch2_s11_eivis_plains",
   pvp_donatello:       "scenes/ch2_s03_central_square",
   pvp_kevin:           "scenes/ch2_s03_central_square",
   pvp_chopper:         "scenes/ch2_s03_central_square",
-  orga:                "scenes/ch2_s03_central_square",
+  olga:                "scenes/ch2_s03_central_square",
 };
 
 // @@SECTION:BATTLE_BG_STYLE ─────────────────────────────────────────────────
@@ -685,13 +697,16 @@ const BATTLE_BG_STYLE = {
   moocat:        { size: "cover",   position: "center 40%" },
   mandragora:    { size: "cover",   position: "center 40%" },
   cocatris:           { size: "cover",   position: "center 40%" },
+  cocatris_karma_a:    { size: "cover",   position: "center 40%" },
+  cocatris_karma_b:    { size: "cover",   position: "center 40%" },
+  cocatris_karma_c:    { size: "cover",   position: "center 40%" },
   cocatris_ponki_a:    { size: "cover",   position: "center 40%" },
   cocatris_ponki_b:    { size: "cover",   position: "center 40%" },
   cocatris_ponki_c:    { size: "cover",   position: "center 40%" },
   pvp_donatello:       { size: "cover",   position: "center 40%" },
   pvp_kevin:           { size: "cover",   position: "center 40%" },
   pvp_chopper:         { size: "cover",   position: "center 40%" },
-  orga:                { size: "cover",   position: "center 40%" },
+  olga:                { size: "cover",   position: "center 40%" },
 };
 
 // @@SECTION:SCENE_BG_STYLE ──────────────────────────────────────────────────
@@ -929,12 +944,12 @@ const SCENES = [
     { sp:"フランク", t:"「フランクです。Ｌｖ１５。\nメインは片手剣。リーベルトとペア組んでやってます」" , loc:"スティアルーフ コミュニティルーム", sprites:["🏹","🤗"]},
     { sp:"オルガ", t:"「オルガだ。Ｌｖ２３。\nこのゲームは稼動初期からやっている古参だが、\n人が増えるのはいい事だ。\n新しく入ってきた者には皆\nアドバイスを与えてやってくれ。以上」" , loc:"スティアルーフ コミュニティルーム", sprites:["⚔️"]},
     { sp:"ナレーション", t:"宴もたけなわ、そこへ──\n部屋の入口の扉が乱暴に開かれる。" , loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"]},
-    { sp:"ウィル", t:"「ああー！疲れたー！！\nシュラクのバカー！死ぬ、マジで死ぬよー！」\n\nドタドタと飛び込んできた小さな影が二つ。" , loc:"スティアルーフ コミュニティルーム", sprites:["😤"]},
+    { sp:"ウィル", t:"「ああー！疲れたー！！\nシュラクのバカー！死ぬ、マジで死ぬよー！」\n\nドタドタと飛び込んできた小さな影が二つ。" , loc:"スティアルーフ コミュニティルーム", sprites:["😤","😄"]},
     { sp:"ドナテロ", t:"「噂をすればうるせぇ奴が来た」" , loc:"スティアルーフ コミュニティルーム", sprites:["🎭"]},
-    { sp:"ウィル", t:"（チョッパーに気づき）\n「お？　誰々！？　誰！！？」\n\nじっとチョッパーを見つめる。\n「よし、お前子分にしてやるよ」" , loc:"スティアルーフ コミュニティルーム", sprites:["😤","👦"]},
-    { sp:"チョッパー", t:"「......チョッパー」" , loc:"スティアルーフ コミュニティルーム", sprites:["😤","👦"]},
-    { sp:"ウィル", t:"「よし、チョッパー今から狩り行くぞ！\nお前の腕を見せてみろ！」", loc:"スティアルーフ コミュニティルーム", sprites:["😤","👦"] },
-    { sp:"シュラク", t:"「お前、たった今狩り行ってきたばかりだろ！」", loc:"スティアルーフ コミュニティルーム", sprites:["😤","👦"] },
+    { sp:"ウィル", t:"（チョッパーに気づき）\n「お？　誰々！？　誰！！？」\n\nじっとチョッパーを見つめる。\n「よし、お前子分にしてやるよ」" , loc:"スティアルーフ コミュニティルーム", sprites:["😤","👦","😄"]},
+    { sp:"チョッパー", t:"「......チョッパー」" , loc:"スティアルーフ コミュニティルーム", sprites:["😤","👦","😄"]},
+    { sp:"ウィル", t:"「よし、チョッパー今から狩り行くぞ！\nお前の腕を見せてみろ！」", loc:"スティアルーフ コミュニティルーム", sprites:["😤","👦","😄"] },
+    { sp:"シュラク", t:"「お前、たった今狩り行ってきたばかりだろ！」", loc:"スティアルーフ コミュニティルーム", sprites:["😤","👦","😄"] },
     { sp:"ナレーション", t:"ウィルとシュラクがそのままソファの外へ\n掴み合い転がり始める。\n\n「いや、なんていうか賑やかですね」とエルツ。\n「大体いつもこうよ」とスニーピィが笑った。\n\n記念すべき夜の宴は夜明けまで続いた。", sprites:["🧑","🧙"], next:9 }
   ]},
 
@@ -1138,13 +1153,13 @@ const SCENES = [
     { sp:"アリエス", t:"「セパレイトパーティというのは\nパーティを組まない状態で組むチームの事です。\n１ＶＳ１の状況を作り出す事が出来ます。\n絶対条件──それぞれが一匹を最初から最後まで\n責任を持って倒す事です」" },
     { sp:"カルマ", t:"「そのくらい事前に調べてくるべきだと思うけど」" },
     { sp:"エルツ", t:"「すみません、事前準備が足りませんでした」" },
-    { sp:"ナレーション", t:"狩場へ着くと、アリエスが釣りを担当。\n三匹のコカトリスに対して三人が散開──\n\n盾でつっつきをいなしながら剣を振るうエルツ。\n初コカトリスで一番早く仕留めたのはエルツだった。\n\nしかし次の群れで事故が起きる──\n隠れていた四匹目が出現！\n「四匹いるぞ！何やってんだバカ！！」", battle:true, multiEnemyTypes:["cocatris_carma_a","cocatris_carma_b","cocatris_carma_c"],battleNext:25 }
+    { sp:"ナレーション", t:"狩場へ着くと、アリエスが釣りを担当。\n三匹のコカトリスに対して三人が散開──\n\n盾でつっつきをいなしながら剣を振るうエルツ。\n初コカトリスで一番早く仕留めたのはエルツだった。\n\nしかし次の群れで事故が起きる──\n隠れていた四匹目が出現！\n「四匹いるぞ！何やってんだバカ！！」", battle:true, multiEnemyTypes:["cocatris_karma_a","cocatris_karma_b","cocatris_karma_c"],battleNext:25 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
   // S25: パーティリーダー〈PartyLeader〉
   // ─────────────────────────────────────────────────────────────
-  { bg:["#0a1808","#184010","#283020"], loc:"エイビス平原 西", sprites:["🧑","🌊","😜"], dl:[
+  { bg:["#0a1808","#184010","#283020"], loc:"エイビス平原 西", sprites:["🧑","🌊"], dl:[
     { sp:"ナレーション", t:"カルマは捨て台詞を残し去っていった。\n\n残されたエルツとアリエスはその場に蹲う。\nアリエスが静かに口を開く。" },
     { sp:"アリエス", t:"「申し訳ないです、私のミスで」" },
     { sp:"エルツ", t:"「アリエスさんの責任じゃありませんよ。\nただの事故です」" },
@@ -1185,7 +1200,7 @@ const SCENES = [
   // ─────────────────────────────────────────────────────────────
   // S28: 童憬
   // ─────────────────────────────────────────────────────────────
-  { bg:["#1a0e06","#2a1808","#1a1208"], loc:"スティアルーフ コミュニティルーム", sprites:["🧑","😤"], dl:[
+  { bg:["#1a0e06","#2a1808","#1a1208"], loc:"スティアルーフ コミュニティルーム", sprites:["🧑","😤","😄"], dl:[
     { sp:"ナレーション", t:"ＷＡを覚えたエルツのマンドラゴラ狩りは\n一時間に五匹ペースへと向上した。\n狩場が空いていればアリエスを誘ってコカ狩りへ。\n\nそんな数日が過ぎた頃──\nコミュニティルームにウィルとシュラクが戻ってきた。" },
     { sp:"ウィル", t:"「エルツ、奢って！」" },
     { sp:"ナレーション", t:"所持金3354ELK。\nたまにはこういう奉仕も悪くない。\n三人で屋台市へ繰り出し、ウィルは怒涛の10人前を平らげた。\n\n食事代 314ELK──随分高くついた。" },
@@ -1283,11 +1298,10 @@ const SCENES = [
   // S35: Top of Community
   // ─────────────────────────────────────────────────────────────
   { bg:["#1a0e06","#2a1808","#1a1208"], loc:"スティアルーフ コミュニティルーム", sprites:["🧑","🧑‍🦱","👩","👦","👧"], dl:[
-    { sp:"ナレーション", t:"氷刻24日──コミュニティルームはかつてない賑わいを見せていた。\n\nオルガの送別会。\nそして今日は見覚えのない人物達の姿も。" },
-    { sp:"ドナテロ", t:"「シンさん、どうなんすか、グリードは倒せそうです？」", sprites:["🧑","🎭","🧙"] },
-    { sp:"ナレーション", t:"シン〔Lv25〕──WHITEGARDEN のコミュニティリーダー。\nナインツ〔Lv24〕──金の長髪、リーベルトが憧れる目標。\nレイラ〔Lv24〕──白く美しい、コミュニティ屈指のトップグループ紅一点。\nコッペル〔Lv23〕──子供達にせがまれると断れない愛嬌のある好人物。\nロゼ〔Lv23〕──物静かな老人。IQ180の化け物。", sprites:["🧑","🎭","🧙"] },
-    { sp:"シン", t:"「どうだろうな。\n今狩ったとしたら多分、99.9%の確率で全滅か」", sprites:["🧑","🎭","🧙"] },
-    { sp:"スニーピィ", t:"「全然駄目じゃないですか」" , sprites:["🧑","🎭","🧙"]},
+    { sp:"ナレーション", t:"氷刻24日──コミュニティルームはかつてない賑わいを見せていた。\n\nオルガの送別会。" },
+    { sp:"ドナテロ", t:"「オルガさん、どうなんすか、グリードは倒せそうです？」", sprites:["🧑","🎭","🧙"] },
+    { sp:"オルガ", t:"「どうだろうな。\n今狩ったとしたら多分、99.9%の確率で全滅か」", sprites:["🧑","🎭","🧙","⚔️"] },
+    { sp:"スニーピィ", t:"「全然駄目じゃないですか」" , sprites:["🧑","🎭","🧙","⚔️"]},
     { sp:"ナレーション", t:"笑い声が溢れる中──\nコミュニティルームの扉が開き、\n今日の主役が姿を現した。\n\n一同が歓声を上げる。\nオルガは表情を綻ばせながら\n満面の笑みを見せた。\n\n――心からの祝福を――\n――さあ、宴の始まりだ――", sprites:["🧑","🎭","🧙","⚔️"], next:36 }
   ]},
 
@@ -1302,7 +1316,7 @@ const SCENES = [
     { sp:"オルガ", t:"「いい突きだった......今まで受けた中で最高のな。\n\nこれからはこのコミュニティを背負う\n者としての自覚を身に付けて欲しい」" , sprites:["🎭","⚔️"] },
     { sp:"ドナテロ", t:"「いずれその後姿、追い越して見せますよ。必ずね」", sprites:["🎭","⚔️"]  },
     { sp:"ナレーション", t:"続くスニーピィ、ウィル・シュラク・チョッパーの三人、\nリーベルトとフランクのペア、ユミルとケヴィン──\n皆がオルガと手合わせをした。\n\nそして残るはエルツ、スウィフト、リンスの三名。", sprites:["🧑","🧑‍🦱","👩"]  },
-    { sp:"エルツ", t:"「オルガさん、行きます！」", sprites:["🧑","🧑‍🦱","👩"], battle:true, battleType:"orga", battleNext:37 }
+    { sp:"エルツ", t:"「オルガさん、行きます！」", sprites:["🧑","🧑‍🦱","👩"], battle:true, battleType:"olga", battleNext:37 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
