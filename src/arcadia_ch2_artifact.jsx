@@ -123,7 +123,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"ドナテロ", em:"🎭",
     maxHp:500, atk:[16,24], elk:0, exp:0, lv:18, spd:14,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
-    pattern:["atk","counter","atk","dodge","atk","atk","counter"],
+    pattern:["atk","counter","atk","dodge","atk","atk","unavoidable"],
     unavoidableAtk:[22,32],
   },
   // ケヴィン（魔法剣士・Lv8）
@@ -422,8 +422,11 @@ const ASSET_STATUS = {
   "sprites/toma":            true,
   "sprites/mikhail":         false,
   // ── 第二章 新BGM ───────────────────────────────────────────────────────────
-  "bgm/city":                false,   // 都市・街BGM
-  "bgm/battle_pvp":          false,   // PvP用BGM
+  "bgm/stiaroof":            true,   // 都市・街BGM
+  "bgm/guild":               true,   // ギルド
+  "bgm/eibisplain":          true,   // エイビス平原
+  "bgm/battle_normal2":      true,   // PvP用BGM
+  "bgm/battle_boss2":        true,   // PvP用BGM
 };
 
 function assetUrl(key) {
@@ -465,20 +468,20 @@ const LOC_BGM = {
   "試練の洞窟 ─ 青の洞窟":   "bgm/cave",
   "試練の洞窟 ─ 最深部":     "bgm/cave",
   // ── 第二章 ────────────────────────────────────────────────────────────────
-  "スティアルーフ 港":                  "bgm/field",
-  "スティアルーフ 繁華街":              "bgm/field",
-  "スティアルーフ 中央広場":            "bgm/field",
-  "スティアルーフ コミュニティセンター": "bgm/field",
-  "スティアルーフ コミュニティルーム":   "bgm/field",
-  "スティアルーフ 繁華街 武器防具屋":   "bgm/field",
-  "スティアルーフ レストランDIFORE":    "bgm/field",
-  "スティアルーフ 魔法店LUNALEE":       "bgm/field",
+  "スティアルーフ 港":                  "bgm/stiaroof",
+  "スティアルーフ 繁華街":              "bgm/stiaroof",
+  "スティアルーフ 中央広場":            "bgm/stiaroof",
+  "スティアルーフ コミュニティセンター": "bgm/stiaroof",
+  "スティアルーフ コミュニティルーム":   "bgm/guild",
+  "スティアルーフ 繁華街 武器防具屋":   "bgm/night",
+  "スティアルーフ レストランDIFORE":    "bgm/night",
+  "スティアルーフ 魔法店LUNALEE":       "bgm/night",
   "スティアルーフ B&B宿屋":            "bgm/night",
-  "スティアルーフ 西門":               "bgm/field",
-  "エイビス平原 西":                   "bgm/field",
-  "エイビス平原 東":                   "bgm/field",
-  "スティアルーフ ギルド":             "bgm/field",
-  "スティアルーフ 中央広場 屋台市":    "bgm/field",
+  "スティアルーフ 西門":               "bgm/eibisplain",
+  "エイビス平原 西":                   "bgm/eibisplain",
+  "エイビス平原 東":                   "bgm/eibisplain",
+  "スティアルーフ ギルド":             "bgm/guild",
+  "スティアルーフ 中央広場 屋台市":    "bgm/night",
 };
 
 const BATTLE_BGM = {
@@ -494,16 +497,16 @@ const BATTLE_BGM = {
   mandragora:    "bgm/battle_normal",
   cocatris:      "bgm/battle_normal",
   simuluu_ch2:        "bgm/battle_boss",
-  cocatris_karma_a:    "bgm/battle_normal",
-  cocatris_karma_b:    "bgm/battle_normal",
-  cocatris_karma_c:    "bgm/battle_normal",
-  cocatris_ponki_a:    "bgm/battle_normal",
-  cocatris_ponki_b:    "bgm/battle_normal",
-  cocatris_ponki_c:    "bgm/battle_normal",
-  pvp_donatello:       "bgm/battle_normal",
-  pvp_kevin:           "bgm/battle_normal",
-  pvp_chopper:         "bgm/battle_normal",
-  olga:                "bgm/battle_boss",
+  cocatris_karma_a:    "bgm/battle_normal2",
+  cocatris_karma_b:    "bgm/battle_normal2",
+  cocatris_karma_c:    "bgm/battle_normal2",
+  cocatris_ponki_a:    "bgm/battle_normal2",
+  cocatris_ponki_b:    "bgm/battle_normal2",
+  cocatris_ponki_c:    "bgm/battle_normal2",
+  pvp_donatello:       "bgm/battle_normal2",
+  pvp_kevin:           "bgm/battle_normal2",
+  pvp_chopper:         "bgm/battle_normal2",
+  olga:                "bgm/battle_boss2",
 };
 
 function resolveBgmId(phase, sceneLoc, enemyType) {
@@ -3560,6 +3563,7 @@ export default function ArcadiaCh2() {
   if (phase === "select") {
     // バトル直接起動ヘルパー
     const startBattle = (types) => {
+      unlockAudio(null);
       const isMulti = Array.isArray(types);
       const firstKey = isMulti ? types[0] : types;
       const ed = battleDefs[firstKey];
@@ -3614,6 +3618,7 @@ export default function ArcadiaCh2() {
     ];
 
     const startStory = () => {
+      unlockAudio(null);
       setSceneIdx(0); setDlIdx(0);
       setPhase("movie");
     };
