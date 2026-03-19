@@ -1390,17 +1390,17 @@ export default function ArcadiaCh2() {
   const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   // @@SECTION:STATE_PLAYER
-  const [hp, setHp] = useState(100);
-  const [mhp, setMhp] = useState(100);
-  const [mp, setMp] = useState(80);
-  const [mmp, setMmp] = useState(80);
-  const [elk, setElk] = useState(50);
-  const [lv, setLv] = useState(1);
+  const [hp, setHp] = useState(115);
+  const [mhp, setMhp] = useState(115);
+  const [mp, setMp] = useState(95);
+  const [mmp, setMmp] = useState(95);
+  const [elk, setElk] = useState(500);
+  const [lv, setLv] = useState(3);
   const [exp, setExp] = useState(0);
-  const [weapon, setWeapon] = useState("銅の短剣");
-  const [weaponPatk, setWeaponPatk] = useState(3);   // 武器による物理ATK補正（銅の短剣+3）
-  const [statPoints, setStatPoints] = useState(0);
-  const [statAlloc, setStatAlloc] = useState({patk:10,pdef:10,matk:10,spd:10});
+  const [weapon, setWeapon] = useState("銅の剣");
+  const [weaponPatk, setWeaponPatk] = useState(6);   // 武器による物理ATK補正（銅の剣+6）
+  const [statPoints, setStatPoints] = useState(6);
+  const [statAlloc, setStatAlloc] = useState({patk:11,pdef:11,matk:10,spd:10});
   const [hasPb, setHasPb] = useState(true);
   const [hasMapScan, setHasMapScan] = useState(true);
   const [inCom, setInCom] = useState(false);
