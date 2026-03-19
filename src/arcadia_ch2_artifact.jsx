@@ -273,52 +273,54 @@ const BATTLE_PARTY_MAP = {
 
 
 // @@SECTION:NOVEL_TEXTS
-const NOVEL_BASE_URL = "https://superapolon.github.io/Arcadia_Assets/novels/";
+const NOVEL_BASE_URL = "https://superapolon.github.io/Arcadia_Assets/novels/ch2/";
 // true = アップロード済み → テキストファイルを取得する
 // false = 未アップロード → LOGタブのみ表示
 const NOVEL_STATUS = {
-   0: false,  // s00 スティアルーフ 港
-   1: false,  // s01 繁華街
-   2: false,  // s02 コミュニティセンター
-   3: false,  // s03 中央広場（ホームポイント設定）
-   4: false,  // s04 武器防具屋
-   5: false,  // s05 レストランDIFORE
-   6: false,  // s06 魔法店LUNALEE
-   7: false,  // s07 B&B宿屋
-   8: false,  // s08 コミュニティルーム（メール・舞闘祭前）
-   9: false,  // s09 中央広場（舞闘祭・第一試合）
-  10: false,  // s10 中央広場（舞闘祭・混戦）
-  11: false,  // s11 コミュニティルーム（舞闘祭後）
-  12: false,  // s12 西門（チョッパー別行動）
-  13: false,  // s13 エイビス平原 西（ムーキャット初戦）
-  14: false,  // s14 エイビス平原 西（ムーキャット苦戦）
-  15: false,  // s15 エイビス平原 西（ムーキャット狩り継続）
-  16: false,  // s16 エイビス平原 東（マンドラゴラ探索）
-  17: false,  // s17 エイビス平原 東（マンドラゴラ初戦）
-  18: false,  // s18 コミュニティルーム（オルガ登場）
-  19: false,  // s19 コミュニティルーム（仲間集合）
-  20: false,  // s20 エイビス平原 東（ソロ狩り開始）
-  21: false,  // s21 エイビス平原 東（ソロ狩り中盤）
-  22: false,  // s22 エイビス平原 西（Lv5到達）
-  23: false,  // s23 スティアルーフ ギルド（依頼受付）
-  24: false,  // s24 エイビス平原 西（アリエスと合流・カルマ）
-  25: false,  // s25 エイビス平原 西（カルマ去る・WA習得）
-  26: false,  // s26 エイビス平原 東（コカトリス狩り）
-  27: false,  // s27 中央広場 屋台市（ウーピィ青年と邂逅）
-  28: false,  // s28 コミュニティルーム（WA狩り向上）
-  29: false,  // s29 中央広場（翌朝・新展開）
-  30: false,  // s30 コミュニティルーム（夕方・一同集合）
-  31: false,  // s31 エイビス平原 西（ペルシア・ポン吉パーティ）
-  32: false,  // s32 エイビス平原 西（三人狩り・高揚感）
-  33: false,  // s33 コミュニティルーム（夕方・オルガ）
-  34: false,  // s34 中央広場 屋台市（スウィフト再合流）
-  35: false,  // s35 コミュニティルーム（送別会準備）
-  36: false,  // s36 中央広場（送別会・エンディング）
+   0: true,  // s00 スティアルーフ 港
+   1: true,  // s01 繁華街
+   2: true,  // s02 コミュニティセンター
+   3: true,  // s03 中央広場（ホームポイント設定）
+   4: true,  // s04 武器防具屋
+   5: true,  // s05 レストランDIFORE
+   6: true,  // s06 魔法店LUNALEE
+   7: true,  // s07 B&B宿屋
+   8: true,  // s08 コミュニティルーム（メール・舞闘祭前）
+   9: true,  // s09 中央広場（舞闘祭・第一試合）
+  10: true,  // s10 中央広場（舞闘祭・混戦）
+  11: true,  // s11 コミュニティルーム（舞闘祭後）
+  12: true,  // s12 西門（チョッパー別行動）
+  13: true,  // s13 エイビス平原 西（ムーキャット初戦）
+  14: true,  // s14 エイビス平原 西（ムーキャット苦戦）
+  15: true,  // s15 エイビス平原 西（ムーキャット狩り継続）
+  16: true,  // s16 エイビス平原 東（マンドラゴラ探索）
+  17: true,  // s17 エイビス平原 東（マンドラゴラ初戦）
+  18: true,  // s18 コミュニティルーム（オルガ登場）
+  19: true,  // s19 コミュニティルーム（仲間集合）
+  20: true,  // s20 エイビス平原 東（ソロ狩り開始）
+  21: true,  // s21 エイビス平原 東（ソロ狩り中盤）
+  22: true,  // s22 エイビス平原 西（Lv5到達）
+  23: true,  // s23 スティアルーフ ギルド（依頼受付）
+  24: true,  // s24 エイビス平原 西（アリエスと合流・カルマ）
+  25: true,  // s25 エイビス平原 西（カルマ去る・WA習得）
+  26: true,  // s26 エイビス平原 東（コカトリス狩り）
+  27: true,  // s27 中央広場 屋台市（ウーピィ青年と邂逅）
+  28: true,  // s28 コミュニティルーム（WA狩り向上）
+  29: true,  // s29 中央広場（翌朝・新展開）
+  30: true,  // s30 コミュニティルーム（夕方・一同集合）
+  31: true,  // s31 エイビス平原 西（ペルシア・ポン吉パーティ）
+  32: true,  // s32 エイビス平原 西（三人狩り・高揚感）
+  33: true,  // s33 コミュニティルーム（夕方・オルガ）
+  34: true,  // s34 中央広場 屋台市（スウィフト再合流）
+  35: true,  // s35 コミュニティルーム（送別会準備）
+  36: true,  // s36 中央広場（送別会・エンディング）
 };
 // true のシーンのみ novels/s{nn}.txt を取得する
 function novelUrl(i) {
   return NOVEL_STATUS[i] ? `${NOVEL_BASE_URL}s${String(i).padStart(2,"0")}.txt` : null;
 }
+// fetchエラー識別用センチネル（nullと区別するため）
+const NOVEL_FETCH_ERR = "NOVEL_FETCH_ERR";
 
 // @@SECTION:ASSETS
 const BASE_URL = "https://superapolon.github.io/Arcadia_Assets/";
@@ -4982,12 +4984,17 @@ export default function ArcadiaCh2() {
                                 const url = novelUrl(s.idx);
                                 setNovelLoading(true);
                                 fetch(url)
-                                  .then(r => r.ok ? r.text() : Promise.reject(r.status))
-                                  .then(text => {
-                                    setNovelCache(prev => ({ ...prev, [s.idx]: text || null }));
+                                  .then(r => {
+                                    console.log(`[Novel] fetch ${url} → ${r.status} ${r.ok ? "OK" : "NG"}`);
+                                    return r.ok ? r.text() : Promise.reject(r.status);
                                   })
-                                  .catch(() => {
-                                    setNovelCache(prev => ({ ...prev, [s.idx]: null }));
+                                  .then(text => {
+                                    console.log(`[Novel] s${s.idx} text length=${text?.length}`);
+                                    setNovelCache(prev => ({ ...prev, [s.idx]: text ?? null }));
+                                  })
+                                  .catch(err => {
+                                    console.warn(`[Novel] fetch failed s${s.idx}:`, err);
+                                    setNovelCache(prev => ({ ...prev, [s.idx]: NOVEL_FETCH_ERR }));
                                   })
                                   .finally(() => setNovelLoading(false));
                               }
@@ -5051,7 +5058,9 @@ export default function ArcadiaCh2() {
                         </div>
                       );
                     }
-                    const novelText = novelCache[novelSelScene] ?? null;
+                    const novelCached = novelCache[novelSelScene];
+                    const isFetchErr  = novelCached === NOVEL_FETCH_ERR;
+                    const novelText   = (novelCached && !isFetchErr) ? novelCached : null;
                     return novelText ? (
                       <>
                         <div style={{marginBottom:24,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
@@ -5072,7 +5081,7 @@ export default function ArcadiaCh2() {
                     ) : (
                       <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,lineHeight:2}}>
                         <div style={{fontSize:20,marginBottom:12}}>✏️</div>
-                        {novelSelScene in novelCache
+                        {isFetchErr
                           ? <>読み込みに失敗しました<br/><span style={{fontSize:10}}>ネットワーク接続を確認してください</span></>
                           : <>このシーンのノベルはまだ執筆中です<br/><span style={{fontSize:10}}>GAME LOG タブでゲームログを確認できます</span></>
                         }
