@@ -90,6 +90,7 @@ const INITIAL_BATTLE_DEFS = {
     maxHp:99, atk:[10,16], elk:35, exp:30, lv:4, spd:20,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","dodge","counter","atk","dodge","atk","counter","dodge"],
+    elementCycle:["thunder"],
   },
 
   mandragora: {
@@ -97,6 +98,7 @@ const INITIAL_BATTLE_DEFS = {
     maxHp:165, atk:[8,14], elk:57, exp:35, lv:4, spd:6,
     bg:["#0a1808","#184018","#203020"], isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","counter"],
+    elementCycle:["ice"],
   },
 
   cocatris: {
@@ -105,6 +107,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","counter","atk","dodge","atk","counter","atk"],
     unavoidableAtk:[18,26],
+    elementCycle:["earth"],
   },
 
   // ── 第二章専用ボス ─────────────────────────────────────────────────────────
@@ -125,6 +128,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
     pattern:["atk","counter","atk","dodge","atk","atk","unavoidable"],
     unavoidableAtk:[22,32],
+    elementCycle:["none"],
   },
   // ケヴィン（魔法剣士・Lv8）
   pvp_kevin: {
@@ -133,6 +137,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","counter","atk"],
     unavoidableAtk:[0,0],
+    elementCycle:["none"],
   },
   // チョッパー（短剣使い・Lv3）
   pvp_chopper: {
@@ -141,6 +146,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
     pattern:["atk","dodge","atk","atk","counter","atk"],
     unavoidableAtk:[0,0],
+    elementCycle:["none"],
   },
 
    // ── アリエス・カルマとのコカトリス3体 ──────────────────────────────────
@@ -150,6 +156,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","counter","atk","dodge","atk","counter","atk"],
     unavoidableAtk:[18,26],
+    elementCycle:["earth"],
   },
   cocatris_karma_b: {
     name:"コカトリス Lv.5", em:"🐔",
@@ -157,6 +164,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["dodge","atk","counter","atk","atk","dodge","counter"],
     unavoidableAtk:[18,26],
+    elementCycle:["earth"],
   },
   cocatris_karma_c: {
     name:"コカトリス Lv.5", em:"🐔",
@@ -164,6 +172,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","atk","counter"],
     unavoidableAtk:[18,26],
+    elementCycle:["earth"],
   },
   // ── ポンキチ・ペルシアとのコカトリス3体 ──────────────────────────────────
   cocatris_ponki_a: {
@@ -172,6 +181,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","counter","atk","dodge","atk","counter","atk"],
     unavoidableAtk:[18,26],
+    elementCycle:["earth"],
   },
   cocatris_ponki_b: {
     name:"コカトリス Lv.5", em:"🐔",
@@ -179,6 +189,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["dodge","atk","counter","atk","atk","dodge","counter"],
     unavoidableAtk:[18,26],
+    elementCycle:["earth"],
   },
   cocatris_ponki_c: {
     name:"コカトリス Lv.5", em:"🐔",
@@ -186,6 +197,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","atk","counter"],
     unavoidableAtk:[18,26],
+    elementCycle:["earth"],
   },
 
   // ── オルガ：最終話手合わせ ────────────────────────────────────────────────
@@ -195,6 +207,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:true, isFloating:false, isGround:true,
     pattern:["atk","counter","dodge","atk","atk_all","counter","unavoidable","dodge","counter","atk_all",],
     unavoidableAtk:[28,40],
+    elementCycle:["fire","ice","thunder","earth","none"],
   },
 
 };
@@ -1402,6 +1415,7 @@ export default function ArcadiaCh2() {
   const [defeat, setDefeat] = useState(false);
   const [turn, setTurn] = useState(0);
   const [battleNext, setBattleNext] = useState(null);
+  const sceneIdxBeforeBattle = useRef(0); // 敗北時の戻り先シーン
   const [btlAnimEnemy, setBtlAnimEnemy] = useState(false);
   const [btlAnimPlayer, setBtlAnimPlayer] = useState(false);
   const [victoryNextSc, setVictoryNextSc] = useState(null);
@@ -1420,6 +1434,7 @@ export default function ArcadiaCh2() {
   const [pendingTargetSelect, setPendingTargetSelect] = useState(null);
   // { memberId → targetIdx } ターゲット決定済みバッファ
   const [pendingTargets, setPendingTargets] = useState({});
+  const [dlUrl, setDlUrl] = useState(null); // エンディング セーブエクスポート用
 
   // ── 属性システム（第二章） ────────────────────────────────────────────────
   const [enemyElementIdx, setEnemyElementIdx] = useState(0);
@@ -1845,6 +1860,7 @@ export default function ArcadiaCh2() {
 
     // ── バトル突入フラグ ────────────────────────────────────────────────────
     if (dl.battle) {
+      sceneIdxBeforeBattle.current = sceneIdx; // 敗北時の戻り先を記録
       // マルチ敵バトル
       if (dl.multiEnemyTypes && Array.isArray(dl.multiEnemyTypes)) {
         const types = dl.multiEnemyTypes;
@@ -1939,6 +1955,7 @@ export default function ArcadiaCh2() {
       return;
     }
     if (ch.battle) {
+      sceneIdxBeforeBattle.current = sceneIdx; // 敗北時の戻り先を記録
       // ── マルチ敵バトル（ch.multiEnemyTypes が配列の場合） ────────────────
       if (ch.multiEnemyTypes && Array.isArray(ch.multiEnemyTypes)) {
         const types = ch.multiEnemyTypes;
@@ -3173,7 +3190,7 @@ export default function ArcadiaCh2() {
       setMultiEnemies(null);
       showNotif("💀 敗北...");
       setFade(true);
-      setTimeout(() => { setPhase("select"); setFade(false); }, 400);
+      setTimeout(() => { setSceneIdx(sceneIdxBeforeBattle.current); setDlIdx(0); setPhase("game"); setFade(false); }, 400);
       return;
     }
     const nextSc = battleNext !== null ? battleNext : sceneIdx;
@@ -3541,7 +3558,7 @@ export default function ArcadiaCh2() {
         <div style={{width:280,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 40px"}}/>
 
         <button
-          onClick={() => { unlockAudio("bgm/title"); setPhase("select"); }}
+          onClick={() => { unlockAudio("bgm/title"); setSceneIdx(0); setDlIdx(0); setPhase("movie"); }}
           style={{padding:"14px 48px",background:"transparent",border:`1px solid ${C.accent}`,color:C.accent,fontSize:16,letterSpacing:6,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",animation:"glow 2s infinite",transition:"all 0.3s"}}
           onMouseEnter={e => e.target.style.background = `${C.accent}22`}
           onMouseLeave={e => e.target.style.background = "transparent"}
@@ -3762,7 +3779,7 @@ export default function ArcadiaCh2() {
     // ── セーブデータ生成 ────────────────────────────────────────────────────
     const buildSaveData = () => ({
       version:    "arcadia_ch2_v1",
-      chapter:    1,
+      chapter:    2,
       savedAt:    new Date().toISOString(),
       player: {
         hp, mhp, mp, mmp,
@@ -3775,15 +3792,11 @@ export default function ArcadiaCh2() {
     });
 
     const handleExport = () => {
-      const data    = buildSaveData();
-      const json    = JSON.stringify(data, null, 2);
-      const blob    = new Blob([json], { type: "application/json" });
-      const url     = URL.createObjectURL(blob);
-      const a       = document.createElement("a");
-      a.href        = url;
-      a.download    = `arcadia_save_ch2_lv${lv}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const data = buildSaveData();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      if (dlUrl) URL.revokeObjectURL(dlUrl);
+      setDlUrl(URL.createObjectURL(blob));
     };
 
     const resetToTitle = () => {
@@ -3825,18 +3838,31 @@ export default function ArcadiaCh2() {
 
           {/* ── セーブデータエクスポート ─────────────────────────────────── */}
           <div style={{marginBottom:16,fontSize:12,color:C.muted,letterSpacing:1,lineHeight:1.8}}>
-            第二章へ引き継ぐには、セーブデータをエクスポートして<br/>
-            ARCADIA Ch.2 で読み込んでください。
+            第三章へ引き継ぐには、セーブデータをダウンロードして<br/>
+            ARCADIA Ch.3 で読み込んでください。
           </div>
           <button
             onClick={handleExport}
             style={{width:"100%",padding:"14px 0",marginBottom:12,background:`linear-gradient(135deg,rgba(0,200,255,0.15),rgba(0,255,204,0.1))`,border:`1px solid ${C.accent}`,color:C.accent,fontSize:14,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
           >
-            💾 セーブデータをエクスポート
+            💾 セーブデータを生成
           </button>
-          <div style={{fontSize:11,color:C.muted,marginBottom:32,fontFamily:"'Share Tech Mono',monospace",opacity:0.7}}>
-            arcadia_save_ch2_lv{lv}.json がダウンロードされます
-          </div>
+          {dlUrl ? (
+            <div style={{marginBottom:24}}>
+              <a
+                href={dlUrl}
+                download={`arcadia_save_ch2_lv${lv}.json`}
+                style={{display:"block",width:"100%",padding:"12px 0",boxSizing:"border-box",textAlign:"center",background:"rgba(0,255,204,0.12)",border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:13,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4,textDecoration:"none"}}
+              >
+                ⬇ arcadia_save_ch2_lv{lv}.json
+              </a>
+              <div style={{fontSize:11,color:C.muted,marginTop:8,fontFamily:"'Share Tech Mono',monospace",opacity:0.7}}>
+                上のリンクをタップ / 長押しして保存してください
+              </div>
+            </div>
+          ) : (
+            <div style={{height:32,marginBottom:24}}/>
+          )}
 
           <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 24px"}}/>
           <button
@@ -3886,6 +3912,9 @@ export default function ArcadiaCh2() {
         ? `url(${battleBgUrl}) ${bgSt.position}/${bgSt.size} no-repeat, linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`
         : `linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`;
 
+    // ── レイアウト：縦長（portrait）判定 ────────────────────────────────────
+    const isPortrait = windowSize.h > windowSize.w;
+
     // ── 属性システム表示用データ ────────────────────────────────────────────
     const elementCycle = ed.elementCycle || null;
     const currentElemKey = elementCycle ? elementCycle[enemyElementIdx % elementCycle.length] : null;
@@ -3910,6 +3939,24 @@ export default function ArcadiaCh2() {
         <style>{keyframes}</style>
         {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease"}}>{notif}</div>}
 
+        {/* ── 戦闘SKIP ─────────────────────────────────────────────────────── */}
+        {!victory && !defeat && (
+          <button
+            onClick={() => {
+              // 全敵を撃破扱い・プレイヤー勝利状態にしてexitBattleへ
+              if (multiEnemies) {
+                setMultiEnemies(prev => prev.map(e => ({ ...e, hp: 0, defeated: true })));
+              } else {
+                setEnemyHp(0);
+              }
+              setVictory(true);
+            }}
+            style={{position:"absolute",top:6,right:8,zIndex:200,padding:"3px 10px",fontSize:10,letterSpacing:2,fontFamily:"'Share Tech Mono',monospace",background:"rgba(5,13,20,0.7)",border:`1px solid ${C.muted}`,color:C.muted,borderRadius:3,cursor:"pointer",opacity:0.6}}
+          >
+            SKIP
+          </button>
+        )}
+
         {/* ── 怒り状態フルスクリーン警告エフェクト ─────────────────────────── */}
         {enrageCount > 0 && (
           <div style={{position:"absolute",inset:0,zIndex:1,pointerEvents:"none",
@@ -3928,11 +3975,18 @@ export default function ArcadiaCh2() {
           </div>
         )}
 
-        {/* ── メインエリア：左＝エネミー、右＝ログ＋ステータス＋ボタン ── */}
-        <div style={{flex:1,display:"flex",flexDirection:"row",overflow:"hidden",minHeight:0}}>
+        {/* ── メインエリア：横長=左右2カラム、縦長=上下2段 ── */}
+        <div style={{flex:1,display:"flex",flexDirection:isPortrait?"column":"row",overflow:"hidden",minHeight:0}}>
 
-          {/* 左カラム：エネミー表示 */}
-          <div style={{flex:"0 0 62%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:multiEnemies?"stretch":"flex-start",padding:multiEnemies?"8px":0,position:"relative",overflow:"hidden",gap:0}}>
+          {/* 上段（縦長）or 左カラム（横長）：エネミー表示 */}
+          <div style={{
+            flex: isPortrait ? "0 0 52%" : "0 0 62%",
+            display:"flex",flexDirection:"column",
+            alignItems:"center",
+            justifyContent:multiEnemies?"stretch":"flex-start",
+            padding:multiEnemies?"8px":0,
+            position:"relative",overflow:"hidden",gap:0,
+          }}>
 
           {multiEnemies ? (
             /* ── マルチ敵表示 ─────────────────────────────────────────────── */
@@ -4190,8 +4244,15 @@ export default function ArcadiaCh2() {
           )}
           </div>
 
-          {/* 右カラム：ログ＋ステータス＋ボタン */}
-          <div style={{flex:"0 0 38%",display:"flex",flexDirection:"column",background:"rgba(5,13,20,0.82)",borderLeft:`1px solid ${C.border}44`,overflow:"hidden"}}>
+          {/* 下段（縦長）or 右カラム（横長）：ログ＋ステータス＋ボタン */}
+          <div style={{
+            flex: isPortrait ? "1 1 0" : "0 0 38%",
+            display:"flex",flexDirection:"column",
+            background:"rgba(5,13,20,0.82)",
+            borderLeft: isPortrait ? "none" : `1px solid ${C.border}44`,
+            borderTop:  isPortrait ? `1px solid ${C.border}44` : "none",
+            overflow:"hidden",
+          }}>
 
             {/* すくみガイド */}
             <div style={{padding:"3px 8px",borderBottom:`1px solid ${C.border}33`,display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center",flexShrink:0}}>
@@ -4225,7 +4286,7 @@ export default function ArcadiaCh2() {
                   return (
                     <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"6px 8px",marginBottom:4,background:`linear-gradient(90deg,${C.accent}18,transparent)`,border:`1px solid ${C.accent}55`,borderRadius:6}}>
                       {/* スプライト: 下半身欠けOK・頭が見えるよう object-position:top */}
-                      <div style={{flexShrink:0,width:88,height:120,overflow:"hidden",borderRadius:4,border:`1px solid ${C.accent}66`,background:"rgba(0,200,255,0.06)",filter:`drop-shadow(0 0 8px ${C.accent}55)`}}>
+                      <div style={{flexShrink:0,width:isPortrait?68:88,height:isPortrait?96:120,overflow:"hidden",borderRadius:4,border:`1px solid ${C.accent}66`,background:"rgba(0,200,255,0.06)",filter:`drop-shadow(0 0 8px ${C.accent}55)`}}>
                         {cmSprUrl
                           ? <img src={cmSprUrl} alt={cm.name} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top center"}} />
                           : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:56}}>{cm.icon}</div>
