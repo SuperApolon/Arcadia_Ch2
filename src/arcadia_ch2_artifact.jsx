@@ -1403,7 +1403,7 @@ export default function ArcadiaCh2() {
   const [statAlloc, setStatAlloc] = useState({patk:11,pdef:11,matk:10,spd:10});
   const [hasPb, setHasPb] = useState(true);
   const [hasMapScan, setHasMapScan] = useState(true);
-  const [inCom, setInCom] = useState(false);
+  const [inCom, setInCom] = useState(true);
 
   // @@SECTION:STATE_BATTLE
   const [battleEnemy, setBattleEnemy] = useState(null);
