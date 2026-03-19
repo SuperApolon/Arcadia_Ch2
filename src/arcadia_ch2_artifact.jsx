@@ -675,11 +675,11 @@ const ENEMY_IMG_SIZE = {
 };
 
 const BATTLE_BG_MAP = {
-  seagull:       "battle/bg_cave",
-  koza:          "battle/bg_cave",
-  shamerlot:     "battle/bg_cave",
-  shamerlot_lv3: "battle/bg_cave",
-  shamerlot_lv5: "battle/bg_cave",
+  seagull:       "battle/bg_coast",
+  koza:          "battle/bg_meadow",
+  shamerlot:     "battle/bg_rocks",
+  shamerlot_lv3: "battle/bg_rocks",
+  shamerlot_lv5: "battle/bg_rocks",
   simuluu:       "scenes/s26_cave_blue",
   simuluu_ch2:   "scenes/s27_cave_deep",
   // ── 第二章 ────────────────────────────────────────────────────────────────
@@ -704,11 +704,11 @@ const BATTLE_BG_MAP = {
 // size:     CSS background-size 値（"cover" / "contain" / "120%" など）
 // position: CSS background-position 値（"center" / "top center" / "50% 30%" など）
 const BATTLE_BG_STYLE = {
-  seagull:       { size: "contain", position: "top center" },
-  koza:          { size: "contain", position: "top center" },
-  shamerlot:     { size: "contain", position: "top center" },
-  shamerlot_lv3: { size: "contain", position: "top center" },
-  shamerlot_lv5: { size: "contain", position: "top center" },
+  seagull:       { size: "cover", position: "enter 40%" },
+  koza:          { size: "cover", position: "enter 40%" },
+  shamerlot:     { size: "cover", position: "enter 40%" },
+  shamerlot_lv3: { size: "cover", position: "enter 40%" },
+  shamerlot_lv5: { size: "cover", position: "enter 40%" },
   simuluu:       { size: "cover",   position: "center" },
   simuluu_ch2:   { size: "cover",   position: "center" },
   // ── 第二章 ────────────────────────────────────────────────────────────────
@@ -4828,6 +4828,9 @@ export default function ArcadiaCh2() {
                       { key:"shamerlot",     label:"岩場",     note:"Lv.1 シャメロット" },
                       { key:"shamerlot_lv3", label:"岩場 深部",note:"Lv.3 シャメロット" },
                       { key:"shamerlot_lv5", label:"岩場 最奥",note:"Lv.5 シャメロット" },
+                      { key:"moocat",        label:"西エイビス平原",   note:"Lv.4 ムーキャット" },
+                      { key:"mandragora",    label:"東エイビス平原の森",  note:"Lv.4 マンドラゴラ" },
+                      { key:"cocatris",      label:"東エイビス平原",note:"Lv.5 コカトリス" },
                     ].map(({ key, label, note }) => {
                       const def = battleDefs[key];
                       const lvDiff = def.lv - lv;
