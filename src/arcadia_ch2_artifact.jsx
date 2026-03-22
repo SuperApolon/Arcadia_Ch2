@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 
 // @@SECTION:PALETTE
@@ -129,7 +128,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
     pattern:["atk","counter","atk","dodge","atk","atk","unavoidable"],
     unavoidableAtk:[22,32],
-    elementCycle:["none"],
+    elementCycle:["fire"],
   },
   // ケヴィン（魔法剣士・Lv8）
   pvp_kevin: {
@@ -138,7 +137,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","counter","atk"],
     unavoidableAtk:[0,0],
-    elementCycle:["none"],
+    elementCycle:["earth"],
   },
   // チョッパー（短剣使い・Lv3）
   pvp_chopper: {
@@ -147,7 +146,7 @@ const INITIAL_BATTLE_DEFS = {
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
     pattern:["atk","dodge","atk","atk","counter","atk"],
     unavoidableAtk:[0,0],
-    elementCycle:["none"],
+    elementCycle:["fire"],
   },
 
    // ── アリエス・カルマとのコカトリス3体 ──────────────────────────────────
@@ -163,7 +162,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"コカトリス Lv.5", em:"🐔",
     maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["dodge","atk","counter","atk","atk","dodge","counter"],
+    pattern:["counter","atk","counter","dodge","atk","counter","counter"],
     unavoidableAtk:[18,26],
     elementCycle:["earth"],
   },
@@ -180,7 +179,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"コカトリス Lv.5", em:"🐔",
     maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["atk","counter","atk","dodge","atk","counter","atk"],
+    pattern:["atk","counter","atk","dodge","atk","counter","dodge"],
     unavoidableAtk:[18,26],
     elementCycle:["earth"],
   },
@@ -188,7 +187,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"コカトリス Lv.5", em:"🐔",
     maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["dodge","atk","counter","atk","atk","dodge","counter"],
+    pattern:["counter","atk","counter","dodge","atk","counter","dodge"],
     unavoidableAtk:[18,26],
     elementCycle:["earth"],
   },
@@ -196,7 +195,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"コカトリス Lv.5", em:"🐔",
     maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:15,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["atk","atk","counter","dodge","atk","atk","counter"],
+    pattern:["atk","atk","counter","dodge","atk","atk","unavoidable"],
     unavoidableAtk:[18,26],
     elementCycle:["earth"],
   },
@@ -206,7 +205,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"オルガ", em:"⚔️",
     maxHp:1450, atk:[20,32], elk:0, exp:0, lv:23, spd:13,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:true, isFloating:false, isGround:true,
-    pattern:["atk","counter","dodge","atk","atk_all","counter","unavoidable","dodge","counter","atk_all",],
+    pattern:["atk","counter","dodge","atk_all","atk","counter","unavoidable","dodge","counter","atk_all",],
     unavoidableAtk:[28,40],
     elementCycle:["fire","ice","thunder","earth","none"],
   },
@@ -1498,6 +1497,8 @@ export default function ArcadiaCh2() {
   // sleepActive > 0: 敵全員を行動不能にする残りターン数
   const [sleepCooldown, setSleepCooldown] = useState(0);
   const [sleepActive,   setSleepActive  ] = useState(0);
+  // overhealCooldown > 0: CD中。使用後2T経過で再使用可。
+  const [overhealCooldown, setOverhealCooldown] = useState(0);
 
   // ── 属性スキルクールダウン（各3T）────────────────────────────────────────
   // { elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 }
@@ -1886,7 +1887,7 @@ export default function ArcadiaCh2() {
           const pi = buildPartyInit(pKeys);
           setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
         setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
+        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setOverhealCooldown(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
         setPhase("battle");
         return;
       }
@@ -1908,7 +1909,7 @@ export default function ArcadiaCh2() {
         const pi = buildPartyInit(pKeys);
         setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setOverhealCooldown(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
       setMultiEnemies(null);
       setPhase("battle");
       return;
@@ -1983,7 +1984,7 @@ export default function ArcadiaCh2() {
           const pi = buildPartyInit(pKeys);
           setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
         setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
+        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setOverhealCooldown(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
         setPhase("battle");
         return;
       }
@@ -2005,7 +2006,7 @@ export default function ArcadiaCh2() {
         const pi = buildPartyInit(pKeys);
         setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setOverhealCooldown(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
       setMultiEnemies(null);
       setPhase("battle");
       return;
@@ -2083,6 +2084,7 @@ export default function ArcadiaCh2() {
     if (skillId === "provoke"   && provokeCooldown   > 0) { showNotif(`挑発 CD中（残${provokeCooldown}T）`);    return; }
     if (skillId === "takedown"  && takedownCooldown  > 0) { showNotif(`テイクダウン CD中（残${takedownCooldown}T）`); return; }
     if (skillId === "sleep"          && sleepCooldown          > 0) { showNotif(`スリープ CD中（残${sleepCooldown}T）`);           return; }
+    if (skillId === "overheal"       && overhealCooldown       > 0) { showNotif(`オーバーヒール CD中（残${overhealCooldown}T）`);   return; }
     if (skillId === "biker_slash"    && bikerSlashCooldown    > 0) { showNotif(`バイカースラッシュ CD中（残${bikerSlashCooldown}T）`);  return; }
     if (skillId === "sansanka"       && sansankaCooldown       > 0) { showNotif(`三散華 CD中（残${sansankaCooldown}T）`);              return; }
     if (skillId === "stinger_bite"   && stingerCooldown        > 0) { showNotif(`スティンガーバイト CD中（残${stingerCooldown}T）`);   return; }
@@ -2124,7 +2126,7 @@ export default function ArcadiaCh2() {
         ? { mode:"multi", cmds:newCmds, targets:newTargets }
         : { mode:"single", cmds:newCmds, targets:null });
     }
-  }, [victory, defeat, inputPhase, cmdInputIdx, pendingCommands, pendingTargets, mp, partyMp, showNotif, multiEnemies, provokeCooldown, takedownCooldown, sleepCooldown, elemCooldowns, bikerSlashCooldown, sansankaCooldown, stingerCooldown, straightShotCooldown, arrowRainCooldown, waterSphereCooldown]);
+  }, [victory, defeat, inputPhase, cmdInputIdx, pendingCommands, pendingTargets, mp, partyMp, showNotif, multiEnemies, provokeCooldown, takedownCooldown, sleepCooldown, overhealCooldown, elemCooldowns, bikerSlashCooldown, sansankaCooldown, stingerCooldown, straightShotCooldown, arrowRainCooldown, waterSphereCooldown]);
 
   // ─── ターゲット確定（複数敵専用） ─────────────────────────────────────────
   const onSelectTarget = useCallback((targetIdx) => {
@@ -2181,10 +2183,12 @@ export default function ArcadiaCh2() {
     let curPartyMp = { ...partyMp };
     let curEnemies = enemies.map(e => ({ ...e }));
     const memberDmg = Object.fromEntries(currentPartyKeys.map(k => [k, 0]));  // 各メンバーの受けたダメージ合計
+    const memberHeal = Object.fromEntries(currentPartyKeys.map(k => [k, 0])); // 各メンバーのメインフェイズ回復量
     let earthSlashUsed = false;
     let iceSlashUsed = false;
     let thunderSlashUsed = false;
     let fireSlashUsed = false;
+    const elemUsed = { elem_fire:false, elem_ice:false, elem_thunder:false, elem_earth:false };
     let provokeUsed = false;
     let takedownUsed = false;
     let sleepUsed = false;
@@ -2241,6 +2245,7 @@ export default function ArcadiaCh2() {
           const healAmt = 80;
           if (isEltz) curHp = Math.min(curHp + healAmt, mhp);
           else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id] ?? 0) + healAmt, partyMhp[actor.id]);
+          memberHeal[actor.id] = (memberHeal[actor.id] ?? 0) + healAmt;
           logs.push(`${actor.icon}${actor.name} 🧪 HP+${healAmt}`);
           continue;
         }
@@ -2292,10 +2297,10 @@ export default function ArcadiaCh2() {
         const eActionForPlayer = tEnemy.def.pattern[tEnemy.turnIdx % tEnemy.def.pattern.length];
         const rawDmg = Math.max(1, randInt(sk.dmg[0], sk.dmg[1]) + (isEltz ? atkBonus : 0));
 
-        if (skillId === "elem_earth")   { earthSlashUsed = true; }
-        if (skillId === "elem_ice")     { iceSlashUsed = true; }
-        if (skillId === "elem_thunder") { thunderSlashUsed = true; }
-        if (skillId === "elem_fire")    { fireSlashUsed = true; }
+        if (skillId === "elem_earth")   { earthSlashUsed = true; elemUsed.elem_earth = true; }
+        if (skillId === "elem_ice")     { iceSlashUsed = true; elemUsed.elem_ice = true; }
+        if (skillId === "elem_thunder") { thunderSlashUsed = true; elemUsed.elem_thunder = true; logs.push(`⚡ 雷神斬効果：味方全員 SPD +3（3ターン）！`); }
+        if (skillId === "elem_fire")    { fireSlashUsed = true; elemUsed.elem_fire = true; }
 
         if (elemSk) {
           curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - rawDmg);
@@ -2488,16 +2493,21 @@ export default function ArcadiaCh2() {
     // ══════════════════════════════════════════════════════════════════
     // コンボジャッジ
     //   通常：全員無被弾 → 成立
-    //   overheal使用時：被ダメージ合計 ≤ 回復量(80) なら成立
+    //   heal使用時（unavoidable含むターン）：被ダメ - 回復量 ≤ 0 で全員成立
+    //   overheal使用時：被ダメージ合計 ≤ 回復量(80) なら成立（従来仕様維持）
     //   コンボ加算はパーティ人数分
     // ══════════════════════════════════════════════════════════════════
     logs.push(`── コンボジャッジ ──`);
 
     const OVERHEAL_AMT = 80;
     const partySize = currentPartyKeys.length;
+    // このターンに敵がunavoidableを使用したか確認
+    const hadUnavoidable = aliveEnemies.some(e => e.def.pattern[e.turnIdx % e.def.pattern.length] === "unavoidable");
+    // いずれかのメンバーがhealを使用したか
+    const healUsedThisTurn = currentPartyKeys.some(k => (memberHeal[k] ?? 0) > 0);
     let comboOk;
     if (overhealUsed) {
-      // オーバーヒールターン：メンバー全員の被ダメ ≤ 回復量か確認
+      // オーバーヒールターン：メンバー全員の被ダメ ≤ 回復量か確認（従来仕様維持）
       comboOk = currentPartyKeys.every(k => (memberDmg[k] ?? 0) <= OVERHEAL_AMT);
       if (!comboOk) {
         const failNames = currentPartyKeys
@@ -2507,6 +2517,17 @@ export default function ArcadiaCh2() {
           const k = currentPartyKeys.find(key => (PARTY_DEFS.find(p=>p.id===key)?.name??key)===n);
           return memberDmg[k]??0;
         }).join("・")}) がオーバーヒール(${OVERHEAL_AMT})を超過`);
+      }
+    } else if (hadUnavoidable && healUsedThisTurn) {
+      // 回避不能ターン＋heal使用：被ダメ - 回復量 ≤ 0 で全員コンボ成立
+      comboOk = currentPartyKeys.every(k => (memberDmg[k] ?? 0) - (memberHeal[k] ?? 0) <= 0);
+      if (!comboOk) {
+        const failKeys = currentPartyKeys.filter(k => (memberDmg[k] ?? 0) - (memberHeal[k] ?? 0) > 0);
+        const failInfo = failKeys.map(k => {
+          const name = PARTY_DEFS.find(p => p.id === k)?.name ?? k;
+          return `${name}(被ダメ${memberDmg[k]??0}-回復${memberHeal[k]??0}=${( memberDmg[k]??0)-(memberHeal[k]??0)})`;
+        }).join("・");
+        logs.push(`💔 ${failInfo} がヒール後もダメージ超過`);
       }
     } else {
       comboOk = currentPartyKeys.every(k => (memberDmg[k] ?? 0) === 0);
@@ -2548,6 +2569,7 @@ export default function ArcadiaCh2() {
     const nextTakedownActive   = takedownUsed ? 1 : Math.max(0, takedownActive   - 1);
     const nextSleepCooldown    = sleepUsed    ? 3 : Math.max(0, sleepCooldown    - 1);
     const nextSleepActive      = sleepUsed    ? 2 : Math.max(0, sleepActive      - 1);
+    const nextOverhealCooldown = overhealUsed ? 2 : Math.max(0, overhealCooldown - 1);
     const nextBikerSlashCooldown   = bikerSlashUsed   ? 3 : Math.max(0, bikerSlashCooldown   - 1);
     const nextBikerAtkBonus        = bikerSlashUsed   ? Math.min(bikerAtkBonus + 5, 20) : bikerAtkBonus;
     const nextSansankaCooldown     = sansankaUsed     ? 3 : Math.max(0, sansankaCooldown     - 1);
@@ -2557,6 +2579,13 @@ export default function ArcadiaCh2() {
     const nextArrowRainCooldown    = arrowRainUsed    ? 4 : Math.max(0, arrowRainCooldown    - 1);
     const nextWaterSphereCooldown  = waterSphereUsed  ? 3 : Math.max(0, waterSphereCooldown  - 1);
     const nextWaterSphereActive    = waterSphereUsed  ? 3 : Math.max(0, waterSphereActive    - 1);
+    // 属性スキルCD更新（使用した場合2をセット、毎ターン減算）
+    const nextElemCooldowns = {
+      elem_fire:    elemUsed.elem_fire    ? 2 : Math.max(0, elemCooldowns.elem_fire    - 1),
+      elem_ice:     elemUsed.elem_ice     ? 2 : Math.max(0, elemCooldowns.elem_ice     - 1),
+      elem_thunder: elemUsed.elem_thunder ? 2 : Math.max(0, elemCooldowns.elem_thunder - 1),
+      elem_earth:   elemUsed.elem_earth   ? 2 : Math.max(0, elemCooldowns.elem_earth   - 1),
+    };
 
     // ステート一括更新
     setHp(Math.min(curHp, mhp));
@@ -2578,6 +2607,8 @@ export default function ArcadiaCh2() {
     setTakedownActive(nextTakedownActive);
     setSleepCooldown(nextSleepCooldown);
     setSleepActive(nextSleepActive);
+    setOverhealCooldown(nextOverhealCooldown);
+    setElemCooldowns(nextElemCooldowns);
     setBikerSlashCooldown(nextBikerSlashCooldown);
     setBikerAtkBonus(nextBikerAtkBonus);
     setSansankaCooldown(nextSansankaCooldown);
@@ -2692,6 +2723,7 @@ export default function ArcadiaCh2() {
     const elemUsed = { elem_fire:false, elem_ice:false, elem_thunder:false, elem_earth:false };
     // このターンで敵行動が割り込んだ後の全メンバーの被弾フラグ
     const memberDmg = Object.fromEntries(currentPartyKeys.map(k => [k, 0]));  // 各メンバーの受けたダメージ合計
+    const memberHeal = Object.fromEntries(currentPartyKeys.map(k => [k, 0])); // 各メンバーのメインフェイズ回復量
 
     // ── 現在有効なバフ・デバフ表示 ──────────────────────────────────────
     logs.push(`─ ターン ${turn + 1} ─`);
@@ -2800,6 +2832,7 @@ export default function ArcadiaCh2() {
             curPartyHp[actor.id] = Math.min((curPartyHp[actor.id] ?? 0) + healAmt, partyMhp[actor.id]);
             logs.push(`${actor.icon} ${actor.name} 🧪 回復ポーション！ HP +${healAmt}`);
           }
+          memberHeal[actor.id] = (memberHeal[actor.id] ?? 0) + healAmt;
         } else if (skillId === "biker_slash") {
           bikerSlashUsed = true;
           const rawDmg = Math.max(1, randInt(18, 28) + (isEltz ? atkBonus : 0));
@@ -2987,15 +3020,21 @@ export default function ArcadiaCh2() {
     // ══════════════════════════════════════════════════════════════════
     // コンボジャッジ
     //   通常：全員無被弾 → 成立
-    //   overheal使用時：被ダメージ合計 ≤ 回復量(80) なら成立
+    //   heal使用時（unavoidable含むターン）：被ダメ - 回復量 ≤ 0 で全員成立
+    //   overheal使用時：被ダメージ合計 ≤ 回復量(80) なら成立（従来仕様維持）
     //   コンボ加算はパーティ人数分
     // ══════════════════════════════════════════════════════════════════
     logs.push(`── コンボジャッジ ──`);
 
     const OVERHEAL_AMT = 80;
     const partySize = currentPartyKeys.length;
+    // このターン敵がunavoidableを使用したか
+    const hadUnavoidable = eAction === "unavoidable";
+    // いずれかのメンバーがhealを使用したか
+    const healUsedThisTurn = currentPartyKeys.some(k => (memberHeal[k] ?? 0) > 0);
     let comboOk;
     if (overhealUsed) {
+      // オーバーヒールターン（従来仕様維持）
       comboOk = currentPartyKeys.every(k => (memberDmg[k] ?? 0) <= OVERHEAL_AMT);
       if (!comboOk) {
         const failKeys = currentPartyKeys.filter(k => (memberDmg[k] ?? 0) > OVERHEAL_AMT);
@@ -3004,6 +3043,17 @@ export default function ArcadiaCh2() {
           return `${name}(被ダメ${memberDmg[k]??0})`;
         }).join("・");
         logs.push(`💔 ${failInfo} がオーバーヒール(${OVERHEAL_AMT})超過`);
+      }
+    } else if (hadUnavoidable && healUsedThisTurn) {
+      // 回避不能ターン＋heal使用：被ダメ - 回復量 ≤ 0 で全員コンボ成立
+      comboOk = currentPartyKeys.every(k => (memberDmg[k] ?? 0) - (memberHeal[k] ?? 0) <= 0);
+      if (!comboOk) {
+        const failKeys = currentPartyKeys.filter(k => (memberDmg[k] ?? 0) - (memberHeal[k] ?? 0) > 0);
+        const failInfo = failKeys.map(k => {
+          const name = PARTY_DEFS.find(p => p.id === k)?.name ?? k;
+          return `${name}(被ダメ${memberDmg[k]??0}-回復${memberHeal[k]??0}=${(memberDmg[k]??0)-(memberHeal[k]??0)})`;
+        }).join("・");
+        logs.push(`💔 ${failInfo} がヒール後もダメージ超過`);
       }
     } else {
       comboOk = currentPartyKeys.every(k => (memberDmg[k] ?? 0) === 0);
@@ -3052,6 +3102,8 @@ export default function ArcadiaCh2() {
     // スリープ更新（使用した次ターンに2T行動不能、CD=3）
     const nextSleepCooldown    = sleepUsed    ? 3 : Math.max(0, sleepCooldown    - 1);
     const nextSleepActive      = sleepUsed    ? 2 : Math.max(0, sleepActive      - 1);
+    // オーバーヒール更新（使用後2T経過で再使用可）
+    const nextOverhealCooldown = overhealUsed ? 2 : Math.max(0, overhealCooldown - 1);
     // 新スキルCD更新
     const nextBikerSlashCooldown   = bikerSlashUsed   ? 3 : Math.max(0, bikerSlashCooldown   - 1);
     const nextBikerAtkBonus        = bikerSlashUsed   ? Math.min(bikerAtkBonus + 5, 20) : bikerAtkBonus;
@@ -3064,10 +3116,10 @@ export default function ArcadiaCh2() {
     const nextWaterSphereActive    = waterSphereUsed  ? 3 : Math.max(0, waterSphereActive    - 1);
     // 属性スキルCD更新（使用した場合3をセット、毎ターン減算）
     const nextElemCooldowns = {
-      elem_fire:    elemUsed.elem_fire    ? 3 : Math.max(0, elemCooldowns.elem_fire    - 1),
-      elem_ice:     elemUsed.elem_ice     ? 3 : Math.max(0, elemCooldowns.elem_ice     - 1),
-      elem_thunder: elemUsed.elem_thunder ? 3 : Math.max(0, elemCooldowns.elem_thunder - 1),
-      elem_earth:   elemUsed.elem_earth   ? 3 : Math.max(0, elemCooldowns.elem_earth   - 1),
+      elem_fire:    elemUsed.elem_fire    ? 2 : Math.max(0, elemCooldowns.elem_fire    - 1),
+      elem_ice:     elemUsed.elem_ice     ? 2 : Math.max(0, elemCooldowns.elem_ice     - 1),
+      elem_thunder: elemUsed.elem_thunder ? 2 : Math.max(0, elemCooldowns.elem_thunder - 1),
+      elem_earth:   elemUsed.elem_earth   ? 2 : Math.max(0, elemCooldowns.elem_earth   - 1),
     };
 
     // ── ステート一括更新 ────────────────────────────────────────────────────
@@ -3092,6 +3144,7 @@ export default function ArcadiaCh2() {
     setTakedownActive(nextTakedownActive);
     setSleepCooldown(nextSleepCooldown);
     setSleepActive(nextSleepActive);
+    setOverhealCooldown(nextOverhealCooldown);
     setElemCooldowns(nextElemCooldowns);
     setBikerSlashCooldown(nextBikerSlashCooldown);
     setBikerAtkBonus(nextBikerAtkBonus);
@@ -3138,7 +3191,7 @@ export default function ArcadiaCh2() {
     enemyElementIdx, elemDmgAccum, enemySpdDebuff,
     enrageCount, enemyAtkDebuff, partySpdBuff,
     provokeCooldown, provokeActive,
-    takedownCooldown, takedownActive, sleepCooldown, sleepActive, elemCooldowns,
+    takedownCooldown, takedownActive, sleepCooldown, sleepActive, overhealCooldown, elemCooldowns,
     bikerSlashCooldown, bikerAtkBonus, sansankaCooldown, stingerCooldown,
     straightShotCooldown, straightShotActive, arrowRainCooldown,
     waterSphereCooldown, waterSphereActive,
@@ -3455,47 +3508,47 @@ export default function ArcadiaCh2() {
 
   if (phase === "load") return (
     <div
-      style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1020 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:"16px",overflowY:"auto",overflowX:"hidden",boxSizing:"border-box"}}
+      style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1020 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32,overflow:"hidden"}}
       onDragOver={e => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0]); }}
     >
       <style>{loadKeyframes}</style>
-      <div style={{position:"fixed",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
-      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:440,animation:"fadeIn 1s ease",display:"flex",flexDirection:"column",gap:0}}>
-        <div style={{fontSize:10,letterSpacing:8,color:C.muted,marginBottom:"clamp(2px,1vh,8px)",fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
-        <div style={{fontSize:"clamp(32px,9vw,52px)",fontWeight:700,letterSpacing:"clamp(4px,2vw,12px)",color:C.white,textShadow:`0 0 30px ${C.accent}`,marginBottom:"clamp(2px,0.5vh,4px)"}}>ARCADIA</div>
-        <div style={{fontSize:12,letterSpacing:6,color:C.accent,marginBottom:"clamp(10px,2vh,24px)",fontFamily:"'Share Tech Mono',monospace"}}>─── Lexia の章 ───</div>
-        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:`0 auto clamp(10px,2vh,20px)`}}/>
+      <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:480,animation:"fadeIn 1s ease"}}>
+        <div style={{fontSize:10,letterSpacing:8,color:C.muted,marginBottom:8,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
+        <div style={{fontSize:52,fontWeight:700,letterSpacing:12,color:C.white,textShadow:`0 0 30px ${C.accent}`,marginBottom:4}}>ARCADIA</div>
+        <div style={{fontSize:12,letterSpacing:6,color:C.accent,marginBottom:32,fontFamily:"'Share Tech Mono',monospace"}}>─── Lexia の章 ───</div>
+        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 28px"}}/>
 
-        <div style={{fontSize:12,color:C.text,marginBottom:"clamp(8px,1.5vh,16px)",letterSpacing:1,lineHeight:1.7}}>
+        <div style={{fontSize:12,color:C.text,marginBottom:20,letterSpacing:1,lineHeight:1.9}}>
           第一章のセーブデータを読み込んで<br/>エルツのステータスを引き継ぎます。
         </div>
 
         <label
-          style={{display:"block",border:`2px dashed ${dragOver ? C.accent : C.border}`,borderRadius:8,padding:"clamp(12px,3vh,28px) 20px",cursor:"pointer",marginBottom:"clamp(8px,1.5vh,16px)",background:dragOver ? "rgba(0,200,255,0.06)" : "rgba(10,26,38,0.4)",animation:dragOver ? "dropZoneOver 0.8s infinite" : "dropZonePulse 2s infinite",transition:"background 0.2s"}}
+          style={{display:"block",border:`2px dashed ${dragOver ? C.accent : C.border}`,borderRadius:8,padding:"32px 20px",cursor:"pointer",marginBottom:16,background:dragOver ? "rgba(0,200,255,0.06)" : "rgba(10,26,38,0.4)",animation:dragOver ? "dropZoneOver 0.8s infinite" : "dropZonePulse 2s infinite",transition:"background 0.2s"}}
         >
           <input type="file" accept=".json" onChange={e => handleFile(e.target.files?.[0])} style={{display:"none"}} />
-          <div style={{fontSize:"clamp(24px,5vw,32px)",marginBottom:"clamp(4px,1vh,10px)"}}>{dragOver ? "📂" : "💾"}</div>
+          <div style={{fontSize:32,marginBottom:12}}>{dragOver ? "📂" : "💾"}</div>
           <div style={{fontSize:13,color:dragOver ? C.accent : C.text,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
             {dragOver ? "ここにドロップ！" : "クリック or ドラッグ＆ドロップ"}
           </div>
-          <div style={{fontSize:11,color:C.muted,marginTop:6}}>arcadia_save_ch1_*.json または arcadia_save_ch2_*.json</div>
+          <div style={{fontSize:11,color:C.muted,marginTop:8}}>arcadia_save_ch1_*.json または arcadia_save_ch2_*.json</div>
         </label>
 
         {saveError && (
-          <div style={{background:"rgba(255,68,102,0.1)",border:`1px solid ${C.red}`,borderRadius:4,padding:"10px 16px",marginBottom:"clamp(8px,1.5vh,16px)",fontSize:12,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"shake 0.4s ease"}}>
+          <div style={{background:"rgba(255,68,102,0.1)",border:`1px solid ${C.red}`,borderRadius:4,padding:"10px 16px",marginBottom:16,fontSize:12,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"shake 0.4s ease"}}>
             ⚠ {saveError}
           </div>
         )}
-        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:`0 auto clamp(10px,2vh,20px)`}}/>
+        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 20px"}}/>
         <button
           onClick={() => setPhase("title")}
-          style={{width:"100%",padding:"clamp(8px,1.5vh,12px) 0",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:12,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
+          style={{width:"100%",padding:"12px 0",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:12,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
           onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.text; }}
           onMouseLeave={e => { e.currentTarget.style.color = C.muted; e.currentTarget.style.borderColor = C.border; }}
         >新規スタート（引き継ぎなし）</button>
-        <div style={{fontSize:10,color:C.muted,marginTop:6,fontFamily:"'Share Tech Mono',monospace",opacity:0.7}}>※ Lv1・初期ステータスで開始します</div>
+        <div style={{fontSize:10,color:C.muted,marginTop:8,fontFamily:"'Share Tech Mono',monospace",opacity:0.7}}>※ Lv1・初期ステータスで開始します</div>
       </div>
     </div>
   );
@@ -3542,7 +3595,7 @@ export default function ArcadiaCh2() {
 
   // @@SECTION:RENDER_TITLE
   if (phase === "title") return (
-    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg_ch2.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflowY:"auto",overflowX:"hidden"}}>
+    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg_ch2.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
       <style>{keyframes}</style>
       {/* Scanline effect */}
       <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.015) 2px,rgba(0,200,255,0.015) 4px)",pointerEvents:"none",zIndex:1}}/>
@@ -3551,9 +3604,9 @@ export default function ArcadiaCh2() {
         <div key={i} style={{position:"absolute",width:i%5===0?2:1,height:i%5===0?2:1,borderRadius:"50%",background:"#adf",top:`${Math.random()*100}%`,left:`${Math.random()*100}%`,opacity:0.3+Math.random()*0.5,animation:`blnk ${1.5+Math.random()*2}s ${Math.random()*2}s infinite`}}/>
       ))}
 
-      <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 1.5s ease",margin:"auto",paddingTop:40,paddingBottom:40,width:"100%",boxSizing:"border-box",padding:"40px 16px"}}>
-        <div style={{fontSize:11,letterSpacing:8,color:C.muted,marginBottom:16,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
-        <div style={{fontSize:"clamp(36px, 14vw, 72px)",fontWeight:700,letterSpacing:"clamp(4px, 2.5vw, 16px)",color:C.white,textShadow:`0 0 40px ${C.accent},0 0 80px ${C.accent}44`,lineHeight:1,marginBottom:8}}>ARCADIA</div>
+      <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 1.5s ease"}}>
+        <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:16,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
+        <div style={{fontSize:72,fontWeight:700,letterSpacing:16,color:C.white,textShadow:`0 0 40px ${C.accent},0 0 80px ${C.accent}44`,lineHeight:1,marginBottom:8}}>ARCADIA</div>
         <div style={{fontSize:13,letterSpacing:4,color:C.accent2,marginBottom:48,fontFamily:"'Share Tech Mono',monospace",textShadow:`0 0 10px ${C.accent2}`}}>─── Lexia の章 ───</div>
 
         <div style={{width:280,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 40px"}}/>
@@ -3608,7 +3661,7 @@ export default function ArcadiaCh2() {
       setPartyHp({ swift:80, linz:70, chopper:65 });
       setPartyMp({ swift:60, linz:70, chopper:50 });
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setOverhealCooldown(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
       setPhase("battle");
     };
 
@@ -4040,10 +4093,24 @@ export default function ArcadiaCh2() {
                         boxShadow: "none",
                       }}>
 
-                      {/* ── 上部：BOSSラベル or 倒れ ── */}
-                      <div style={{width:"100%",textAlign:"center",flexShrink:0,minHeight:14}}>
+                      {/* ── 上部：BOSSラベル + 属性インジケーター（シングルと同スタイル） or 倒れ ── */}
+                      <div style={{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0,minHeight:14}}>
                         {meIsBoss && !me.defeated && (
                           <div style={{fontSize:8,letterSpacing:3,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite"}}>BOSS</div>
+                        )}
+                        {meElemInfo && !me.defeated && (
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,background:"rgba(5,13,20,0.84)",border:`1px solid ${meElemInfo.color}88`,borderRadius:5,padding:"3px 10px",minWidth:meIsBoss?120:80,width:"94%"}}>
+                            <div style={{fontSize:7,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,whiteSpace:"nowrap"}}>CURRENT ELEMENT</div>
+                            <div style={{fontSize:meIsBoss?13:11,fontWeight:900,color:meElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,textShadow:`0 0 10px ${meElemInfo.color}`,whiteSpace:"nowrap"}}>
+                              {meElemInfo.icon} {meElemInfo.label}
+                            </div>
+                            <div style={{width:"90%",height:3,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden"}}>
+                              <div style={{height:"100%",width:`${elemBarPct}%`,background:`linear-gradient(90deg,${meElemInfo.color}88,${meElemInfo.color})`,transition:"width 0.3s",borderRadius:2}}/>
+                            </div>
+                            <div style={{fontSize:7,color:meElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,whiteSpace:"nowrap"}}>
+                              蓄積 {elemDmgAccum}/{ELEMENT_BREAK_THRESHOLD}
+                            </div>
+                          </div>
                         )}
                         {me.defeated && (
                           <div style={{fontSize:meIsBoss?36:24,lineHeight:1,marginTop:8}}>💀</div>
@@ -4078,13 +4145,6 @@ export default function ArcadiaCh2() {
                       {/* ── 下部：属性・名前・HP・行動バッジ ── */}
                       {!me.defeated && (
                         <div style={{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0,background:"rgba(5,13,20,0.72)",borderRadius:"0 0 6px 6px",padding:"4px 2px 2px"}}>
-                          {/* 属性バッジ（elementCycle 持ちのみ） */}
-                          {meElemInfo && (
-                            <div style={{display:"flex",alignItems:"center",gap:2,background:`${meElemInfo.color}18`,border:`1px solid ${meElemInfo.color}55`,borderRadius:3,padding:"1px 6px"}}>
-                              <span style={{fontSize:9}}>{meElemInfo.icon}</span>
-                              <span style={{fontSize:8,color:meElemInfo.color,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,letterSpacing:1,textShadow:`0 0 8px ${meElemInfo.color}`}}>{meElemInfo.label}</span>
-                            </div>
-                          )}
                           {/* 敵名 */}
                           <div style={{fontSize:8,color:C.white,fontFamily:"'Share Tech Mono',monospace",textAlign:"center",lineHeight:1.2,width:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 2px"}}>
                             {meDef.name.replace("Simuluu ─ ","").replace("シャメロット ","Lv").replace(" 試練の主","")}
@@ -4265,9 +4325,27 @@ export default function ArcadiaCh2() {
 
             {/* バトルログ */}
             <div style={{flex:1,overflowY:"auto",padding:"5px 10px",minHeight:0}}>
-              {btlLogs.map((l,i) => (
-                <div key={i} style={{fontSize:11,color:i===btlLogs.length-1?C.white:C.muted,lineHeight:1.7,animation:i===btlLogs.length-1?"slideUp 0.3s ease":"none"}}>{l}</div>
-              ))}
+              {btlLogs.map((l,i) => {
+                // ログ色判定
+                let logColor;
+                const hasHeal      = l.includes("HP+") || l.includes("オーバーヒール") || l.includes("大回復");
+                // 味方が攻撃側になる「に+ダメージ」ログ（回避成功・カウンター成功の反撃）
+                const isAllyAttack = l.includes("回避成功！") || l.includes("カウンター成功！");
+                const hasTakenDmg  = !isAllyAttack && (/に\s*\d+\s*ダメージ/.test(l) || /全員\s*(に\s*)?\d+\s*ダメージ/.test(l));
+                const hasDmg       = l.includes("ダメージ");
+                if (hasHeal) {
+                  logColor = "#4ade80";
+                } else if (hasTakenDmg) {
+                  logColor = "#f87171";
+                } else if (hasDmg || isAllyAttack) {
+                  logColor = "#60a5fa";
+                } else {
+                  logColor = C.white;
+                }
+                return (
+                  <div key={i} style={{fontSize:11,color:logColor,lineHeight:1.7,animation:i===btlLogs.length-1?"slideUp 0.3s ease":"none",opacity:i===btlLogs.length-1?1:0.75}}>{l}</div>
+                );
+              })}
             </div>
 
             {/* 右カラム下部：パーティー＋アクション */}
@@ -4325,15 +4403,38 @@ export default function ArcadiaCh2() {
               <div style={{flexShrink:0}}>
                 {!victory && !defeat ? (
                   <div>
-                    {/* 敵SPD表示（コンパクト） */}
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6,marginBottom:5}}>
-                      <div style={{display:"flex",alignItems:"center",gap:4,padding:"2px 8px",background:"transparent",border:`1px solid ${C.border}44`,borderRadius:4}}>
-                        <span style={{fontSize:11}}>{ed.em}</span>
-                        <span style={{fontSize:8,color:enemySpdDebuff>0?C.gold:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>
-                          SPD {effectiveEnemySpdDisp}{enemySpdDebuff>0?" ⬇":""}
-                        </span>
-                      </div>
-                    </div>
+                    {/* ── SPD比較（1行） ── */}
+                    {(() => {
+                      const spdBuffActive = partySpdBuff > 0;
+                      const enemyEntries = multiEnemies
+                        ? multiEnemies.filter(me => !me.defeated).map(me => ({
+                            icon: me.def.em,
+                            spd: Math.max(1, (me.def.spd ?? 12) - (enemySpdDebuff > 0 ? 5 : 0)),
+                            isEnemy: true, debuffed: enemySpdDebuff > 0,
+                          }))
+                        : [{ icon: ed.em, spd: effectiveEnemySpdDisp, isEnemy: true, debuffed: enemySpdDebuff > 0 }];
+                      const partyEntries = partyMembers.map(m => ({
+                        icon: m.icon, spd: m.spd, isEnemy: false, buffed: spdBuffActive,
+                      }));
+                      // SPD降順で並べる
+                      const sorted = [...enemyEntries, ...partyEntries].sort((a, b) => b.spd - a.spd);
+                      return (
+                        <div style={{display:"flex",alignItems:"center",gap:3,marginBottom:5,padding:"3px 6px",background:"rgba(5,13,20,0.7)",border:`1px solid ${C.border}44`,borderRadius:4,flexWrap:"wrap"}}>
+                          <span style={{fontSize:7,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,flexShrink:0,marginRight:2}}>SPD</span>
+                          {sorted.map((e, i) => {
+                            const col = e.isEnemy ? (e.debuffed ? C.gold : C.red) : (e.buffed ? C.accent2 : C.accent);
+                            return (
+                              <React.Fragment key={i}>
+                                {i > 0 && <span style={{fontSize:7,color:C.muted,flexShrink:0}}>{"'"}</span>}
+                                <span style={{fontSize:9,fontFamily:"'Share Tech Mono',monospace",color:col,flexShrink:0,whiteSpace:"nowrap"}}>
+                                  {e.icon}{e.spd}{e.debuffed?"⬇":e.buffed?"⚡":""}
+                                </span>
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
 
                     {showElemMenu ? (
                       /* ── 属性スキルサブメニュー ── */
@@ -4384,7 +4485,7 @@ export default function ArcadiaCh2() {
                         const SPEC_DEF = {
                           provoke:       { icon:"👊", label:"挑発",              color:"#f97316", cd:provokeCooldown,       desc:"敵行動を3T強攻に変換" },
                           takedown:      { icon:"🦵", label:"テイクダウン",       color:"#ef4444", cd:takedownCooldown,      desc:"敵を1T行動不能" },
-                          overheal:      { icon:"💚", label:"オーバーヒール",     color:"#22c55e", cd:0,                     desc:"全員HP+80（最遅）" },
+                          overheal:      { icon:"💚", label:"オーバーヒール",     color:"#22c55e", cd:overhealCooldown,      desc:"全員HP+80（最遅）" },
                           sleep:         { icon:"😴", label:"スリープ",           color:"#a78bfa", cd:sleepCooldown,         desc:"敵を2T眠らせ行動不能" },
                           biker_slash:   { icon:"⚡", label:"バイカースラッシュ", color:"#facc15", cd:bikerSlashCooldown,    desc:`単体ダメージ＋ATK+5(累積/最大20) [+${bikerAtkBonus}]` },
                           sansanka:      { icon:"⚔", label:"三散華",             color:"#00ffcc", cd:sansankaCooldown,      desc:"3連撃×3回ダメージ" },
@@ -4463,7 +4564,7 @@ export default function ArcadiaCh2() {
                           {currentCmdMember.specialSkills.length > 0 && (() => {
                             const hasCdAll = currentCmdMember.specialSkills.every(spId => {
                               const cdMap = {
-                                provoke:provokeCooldown, takedown:takedownCooldown, overheal:0, sleep:sleepCooldown,
+                                provoke:provokeCooldown, takedown:takedownCooldown, overheal:overhealCooldown, sleep:sleepCooldown,
                                 biker_slash:bikerSlashCooldown, sansanka:sansankaCooldown, stinger_bite:stingerCooldown,
                                 straight_shot:straightShotCooldown, arrow_rain:arrowRainCooldown, water_sphere:waterSphereCooldown,
                               };
