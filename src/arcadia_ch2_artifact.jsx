@@ -1,5 +1,67 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 
+// @@SECTION_MAP ─────────────────────────────────────────────────────────────────
+// arcadia_ch2_artifact.jsx  セクション行番号マップ（@@SECTIONアンカー対応）
+// grep -n "@@SECTION" <ファイル> で最新行番号を即確認できる。
+//
+// 【コンポーネント外（グローバル定数）】
+//   PALETTE            65      カラー定数 C
+//   BATTLE_CONFIG      74     スキル定義 BATTLE_SKILLS / 敵定義 INITIAL_BATTLE_DEFS
+//   ELEMENT_SYSTEM     277    属性定義 ELEMENT_NAMES / ELEMENT_SKILL_DEFS
+//   UTILS              298    randInt / EXP_TABLE / ALL_CHAR_DEFS / buildPartyInit / BATTLE_PARTY_MAP
+//   NOVEL_TEXTS        350    NOVEL_STATUS / novelUrl / NOVEL_FETCH_ERR
+//   ASSETS             400    ASSET_STATUS / assetUrl / movieUrl / bgmUrl
+//   BGM_MAPS           521    PHASE_BGM / LOC_BGM / BATTLE_BGM / resolveBgmId
+//   SPRITE_SIZE        657    SPRITE_SIZE / SPRITE_MAP / LOC_TO_SCENE_IMG
+//   ENEMY_SIZE         699    ENEMY_IMG_SIZE / ENEMY_IMG_MAP / SIMULUU_IMG_URL / BATTLE_BG_MAP
+//   BATTLE_BG_STYLE    766    BATTLE_BG_STYLE（敵タイプ → bg画像サイズ・位置）
+//   SCENE_BG_STYLE     795    SCENE_BG_STYLE（loc → bg画像サイズ・位置）
+//   SAVE_LOAD          893    セーブデータ構造定義（コンポーネント外）
+//   SCENES_CH2         897    第二章全シナリオデータ SCENES[]
+//
+// 【コンポーネント内（ArcadiaCh2関数内）】
+//   MAIN_COMPONENT     1421   ArcadiaCh2コンポーネント開始
+//   STATE_ADVENTURE    1423   フェーズ・シーン・UI制御ステート
+//   STATE_PLAYER       1456   HP/MP/ELK/LV/装備などプレイヤーステート
+//   STATE_BATTLE       1472   バトル用ステート全般（multiEnemies / pendingCommands 等）
+//   BGM_CONTROL        1589   BGM制御 ref / fadeOut / fadeIn / switchBgm / playFanfare
+//   LOGIC_TYPEWRITER   1712   startType / showDl / BGM切り替えuseEffect群
+//   LOGIC_DIALOG_TAP   1903   onTapDlg（ダイアログ進行・各種イベント処理）
+//   LOGIC_CHOICE       1998   onChoice（選択肢分岐・購入・バトル突入）
+//   LOGIC_BATTLE       2095   PARTY_DEFS / judgeRPS / ENEMY_ACTION_LABEL
+//   LOGIC_SELECT_CMD   2127   onSelectCommand（コマンド登録・戦闘不能スキップ）
+//   LOGIC_SELECT_TGT   2213   onSelectTarget（ターゲット確定・戦闘不能スキップ）
+//   LOGIC_MULTI_TURN   2248   executeMultiTurn（複数敵ターン実行）
+//   LOGIC_PARTY_TURN   2771   executePartyTurn（単体敵ターン実行）
+//   LOGIC_PENDING_EXEC 3334   pendingExecution useEffect（クロージャ問題解決）
+//   LOGIC_BATTLE_CMD   3348   onCancelCommand / exitBattle
+//   RENDER_VICTORY     3443   勝利画面（BATTLE RESULT）
+//   RENDER_LOAD        3587   セーブデータ読み込み画面（loadKeyframes含む）
+//   LOGIC_SAVE_LOAD    3601   validateSave / applySaveData / handleFile
+//   RENDER_LOADED      3693   セーブデータ確認画面
+//   RENDER_TITLE       3734   タイトル画面
+//   RENDER_SELECT      3771   バトル選択画面（デバッグ用）
+//   RENDER_MOVIE       3914   オープニングムービー画面
+//   RENDER_ENDING      3969   エンディング画面（セーブエクスポート含む）
+//   RENDER_BATTLE      4071   バトル画面（マルチ敵・単体敵・コマンドUI）
+//   RENDER_GAME        4761   ゲーム画面（HUD・スプライト・ダイアログ・P.BOOK・LvUP等）
+//
+// 【「どこに追加すればいい？」クイックリファレンス】
+//   新しい敵・スキルを追加          → BATTLE_CONFIG (74)
+//   属性スキルを追加                → ELEMENT_SYSTEM (277)
+//   キャラ定義・パーティ構成変更    → UTILS (298) の ALL_CHAR_DEFS / BATTLE_PARTY_MAP
+//   シーン背景・BGMのloc対応追加    → BGM_MAPS (521) / SCENE_BG_STYLE (795)
+//   スプライト・敵画像を追加        → SPRITE_SIZE (657) / ENEMY_SIZE (699)
+//   新シーンを追加                  → SCENES_CH2 (897)
+//   ダイアログイベントを追加        → LOGIC_DIALOG_TAP (1903)
+//   バトルコマンド処理を変更        → LOGIC_SELECT_CMD (2127)
+//   複数敵ターン処理を変更          → LOGIC_MULTI_TURN (2248)
+//   単体敵ターン処理を変更          → LOGIC_PARTY_TURN (2771)
+//   バトル終了・報酬処理を変更      → LOGIC_BATTLE_CMD (3348) の exitBattle
+//   バトルUIを変更                  → RENDER_BATTLE (4071)
+//   ゲーム画面UIを変更              → RENDER_GAME (4761)
+// ──────────────────────────────────────────────────────────────────────────────
+
 // @@SECTION:PALETTE
 const C = {
   bg:"#050d14", panel:"#0a1a26", panel2:"#0d2235",
@@ -456,7 +518,9 @@ function bgmUrl(key) {
   return ASSET_STATUS[key] ? `${BASE_URL}${key}.mp3` : null;
 }
 
-// ── BGM割り当てマップ ──────────────────────────────────────────────────────
+// @@SECTION:BGM_MAPS ──────────────────────────────────────────────────────────
+// BGM割り当てマップ（フェーズ・シーンloc・バトル敵タイプ → bgmId）
+// 同一bgmIdが連続する場合はBGMを継続再生（切り替えなし）
 const PHASE_BGM = {
   title:  "bgm/title",
   ending: "bgm/field",
@@ -1079,12 +1143,12 @@ const SCENES = [
   { bg:["#0a1808","#1a2a08","#182808"], loc:"エイビス平原 東", sprites:["🧑","🧑‍🦱","👩"], dl:[
     { sp:"エルツ", t:"「ふぅ、これがマンドラゴラか。\nあの鳴き声は厄介だけど、\n耐久力も無いし慣れれば狩りやすいかも。\nムーキャットよりは落ち着いて闘えそうだね」" },
     { sp:"スウィフト", t:"「確かに、あの鳴き声の前に予備動作もあるし。\n狩りやすいかも」" },
-    { sp:"ナレーション", t:"スニーピィの言葉を信じ、ここで狩りを続けた一同。\n夕方までに十三匹のマンドラゴラを狩り、\nマンドラゴラの根を六枚入手。\n\n売却額 57ELK × 2枚 = 114ELK（各分配）\n\n報酬を手にした三人は\nドナテロに教えられた中央広場の屋台市へ。" },
-    { sp:"スウィフト", t:"「あの海鮮あんかけ美味そうだな」" },
-    { sp:"エルツ", t:"「色々あるんだな、目移りする。\nあれ何だろう？\n\nしゃぶしゃぶ？　入ってみようよ！」" },
-    { sp:"SYSTEM", t:"── 湯揚〔ShangYang〕──\n\n□ 綿兎肉  10ELK\n□ 白羊肉  30ELK\n□ 角牛肉  50ELK\n\n※ ご飯おかわり自由" },
-    { sp:"エルツ", t:"「ライス無料だって。いいね、ここ。\n皆ラム肉食える？\nじゃあ綿兎を一皿ずつと、\n白羊肉を三人で一皿頼もう」" },
-    { sp:"ナレーション", t:"紅腐乳のタレをつけ、熱々の肉をライスと頬張る。\n温かい食事に気づけば会話も弾み、\nあっという間に夜が更けてゆく。\n\n人々を支える衣・食・住の生活。\nリアルに味わえるのもこの世界の醍醐味だった。", next:18 }
+    { sp:"ナレーション", t:"スニーピィの言葉を信じ、ここで狩りを続けた一同。\n夕方までに十三匹のマンドラゴラを狩り、\nマンドラゴラの根を六枚入手。\n\n売却額 57ELK × 2枚 = 114ELK（各分配）\n\n報酬を手にした三人は\nドナテロに教えられた中央広場の屋台市へ。",loc:"スティアルーフ 中央広場 屋台市" },
+    { sp:"スウィフト", t:"「あの海鮮あんかけ美味そうだな」",loc:"スティアルーフ 中央広場 屋台市" },
+    { sp:"エルツ", t:"「色々あるんだな、目移りする。\nあれ何だろう？\n\nしゃぶしゃぶ？　入ってみようよ！」",loc:"スティアルーフ 中央広場 屋台市" },
+    { sp:"SYSTEM", t:"── 湯揚〔ShangYang〕──\n\n□ 綿兎肉  10ELK\n□ 白羊肉  30ELK\n□ 角牛肉  50ELK\n\n※ ご飯おかわり自由",loc:"スティアルーフ 中央広場 屋台市" },
+    { sp:"エルツ", t:"「ライス無料だって。いいね、ここ。\n皆ラム肉食える？\nじゃあ綿兎を一皿ずつと、\n白羊肉を三人で一皿頼もう」",loc:"スティアルーフ 中央広場 屋台市" },
+    { sp:"ナレーション", t:"紅腐乳のタレをつけ、熱々の肉をライスと頬張る。\n温かい食事に気づけば会話も弾み、\nあっという間に夜が更けてゆく。\n\n人々を支える衣・食・住の生活。\nリアルに味わえるのもこの世界の醍醐味だった。",loc:"スティアルーフ 中央広場 屋台市", next:18 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -1522,6 +1586,9 @@ export default function ArcadiaCh2() {
   const tapStartYRef  = useRef(0);   // スクロール判定用
   const autoAdvTimerRef = useRef(null); // オート進行タイマー
 
+  // @@SECTION:BGM_CONTROL ──────────────────────────────────────────────────────
+  // BGM制御 ref・fadeOut/fadeIn/switchBgm/unlockAudio/playFanfare
+  // AutoPlay Policy 対応：ユーザー操作前は pendingBgmRef に積み、操作後に再生開始
   // ── BGM制御 ref ────────────────────────────────────────────────────────────
   const audioRef        = useRef(null);   // 現在再生中のAudioインスタンス
   const currentBgmRef   = useRef(null);   // 現在再生中のbgmId
@@ -2057,6 +2124,8 @@ export default function ArcadiaCh2() {
     enrage:           { icon:"🔴", text:"怒り状態！" },
   };
 
+  // @@SECTION:LOGIC_SELECT_CMD ──────────────────────────────────────────────────
+  // onSelectCommand：コマンド登録・CD/MP/スキル制限チェック・戦闘不能スキップ
   // ─── コマンド登録（コマンドフェーズ専用） ───────────────────────────────
   const onSelectCommand = useCallback((skillId) => {
     if (victory || defeat || inputPhase !== "command") return;
@@ -2109,10 +2178,23 @@ export default function ArcadiaCh2() {
 
     // ターゲット不要（heal/dodge または単体バトル）
     const newTargets = multiEnemies ? { ...pendingTargets, [member.id]: 0 } : pendingTargets;
-    if (multiEnemies) setPendingTargets(newTargets);
 
     const newCmds = { ...pendingCommands, [member.id]: skillId };
-    const nextIdx = cmdInputIdx + 1;
+    const newTgts = { ...newTargets };
+
+    // 戦闘不能（HP0）メンバーをスキップしながら次のcmdInputIdxを求める
+    let nextIdx = cmdInputIdx + 1;
+    while (nextIdx < PARTY_DEFS.length) {
+      const nm = PARTY_DEFS[nextIdx];
+      const nmHp = nm.id === "eltz" ? hp : (partyHp[nm.id] ?? 0);
+      if (nmHp > 0) break;
+      // 戦闘不能 → healを自動割り当てしてスキップ
+      newCmds[nm.id] = "heal";
+      if (multiEnemies) newTgts[nm.id] = 0;
+      nextIdx++;
+    }
+
+    if (multiEnemies) setPendingTargets(newTgts);
 
     if (nextIdx < PARTY_DEFS.length) {
       setPendingCommands(newCmds);
@@ -2123,34 +2205,49 @@ export default function ArcadiaCh2() {
       setCmdInputIdx(0);
       setInputPhase("execute");
       setPendingExecution(multiEnemies
-        ? { mode:"multi", cmds:newCmds, targets:newTargets }
+        ? { mode:"multi", cmds:newCmds, targets:newTgts }
         : { mode:"single", cmds:newCmds, targets:null });
     }
-  }, [victory, defeat, inputPhase, cmdInputIdx, pendingCommands, pendingTargets, mp, partyMp, showNotif, multiEnemies, provokeCooldown, takedownCooldown, sleepCooldown, overhealCooldown, elemCooldowns, bikerSlashCooldown, sansankaCooldown, stingerCooldown, straightShotCooldown, arrowRainCooldown, waterSphereCooldown]);
+  }, [victory, defeat, inputPhase, cmdInputIdx, pendingCommands, pendingTargets, hp, mp, partyHp, partyMp, showNotif, multiEnemies, provokeCooldown, takedownCooldown, sleepCooldown, overhealCooldown, elemCooldowns, bikerSlashCooldown, sansankaCooldown, stingerCooldown, straightShotCooldown, arrowRainCooldown, waterSphereCooldown]);
 
+  // @@SECTION:LOGIC_SELECT_TGT ──────────────────────────────────────────────────
+  // onSelectTarget：ターゲット確定（複数敵専用）・戦闘不能スキップ
   // ─── ターゲット確定（複数敵専用） ─────────────────────────────────────────
   const onSelectTarget = useCallback((targetIdx) => {
     if (!pendingTargetSelect || !multiEnemies) return;
     const { memberIdx, skillId } = pendingTargetSelect;
     const member = PARTY_DEFS[memberIdx];
-    const newTargets = { ...pendingTargets, [member.id]: targetIdx };
     const newCmds = { ...pendingCommands }; // skillIdは既に登録済み
+    const newTgts = { ...pendingTargets, [member.id]: targetIdx };
     setPendingTargetSelect(null);
-    const nextIdx = memberIdx + 1;
+
+    // 戦闘不能（HP0）メンバーをスキップしながら次のcmdInputIdxを求める
+    let nextIdx = memberIdx + 1;
+    while (nextIdx < PARTY_DEFS.length) {
+      const nm = PARTY_DEFS[nextIdx];
+      const nmHp = nm.id === "eltz" ? hp : (partyHp[nm.id] ?? 0);
+      if (nmHp > 0) break;
+      // 戦闘不能 → healを自動割り当てしてスキップ
+      newCmds[nm.id] = "heal";
+      newTgts[nm.id] = 0;
+      nextIdx++;
+    }
 
     if (nextIdx < PARTY_DEFS.length) {
-      setPendingTargets(newTargets);
+      setPendingTargets(newTgts);
       setCmdInputIdx(nextIdx);
     } else {
       setPendingCommands({});
       setPendingTargets({});
       setCmdInputIdx(0);
       setInputPhase("execute");
-      setPendingExecution({ mode:"multi", cmds:newCmds, targets:newTargets });
+      setPendingExecution({ mode:"multi", cmds:newCmds, targets:newTgts });
     }
-  }, [pendingTargetSelect, pendingTargets, pendingCommands, multiEnemies]);
+  }, [pendingTargetSelect, pendingTargets, pendingCommands, multiEnemies, hp, partyHp]);
 
-  // ─── 複数敵ターン実行 ──────────────────────────────────────────────────────
+  // @@SECTION:LOGIC_MULTI_TURN ──────────────────────────────────────────────────
+  // 複数敵バトルのターン実行（multiEnemies配列を使用）
+  // 5フェーズ構成：プリフェイズ → メインフェイズ → エンドフェイズ → コンボジャッジ → アップデート
   const executeMultiTurn = useCallback((cmds, targets) => {
     const enemies = multiEnemies;
     if (!enemies) return;
@@ -2158,6 +2255,9 @@ export default function ArcadiaCh2() {
     const spdBuff = partySpdBuff > 0 ? 3 : 0;
     const defBonus = Math.floor((statAlloc.pdef - 10) * 1.2);
     const atkBonus = weaponPatk + Math.floor((statAlloc.patk - 10) * 1.5) + bikerAtkBonus;
+    // コンボ攻撃力ボーナス：10ヒットごとに×1.1（累積）
+    const comboAtkTier = Math.floor(noDmgStreak / 10);
+    const comboAtkMult = comboAtkTier > 0 ? Math.pow(1.1, comboAtkTier) : 1.0;
 
     // 各生存敵の今ターンのアクションを決定
     const aliveEnemies = enemies.filter(e => !e.defeated);
@@ -2242,7 +2342,8 @@ export default function ArcadiaCh2() {
         }
 
         if (skillId === "heal") {
-          const healAmt = 80;
+          const memberMhp = isEltz ? mhp : (partyMhp[actor.id] ?? mhp);
+          const healAmt = 30 + Math.floor(memberMhp * 0.34);
           if (isEltz) curHp = Math.min(curHp + healAmt, mhp);
           else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id] ?? 0) + healAmt, partyMhp[actor.id]);
           memberHeal[actor.id] = (memberHeal[actor.id] ?? 0) + healAmt;
@@ -2295,7 +2396,7 @@ export default function ArcadiaCh2() {
         }
         const tEnemy = curEnemies[tIdx];
         const eActionForPlayer = tEnemy.def.pattern[tEnemy.turnIdx % tEnemy.def.pattern.length];
-        const rawDmg = Math.max(1, randInt(sk.dmg[0], sk.dmg[1]) + (isEltz ? atkBonus : 0));
+        const rawDmg = Math.max(1, Math.round((randInt(sk.dmg[0], sk.dmg[1]) + (isEltz ? atkBonus : 0)) * comboAtkMult));
 
         if (skillId === "elem_earth")   { earthSlashUsed = true; elemUsed.elem_earth = true; }
         if (skillId === "elem_ice")     { iceSlashUsed = true; elemUsed.elem_ice = true; }
@@ -2303,37 +2404,42 @@ export default function ArcadiaCh2() {
         if (skillId === "elem_fire")    { fireSlashUsed = true; elemUsed.elem_fire = true; }
 
         if (elemSk) {
-          curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - rawDmg);
-          if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
           const tElemCycle = tEnemy.def.elementCycle ?? null;
           const tElemIdx = (tElemCycle && tEnemy.def.isBoss) ? enemyElementIdx : 0;
           const tCurElemKey = tElemCycle ? tElemCycle[tElemIdx % tElemCycle.length] : null;
           const isWeakHit = tCurElemKey && elemSk.targetElement === tCurElemKey;
+          const isResistHit = tCurElemKey && tCurElemKey !== "none" && !isWeakHit;
+          const elemMult = isWeakHit ? 2.0 : (isResistHit ? 0.5 : 1.0);
+          const actualElemDmg = Math.max(1, Math.round(rawDmg * elemMult));
+          curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - actualElemDmg);
+          if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
           if (isWeakHit && !elemBreakTriggered) {
-            newElemAccum += rawDmg;
-            logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} 弱点ヒット！ ${rawDmg} dmg [蓄積:${Math.min(newElemAccum, ELEMENT_BREAK_THRESHOLD)}/${ELEMENT_BREAK_THRESHOLD}]`);
+            newElemAccum += actualElemDmg;
+            logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} ⚡弱点ヒット！×2 ${actualElemDmg} dmg [蓄積:${Math.min(newElemAccum, ELEMENT_BREAK_THRESHOLD)}/${ELEMENT_BREAK_THRESHOLD}]`);
             if (newElemAccum >= ELEMENT_BREAK_THRESHOLD) {
               elemBreakTriggered = true; newElemAccum = 0;
               logs.push(`💥 ELEMENT BREAK！ ${tEnemy.def.em}${tEnemy.def.name}の行動を無効化した！`);
               setElemBreakAnim(true); setTimeout(() => setElemBreakAnim(false), 1500);
             }
+          } else if (isResistHit) {
+            logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} 属性劣勢½ ${actualElemDmg}ダメージ！`);
           } else {
-            logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} ${rawDmg}ダメージ！`);
+            logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} ${actualElemDmg}ダメージ！`);
           }
         } else {
           // 新スキル攻撃処理
           if (skillId === "biker_slash") {
             bikerSlashUsed = true;
-            const bkDmg = Math.max(1, randInt(18, 28) + (isEltz ? atkBonus : 0));
+            const bkDmg = Math.max(1, Math.round(Math.floor(randInt(18, 28) + (isEltz ? atkBonus : 0)) * comboAtkMult));
             curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - bkDmg);
             if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
             logs.push(`${actor.icon}${actor.name} ⚡ バイカースラッシュ！ → ${tEnemy.def.em}${tEnemy.def.name} ${bkDmg}ダメージ！ 🔺攻撃力上昇！`);
           } else if (skillId === "sansanka") {
             sansankaUsed = true;
             const hits = [
-              Math.max(1, randInt(8, 14) + (isEltz ? atkBonus : 0)),
-              Math.max(1, randInt(8, 14) + (isEltz ? atkBonus : 0)),
-              Math.max(1, randInt(8, 14) + (isEltz ? atkBonus : 0)),
+              Math.max(1, Math.round(Math.floor(randInt(8, 14) + (isEltz ? atkBonus : 0)) * comboAtkMult)),
+              Math.max(1, Math.round(Math.floor(randInt(8, 14) + (isEltz ? atkBonus : 0)) * comboAtkMult)),
+              Math.max(1, Math.round(Math.floor(randInt(8, 14) + (isEltz ? atkBonus : 0)) * comboAtkMult)),
             ];
             const total = hits.reduce((a, b) => a + b, 0);
             curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - total);
@@ -2343,23 +2449,23 @@ export default function ArcadiaCh2() {
             stingerUsed = true;
             const isStunned2 = straightShotActive > 0 || takedownActive > 0 || sleepActive > 0;
             const stMult = isStunned2 ? 2.0 : 1.0;
-            const stDmg = Math.max(1, Math.floor(randInt(16, 24) * stMult));
+            const stDmg = Math.max(1, Math.round(randInt(16, 24) * stMult * comboAtkMult));
             curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - stDmg);
             if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
             const bonusLabel = isStunned2 ? "（×2 行動不能ボーナス！）" : "";
             logs.push(`${actor.icon}${actor.name} 🗡 スティンガーバイト！ → ${tEnemy.def.em}${tEnemy.def.name} ${stDmg}ダメージ！${bonusLabel}`);
           } else if (skillId === "straight_shot") {
             straightShotUsed = true;
-            const ssDmg = Math.max(1, randInt(18, 28));
+            const ssDmg = Math.max(1, Math.round(randInt(18, 28) * comboAtkMult));
             curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - ssDmg);
             if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
-            logs.push(`${actor.icon}${actor.name} 🏹 ストレートショット！ → ${tEnemy.def.em}${tEnemy.def.name} ${ssDmg}ダメージ！ 😵1T行動不能！`);
+            logs.push(`${actor.icon}${actor.name} 🏹 ストレートショット！ → ${tEnemy.def.em}${tEnemy.def.name} ${ssDmg}ダメージ！ 😵2T行動不能！`);
           } else {
             // atk のみ（counter/dodgeはスキップ済み）
             if (eActionForPlayer === "counter") {
               // 敵カウンター中：プレイヤーの攻撃を無効化し反撃ダメージ
               const csk = BATTLE_SKILLS.find(s => s.id === "counter");
-              const cd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
+              const cd = Math.max(1, Math.round(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
               logs.push(`${tEnemy.def.em}${tEnemy.def.name} 🔄 カウンター！ ${actor.icon}${actor.name}の強攻を無効化 → ${actor.icon}${actor.name}に${cd}ダメージ！`);
               if (actor.id === "eltz") { curHp = Math.max(0, curHp - cd); }
               else { curPartyHp[actor.id] = Math.max(0, (curPartyHp[actor.id] ?? 0) - cd); }
@@ -2408,7 +2514,7 @@ export default function ArcadiaCh2() {
         if (eAction === "dodge") {
           if (tCounter) {
             const csk = BATTLE_SKILLS.find(s => s.id === "counter");
-            const cd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
+            const cd = Math.max(1, Math.round(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
             if (tid === "eltz") { curHp = Math.max(0, curHp - cd); }
             else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - cd); }
             memberDmg[tid] = (memberDmg[tid] ?? 0) + cd;
@@ -2422,7 +2528,7 @@ export default function ArcadiaCh2() {
           logs.push(`${e.def.em}${e.def.name} 🔴 怒り状態に！`);
         } else if (eAction === "atk_all") {
           // 全体攻撃：回避・カウンター無効、全員にダメージ
-          const dmg = Math.max(1, Math.floor(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - defBonus);
+          const dmg = Math.max(1, Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - defBonus);
           const label = isEnraged ? "🔴🌊全体攻撃" : "🌊全体攻撃";
           logs.push(`${e.def.em}${label}${halfLabel} 全員${dmg}ダメージ！`);
           curHp = Math.max(0, curHp - dmg);
@@ -2431,7 +2537,7 @@ export default function ArcadiaCh2() {
         } else if (eAction === "unavoidable") {
           // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
           const [minD, maxD] = e.def.unavoidableAtk ?? [30,45];
-          const dmg = Math.max(1, Math.floor(randInt(minD, maxD) * totalMult) - defBonus);
+          const dmg = Math.max(1, Math.round(randInt(minD, maxD) * totalMult) - defBonus);
           logs.push(`${e.def.em}${rageLabel}💥回避不能${halfLabel} ${tMember.icon}${tMember.name}に${dmg}ダメージ！`);
           if (tid === "eltz") { curHp = Math.max(0, curHp - dmg); }
           else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg); }
@@ -2440,14 +2546,14 @@ export default function ArcadiaCh2() {
           // 敵カウンター：tDodge→回避+反撃、tCounter→相殺、その他→被弾
           if (tDodge) {
             const csk = BATTLE_SKILLS.find(s => s.id === "dodge");
-            const dodgeDmg = Math.max(1, randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0));
+            const dodgeDmg = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult));
             curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp = Math.max(0, e.hp - dodgeDmg);
             if (curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp <= 0) curEnemies[curEnemies.findIndex(en => en.slot === slot)].defeated = true;
             logs.push(`${tMember.icon}${tMember.name} 💨 回避成功！ ${e.def.name}のカウンターをかわし → ${e.def.em}${e.def.name}に${dodgeDmg}ダメージで反撃！`);
           } else if (tCounter) {
             logs.push(`🔄 カウンター相殺！ ${tMember.icon}${tMember.name} vs ${e.def.em}${e.def.name}（互いの攻撃無効化）`);
           } else {
-            const cd = Math.max(1, Math.floor(randInt(e.def.atk[0], e.def.atk[1]) * 1.3 * totalMult) - defBonus);
+            const cd = Math.max(1, Math.round(randInt(e.def.atk[0], e.def.atk[1]) * 1.3 * totalMult) - defBonus);
             if (tid === "eltz") { curHp = Math.max(0, curHp - cd); }
             else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - cd); }
             memberDmg[tid] = (memberDmg[tid] ?? 0) + cd;
@@ -2457,13 +2563,13 @@ export default function ArcadiaCh2() {
           // 通常強攻：counter→反撃×1.5、dodge/atk→被弾
           if (tCounter) {
             const csk = BATTLE_SKILLS.find(s => s.id === "counter");
-            const bd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.5) + (tid === "eltz" ? atkBonus : 0));
+            const bd = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) * 1.5 + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult));
             curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp = Math.max(0, e.hp - bd);
             if (curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp <= 0) curEnemies[curEnemies.findIndex(en => en.slot === slot)].defeated = true;
             logs.push(`${tMember.icon}${tMember.name} 🔄カウンター成功！ → ${e.def.em}${e.def.name} ${bd}ダメージ（×1.5）！ ${tMember.name}は被弾を免れた！`);
           } else {
             // dodge も atk も通常被弾
-            const d = Math.max(1, Math.floor(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - defBonus);
+            const d = Math.max(1, Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - defBonus);
             if (tid === "eltz") { curHp = Math.max(0, curHp - d); }
             else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - d); }
             memberDmg[tid] = (memberDmg[tid] ?? 0) + d;
@@ -2485,9 +2591,10 @@ export default function ArcadiaCh2() {
       const overhealAmt = 80;
       curHp = Math.min(curHp + overhealAmt, mhp);
       for (const key of currentPartyKeys.filter(k => k !== "eltz")) {
+        if ((curPartyHp[key] ?? 0) <= 0) continue; // 戦闘不能は回復不可
         curPartyHp[key] = Math.min((curPartyHp[key] ?? 0) + overhealAmt, partyMhp[key]);
       }
-      logs.push(`🌟 オーバーヒール発動！ 全員HP +${80}！`);
+      logs.push(`🌟 オーバーヒール発動！ 生存メンバーHP +${80}！`);
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -2575,7 +2682,7 @@ export default function ArcadiaCh2() {
     const nextSansankaCooldown     = sansankaUsed     ? 3 : Math.max(0, sansankaCooldown     - 1);
     const nextStingerCooldown      = stingerUsed      ? 3 : Math.max(0, stingerCooldown      - 1);
     const nextStraightShotCooldown = straightShotUsed ? 3 : Math.max(0, straightShotCooldown - 1);
-    const nextStraightShotActive   = straightShotUsed ? 1 : Math.max(0, straightShotActive   - 1);
+    const nextStraightShotActive   = straightShotUsed ? 2 : Math.max(0, straightShotActive   - 1);
     const nextArrowRainCooldown    = arrowRainUsed    ? 4 : Math.max(0, arrowRainCooldown    - 1);
     const nextWaterSphereCooldown  = waterSphereUsed  ? 3 : Math.max(0, waterSphereCooldown  - 1);
     const nextWaterSphereActive    = waterSphereUsed  ? 3 : Math.max(0, waterSphereActive    - 1);
@@ -2637,10 +2744,17 @@ export default function ArcadiaCh2() {
       }
       setBtlLogs(prev => [...prev, `🏆 全敵を倒した！`]);
     } else if (curHp <= 0) {
+      // エルツが行動不能 → 即敗北
       setDefeat(true);
       setInputPhase("command"); setCmdInputIdx(0);
-      setBtlLogs(prev => [...prev, "💀 エルツが戦闘不能..."]);
+      setBtlLogs(prev => [...prev, "💀 エルツが行動不能！ 敗北..."]);
     } else {
+      // 仲間のHP0チェック → 戦闘不能ログ追記（ゲーム継続）
+      const downedKeys = currentPartyKeys.filter(k => k !== "eltz" && (curPartyHp[k] ?? 0) <= 0);
+      if (downedKeys.length > 0) {
+        const downedNames = downedKeys.map(k => ALL_CHAR_DEFS[k]?.name ?? k).join("・");
+        setBtlLogs(prev => [...prev, `💀 ${downedNames} が戦闘不能！`]);
+      }
       setInputPhase("command");
       setCmdInputIdx(0);
     }
@@ -2654,7 +2768,9 @@ export default function ArcadiaCh2() {
     noDmgStreak, turn, lv, showNotif, handleExpGain,
   ]);
 
-  // ─── パーティーターン実行 ──────────────────────────────────────────────
+  // @@SECTION:LOGIC_PARTY_TURN ──────────────────────────────────────────────────
+  // 単体敵バトルのターン実行（battleEnemy単体を使用）
+  // 5フェーズ構成：プリフェイズ → メインフェイズ → エンドフェイズ → コンボジャッジ → アップデート
   // cmds: { memberId → skillId } の確定済みコマンドマップ
   const executePartyTurn = useCallback((cmds) => {
     const ed = battleEnemy;
@@ -2693,6 +2809,9 @@ export default function ArcadiaCh2() {
 
     const defBonus = Math.floor((statAlloc.pdef - 10) * 1.2);
     const atkBonus = weaponPatk + Math.floor((statAlloc.patk - 10) * 1.5) + bikerAtkBonus;
+    // コンボ攻撃力ボーナス：10ヒットごとに×1.1（累積）
+    const comboAtkTier = Math.floor(noDmgStreak / 10);
+    const comboAtkMult = comboAtkTier > 0 ? Math.pow(1.1, comboAtkTier) : 1.0;
 
     // 属性破壊発動フラグ（このターン中に発動したら敵行動を無効化）
     let elemBreakTriggered = false;
@@ -2783,16 +2902,17 @@ export default function ArcadiaCh2() {
         if (elemSk) {
           // ── 属性スキル ──────────────────────────────────────────────────
           const isWeakHit = elemSk.targetElement === currentElementKey;
-          const rawDmg = Math.max(1, randInt(elemSk.dmg[0], elemSk.dmg[1]) + (isEltz ? atkBonus : 0));
+          const rawDmg = Math.max(1, Math.round((randInt(elemSk.dmg[0], elemSk.dmg[1]) + (isEltz ? atkBonus : 0)) * comboAtkMult));
 
           if (currentElementKey === "none") {
-            const dmg = Math.max(1, Math.floor(rawDmg * 0.5));
+            const dmg = Math.max(1, Math.round(rawDmg * 0.5));
             curEnemyHp = Math.max(0, curEnemyHp - dmg);
             logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}（無属性・蓄積なし） → ${dmg} ダメージ`);
           } else if (isWeakHit) {
-            newElemAccum += rawDmg;
-            curEnemyHp = Math.max(0, curEnemyHp - rawDmg);
-            logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}！ 弱点ヒット！ ${rawDmg} dmg [蓄積:${Math.min(newElemAccum, ELEMENT_BREAK_THRESHOLD)}/${ELEMENT_BREAK_THRESHOLD}]`);
+            const weakDmg = Math.round(rawDmg * 2);
+            newElemAccum += weakDmg;
+            curEnemyHp = Math.max(0, curEnemyHp - weakDmg);
+            logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}！ ⚡弱点ヒット！×2 ${weakDmg} dmg [蓄積:${Math.min(newElemAccum, ELEMENT_BREAK_THRESHOLD)}/${ELEMENT_BREAK_THRESHOLD}]`);
             if (newElemAccum >= ELEMENT_BREAK_THRESHOLD && !elemBreakTriggered) {
               elemBreakTriggered = true;
               newElemAccum = 0;
@@ -2801,9 +2921,9 @@ export default function ArcadiaCh2() {
               setTimeout(() => setElemBreakAnim(false), 1500);
             }
           } else {
-            const dmg = Math.max(1, Math.floor(rawDmg * 0.5));
+            const dmg = Math.max(1, Math.round(rawDmg * 0.5));
             curEnemyHp = Math.max(0, curEnemyHp - dmg);
-            logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}（属性不一致・蓄積なし） → ${dmg} ダメージ`);
+            logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}（属性劣勢・½） → ${dmg} ダメージ`);
           }
 
           if (skillId === "elem_earth")   { earthSlashUsed = true; elemUsed.elem_earth = true; logs.push(`🌿 大地斬効果：次ターン ${ed.name} SPD -5！`); }
@@ -2824,7 +2944,8 @@ export default function ArcadiaCh2() {
           overhealUsed = true;
           logs.push(`${actor.icon} ${actor.name} 🌟 オーバーヒール準備！（ターン後に全員大回復）`);
         } else if (skillId === "heal") {
-          const healAmt = 30;
+          const memberMhp = isEltz ? mhp : (partyMhp[actor.id] ?? mhp);
+          const healAmt = 30 + Math.floor(memberMhp * 0.34);
           if (isEltz) {
             curHp = Math.min(curHp + healAmt, mhp);
             logs.push(`${actor.icon} ${actor.name} 🧪 回復ポーション！ HP +${healAmt}`);
@@ -2835,14 +2956,14 @@ export default function ArcadiaCh2() {
           memberHeal[actor.id] = (memberHeal[actor.id] ?? 0) + healAmt;
         } else if (skillId === "biker_slash") {
           bikerSlashUsed = true;
-          const rawDmg = Math.max(1, randInt(18, 28) + (isEltz ? atkBonus : 0));
+          const rawDmg = Math.max(1, Math.round((randInt(18, 28) + (isEltz ? atkBonus : 0)) * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - rawDmg);
           logs.push(`${actor.icon} ${actor.name} ⚡ バイカースラッシュ！ → ${rawDmg} ダメージ！ 🔺攻撃力上昇！`);
         } else if (skillId === "sansanka") {
           sansankaUsed = true;
-          const h1 = Math.max(1, randInt(8, 14) + (isEltz ? atkBonus : 0));
-          const h2 = Math.max(1, randInt(8, 14) + (isEltz ? atkBonus : 0));
-          const h3 = Math.max(1, randInt(8, 14) + (isEltz ? atkBonus : 0));
+          const h1 = Math.max(1, Math.round((randInt(8, 14) + (isEltz ? atkBonus : 0)) * comboAtkMult));
+          const h2 = Math.max(1, Math.round((randInt(8, 14) + (isEltz ? atkBonus : 0)) * comboAtkMult));
+          const h3 = Math.max(1, Math.round((randInt(8, 14) + (isEltz ? atkBonus : 0)) * comboAtkMult));
           const total = h1 + h2 + h3;
           curEnemyHp = Math.max(0, curEnemyHp - total);
           logs.push(`${actor.icon} ${actor.name} ⚔⚔⚔ 三散華！ ${h1}+${h2}+${h3}=${total} ダメージ！`);
@@ -2850,32 +2971,32 @@ export default function ArcadiaCh2() {
           stingerUsed = true;
           const isStunned2 = straightShotActive > 0 || takedownActive > 0 || sleepActive > 0;
           const stMult = isStunned2 ? 2.0 : 1.0;
-          const stDmg = Math.max(1, Math.floor(randInt(16, 24) * stMult));
+          const stDmg = Math.max(1, Math.round(randInt(16, 24) * stMult * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - stDmg);
           const bonusLabel = isStunned2 ? "（×2 行動不能ボーナス！）" : "";
           logs.push(`${actor.icon} ${actor.name} 🗡 スティンガーバイト！ → ${stDmg} ダメージ！${bonusLabel}`);
         } else if (skillId === "straight_shot") {
           straightShotUsed = true;
-          const ssDmg = Math.max(1, randInt(18, 28));
+          const ssDmg = Math.max(1, Math.round(randInt(18, 28) * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - ssDmg);
-          logs.push(`${actor.icon} ${actor.name} 🏹 ストレートショット！ → ${ssDmg} ダメージ！ 😵1T行動不能！`);
+          logs.push(`${actor.icon} ${actor.name} 🏹 ストレートショット！ → ${ssDmg} ダメージ！ 😵2T行動不能！`);
         } else if (skillId === "arrow_rain") {
           arrowRainUsed = true;
-          const arDmg = Math.max(1, randInt(8, 14));
+          const arDmg = Math.max(1, Math.round(randInt(8, 14) * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - arDmg);
           logs.push(`${actor.icon} ${actor.name} 🏹 アローレイン！ → ${arDmg} ダメージ！（全体攻撃）`);
         } else if (skillId === "water_sphere") {
           waterSphereUsed = true;
-          const wsDmg = Math.max(1, randInt(16, 26) + (isEltz ? atkBonus : 0));
+          const wsDmg = Math.max(1, Math.round((randInt(16, 26) + (isEltz ? atkBonus : 0)) * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - wsDmg);
           logs.push(`${actor.icon} ${actor.name} 🌊 ウォータースフィア！ → ${wsDmg} ダメージ！ 💧水濡れ（3T）`);
         } else {
           // atk のみ（counter/dodgeはスキップ済み）
-          const rawDmg = Math.max(1, randInt(baseSk.dmg[0], baseSk.dmg[1]) + (isEltz ? atkBonus : 0));
+          const rawDmg = Math.max(1, Math.round((randInt(baseSk.dmg[0], baseSk.dmg[1]) + (isEltz ? atkBonus : 0)) * comboAtkMult));
           if (eAction === "counter") {
             // 敵カウンター中：プレイヤーの攻撃を無効化し反撃ダメージ
             const csk = BATTLE_SKILLS.find(s => s.id === "counter");
-            const cd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
+            const cd = Math.max(1, Math.round(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
             logs.push(`${ed.em} ${ed.name} 🔄 カウンター！ ${actor.icon} ${actor.name}の強攻を無効化 → ${actor.icon} ${actor.name}に${cd}ダメージ！`);
             if (actor.id === "eltz") { curHp = Math.max(0, curHp - cd); }
             else { curPartyHp[actor.id] = Math.max(0, (curPartyHp[actor.id] ?? 0) - cd); }
@@ -2921,7 +3042,7 @@ export default function ArcadiaCh2() {
         } else if (resolvedEAction === "atk_all") {
           // 全体攻撃：回避・カウンター無効
           const baseRaw = randInt(ed.atk[0], ed.atk[1]);
-          const dmg = Math.max(1, Math.floor(baseRaw * totalMult) - defBonus);
+          const dmg = Math.max(1, Math.round(baseRaw * totalMult) - defBonus);
           const label = isEnraged ? "🔴🌊 怒り全体攻撃！" : "🌊 全体攻撃！";
           logs.push(`${ed.em} ${label}${halfLabel} 全員に ${dmg} ダメージ！`);
           curHp = Math.max(0, curHp - dmg);
@@ -2934,7 +3055,7 @@ export default function ArcadiaCh2() {
         } else if (resolvedEAction === "unavoidable") {
           // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
           const [minD, maxD] = ed.unavoidableAtk ?? [30, 45];
-          const dmg = Math.max(1, Math.floor(randInt(minD, maxD) * totalMult) - defBonus);
+          const dmg = Math.max(1, Math.round(randInt(minD, maxD) * totalMult) - defBonus);
           logs.push(`${ed.em} ${rageLabel}💥 回避不能攻撃！${halfLabel} ${targetMember.icon} ${targetMember.name}に ${dmg} ダメージ！`);
           if (tid === "eltz") { curHp = Math.max(0, curHp - dmg); }
           else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg); }
@@ -2944,7 +3065,7 @@ export default function ArcadiaCh2() {
           // 敵dodge：counter→敵回避+反撃、dodge→相殺、atk→敵行動なし（プレイヤーは既に直撃済み）
           if (tCounter) {
             const csk = BATTLE_SKILLS.find(s => s.id === "counter");
-            const cd = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
+            const cd = Math.max(1, Math.round(randInt(csk.dmg[0], csk.dmg[1]) * 1.3) - defBonus);
             if (tid === "eltz") { curHp = Math.max(0, curHp - cd); }
             else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - cd); }
             memberDmg[tid] = (memberDmg[tid] ?? 0) + cd;
@@ -2962,14 +3083,14 @@ export default function ArcadiaCh2() {
           // その他  → 敵カウンター発動、ターゲット被弾
           if (tDodge) {
             const csk = BATTLE_SKILLS.find(s => s.id === "dodge");
-            const dodgeDmg = Math.max(1, randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0));
+            const dodgeDmg = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult));
             curEnemyHp = Math.max(0, curEnemyHp - dodgeDmg);
             logs.push(`${targetMember.icon} ${targetMember.name} 💨 回避成功！ ${ed.name}のカウンターをかわし → ${dodgeDmg} ダメージで反撃！`);
           } else if (tCounter) {
             logs.push(`🔄 カウンター相殺！ ${targetMember.icon}${targetMember.name} vs ${ed.name}（互いの攻撃を無効化）`);
           } else {
             const baseRaw = randInt(ed.atk[0], ed.atk[1]) + Math.floor(ed.atk[1] * 0.3);
-            const dmg = Math.max(1, Math.floor(baseRaw * totalMult) - defBonus);
+            const dmg = Math.max(1, Math.round(baseRaw * totalMult) - defBonus);
             if (tid === "eltz") {
               curHp = Math.max(0, curHp - dmg);
             } else {
@@ -2986,13 +3107,13 @@ export default function ArcadiaCh2() {
           // atk/other → 通常被弾
           if (tCounter) {
             const csk = BATTLE_SKILLS.find(s => s.id === "counter");
-            const bonusDmg = Math.max(1, Math.floor(randInt(csk.dmg[0], csk.dmg[1]) * 1.5) + (tid === "eltz" ? atkBonus : 0));
+            const bonusDmg = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) * 1.5 + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult));
             curEnemyHp = Math.max(0, curEnemyHp - bonusDmg);
             logs.push(`${targetMember.icon} ${targetMember.name} 🔄 カウンター成功！ → ${ed.name}に ${bonusDmg} ダメージ（×1.5）！ ${targetMember.name}は被弾を免れた！`);
           } else {
             // dodge も atk も通常被弾
             const baseRaw = randInt(ed.atk[0], ed.atk[1]);
-            const dmg = Math.max(1, Math.floor(baseRaw * totalMult) - defBonus);
+            const dmg = Math.max(1, Math.round(baseRaw * totalMult) - defBonus);
             if (tid === "eltz") { curHp = Math.max(0, curHp - dmg); }
             else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg); }
             memberDmg[tid] = (memberDmg[tid] ?? 0) + dmg;
@@ -3012,9 +3133,10 @@ export default function ArcadiaCh2() {
       const overhealAmt = 80;
       curHp = Math.min(curHp + overhealAmt, mhp);
       for (const key of currentPartyKeys.filter(k => k !== "eltz")) {
+        if ((curPartyHp[key] ?? 0) <= 0) continue; // 戦闘不能は回復不可
         curPartyHp[key] = Math.min((curPartyHp[key] ?? 0) + overhealAmt, partyMhp[key]);
       }
-      logs.push(`🌟 オーバーヒール発動！ 全員HP +${80}！`);
+      logs.push(`🌟 オーバーヒール発動！ 生存メンバーHP +${80}！`);
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -3110,7 +3232,7 @@ export default function ArcadiaCh2() {
     const nextSansankaCooldown     = sansankaUsed     ? 3 : Math.max(0, sansankaCooldown     - 1);
     const nextStingerCooldown      = stingerUsed      ? 3 : Math.max(0, stingerCooldown      - 1);
     const nextStraightShotCooldown = straightShotUsed ? 3 : Math.max(0, straightShotCooldown - 1);
-    const nextStraightShotActive   = straightShotUsed ? 1 : Math.max(0, straightShotActive   - 1);
+    const nextStraightShotActive   = straightShotUsed ? 2 : Math.max(0, straightShotActive   - 1);
     const nextArrowRainCooldown    = arrowRainUsed    ? 4 : Math.max(0, arrowRainCooldown    - 1);
     const nextWaterSphereCooldown  = waterSphereUsed  ? 3 : Math.max(0, waterSphereCooldown  - 1);
     const nextWaterSphereActive    = waterSphereUsed  ? 3 : Math.max(0, waterSphereActive    - 1);
@@ -3156,10 +3278,10 @@ export default function ArcadiaCh2() {
     setWaterSphereCooldown(nextWaterSphereCooldown);
     setWaterSphereActive(nextWaterSphereActive);
     setBtlAnimEnemy(true); setTimeout(() => setBtlAnimEnemy(false), 400);
-    setBtlLogs(prev => [...prev, ...logs].slice(-18));
 
     // ── 勝敗判定 ────────────────────────────────────────────────────────────
     if (curEnemyHp <= 0) {
+      setBtlLogs(prev => [...prev, ...logs].slice(-18));
       setVictory(true);
       setInputPhase("command"); setCmdInputIdx(0);
       setBtlLogs(prev => [...prev, `🏆 ${ed.name}を倒した！`]);
@@ -3179,10 +3301,19 @@ export default function ArcadiaCh2() {
         setBattleResultBonus({ comboMult, gradeMult });
       }
     } else if (curHp <= 0) {
+      // エルツが行動不能 → 即敗北
+      setBtlLogs(prev => [...prev, ...logs].slice(-18));
       setDefeat(true);
       setInputPhase("command"); setCmdInputIdx(0);
-      setBtlLogs(prev => [...prev, "💀 エルツが戦闘不能..."]);
+      setBtlLogs(prev => [...prev, "💀 エルツが行動不能！ 敗北..."]);
     } else {
+      // 仲間のHP0チェック → 戦闘不能ログ追記（ゲーム継続）
+      const downedKeys = currentPartyKeys.filter(k => k !== "eltz" && (curPartyHp[k] ?? 0) <= 0);
+      if (downedKeys.length > 0) {
+        const downedNames = downedKeys.map(k => ALL_CHAR_DEFS[k]?.name ?? k).join("・");
+        logs.push(`💀 ${downedNames} が戦闘不能！`);
+      }
+      setBtlLogs(prev => [...prev, ...logs].slice(-18));
       setInputPhase("command");
       setCmdInputIdx(0);
     }
@@ -3200,7 +3331,8 @@ export default function ArcadiaCh2() {
     showNotif, handleExpGain, turn,
   ]);
 
-  // ─── pendingExecution → ターン実行（クロージャ問題の解決） ─────────────────
+  // @@SECTION:LOGIC_PENDING_EXEC ────────────────────────────────────────────────
+  // pendingExecution → ターン実行（クロージャ問題の解決）
   // onCommand/onSelectTargetから直接execute*を呼ぶと古いクロージャを参照する場合がある。
   // stateにキューイングしてuseEffectで実行することで常に最新のexecute*を使う。
   useEffect(() => {
@@ -3213,6 +3345,8 @@ export default function ArcadiaCh2() {
     }
   }, [pendingExecution, executeMultiTurn, executePartyTurn]);
 
+  // @@SECTION:LOGIC_BATTLE_CMD ──────────────────────────────────────────────────
+  // onCancelCommand（コマンドキャンセル）・exitBattle（バトル終了・勝敗処理）
   // コマンドキャンセル（最後に選んだメンバーの選択を1つ戻す）
   const onCancelCommand = useCallback(() => {
     // ターゲット選択中のキャンセル → スキル選択に戻る（cmdInputIdxはそのまま）
@@ -3464,6 +3598,9 @@ export default function ArcadiaCh2() {
     @keyframes dropZoneOver { 0%,100%{border-color:#00c8ff} 50%{border-color:#00ffcc} }
   `;
 
+  // @@SECTION:LOGIC_SAVE_LOAD ───────────────────────────────────────────────────
+  // セーブデータのバリデーション・適用・ファイル読み込み処理
+  // validateSave → applySaveData → handleFile の順で呼ばれる
   // ── ファイル読み込み処理 ──────────────────────────────────────────────────
   const validateSave = (obj) => {
     if (!obj || typeof obj !== "object")         return "JSONの形式が不正です";
@@ -3553,7 +3690,8 @@ export default function ArcadiaCh2() {
     </div>
   );
 
-  // ── RENDER_LOADED -- 確認画面 ───────────────────────────────────────────
+  // @@SECTION:RENDER_LOADED ─────────────────────────────────────────────────────
+  // セーブデータ確認画面（ロード後・タイトル前）
   if (phase === "loaded" && saveFile) {
     const p = saveFile.player;
     const savedDate = saveFile.savedAt ? new Date(saveFile.savedAt).toLocaleString("ja-JP") : "不明";
@@ -3568,8 +3706,8 @@ export default function ArcadiaCh2() {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 24px",fontSize:13,color:C.text,fontFamily:"'Share Tech Mono',monospace",lineHeight:1.8}}>
               <div><span style={{color:C.muted}}>NAME</span>  Eltz</div>
               <div><span style={{color:C.muted}}>Lv</span>    {p.lv}</div>
-              <div><span style={{color:C.muted}}>HP</span>    {p.hp}/{p.mhp}</div>
-              <div><span style={{color:C.muted}}>MP</span>    {p.mp}/{p.mmp}</div>
+              <div><span style={{color:C.muted}}>HP</span>    {Math.round(p.hp)}/{p.mhp}</div>
+              <div><span style={{color:C.muted}}>MP</span>    {Math.round(p.mp)}/{p.mmp}</div>
               <div><span style={{color:C.muted}}>EXP</span>   {p.exp}</div>
               <div><span style={{color:C.muted}}>ELK</span>   {p.elk}</div>
               <div><span style={{color:C.muted}}>武器</span>  {p.weapon}</div>
@@ -3877,8 +4015,8 @@ export default function ArcadiaCh2() {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 24px",fontSize:13,color:C.text,fontFamily:"'Share Tech Mono',monospace",lineHeight:1.8}}>
               <div><span style={{color:C.muted}}>NAME</span>  Eltz</div>
               <div><span style={{color:C.muted}}>Lv</span>    {lv}</div>
-              <div><span style={{color:C.muted}}>HP</span>    {hp} / {mhp}</div>
-              <div><span style={{color:C.muted}}>MP</span>    {mp} / {mmp}</div>
+              <div><span style={{color:C.muted}}>HP</span>    {Math.round(hp)} / {mhp}</div>
+              <div><span style={{color:C.muted}}>MP</span>    {Math.round(mp)} / {mmp}</div>
               <div><span style={{color:C.muted}}>EXP</span>   {exp}</div>
               <div><span style={{color:C.muted}}>ELK</span>   {elk}</div>
               <div><span style={{color:C.muted}}>武器</span>  {weapon}</div>
@@ -4153,7 +4291,7 @@ export default function ArcadiaCh2() {
                           <div style={{width:"92%",height:4,background:C.panel2,borderRadius:2,overflow:"hidden"}}>
                             <div style={{height:"100%",width:`${meHpPct}%`,background: meIsBoss ? `linear-gradient(90deg,${C.red},#ff8844)` : `linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:2}}/>
                           </div>
-                          <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>{me.hp}/{meDef.maxHp}</div>
+                          <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>{Math.round(me.hp)}/{meDef.maxHp}</div>
                           {/* NEXT行動バッジ */}
                           {!victory && !defeat && (
                             <div style={{width:"94%",padding:"2px 3px",background:`${meColor}11`,border:`1px solid ${meColor}44`,borderRadius:3,textAlign:"center"}}>
@@ -4189,6 +4327,11 @@ export default function ArcadiaCh2() {
                     <span style={{fontSize:"0.45em",letterSpacing:4,display:"block",marginTop:2,color:"#ffe08a"}}>COMBO</span>
                   </div>
                   <div style={{fontSize:10,color:"#ffe08a",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:4,opacity:0.85}}>MP +{5 + noDmgStreak} / turn</div>
+                  {Math.floor(noDmgStreak / 10) > 0 && (
+                    <div style={{fontSize:10,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:2}}>
+                      ⚔ ATK ×{Math.pow(1.1, Math.floor(noDmgStreak / 10)).toFixed(2)}
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -4206,6 +4349,11 @@ export default function ArcadiaCh2() {
                   <span style={{fontSize:"0.45em",letterSpacing:4,display:"block",marginTop:2,color:"#ffe08a"}}>COMBO</span>
                 </div>
                 <div style={{fontSize:10,color:"#ffe08a",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:4,opacity:0.85}}>MP +{5 + noDmgStreak} / turn</div>
+                {Math.floor(noDmgStreak / 10) > 0 && (
+                  <div style={{fontSize:10,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:2}}>
+                    ⚔ ATK ×{Math.pow(1.1, Math.floor(noDmgStreak / 10)).toFixed(2)}
+                  </div>
+                )}
               </div>
             )}
 
@@ -4282,7 +4430,7 @@ export default function ArcadiaCh2() {
                      <div style={{width:"100%",height:8,background:C.panel2,borderRadius:4,overflow:"hidden"}}>
                        <div style={{height:"100%",width:`${enemyPct}%`,background:isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:4,boxShadow:enrageCount>0?`0 0 8px ${C.red}`:"none"}}/>
                      </div>
-                     <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>{enemyHp} / {ed.maxHp}</div>
+                     <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>{Math.round(enemyHp)} / {ed.maxHp}</div>
                    </div>
                    {!victory && !defeat && enemyNextAction && (() => {
                      const eLabel = ENEMY_ACTION_LABEL[enemyNextAction];
@@ -4380,14 +4528,14 @@ export default function ArcadiaCh2() {
                         </div>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                           <span style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
-                          <span style={{fontSize:12,color:cmHpColor,fontFamily:"'Share Tech Mono',monospace",animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{cm.hp}<span style={{fontSize:10,color:C.muted}}>/{cm.mhp}</span></span>
+                          <span style={{fontSize:12,color:cmHpColor,fontFamily:"'Share Tech Mono',monospace",animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{Math.round(cm.hp)}<span style={{fontSize:10,color:C.muted}}>/{cm.mhp}</span></span>
                         </div>
                         <div style={{height:6,background:C.panel2,borderRadius:3,marginBottom:6,overflow:"hidden"}}>
                           <div style={{height:"100%",width:`${cmHpPct}%`,background:`linear-gradient(90deg,${cmHpColor}99,${cmHpColor})`,transition:"width 0.4s",borderRadius:3}}/>
                         </div>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                           <span style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
-                          <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{cm.mp}<span style={{fontSize:10,color:C.muted}}>/{cm.mmp}</span></span>
+                          <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{Math.round(cm.mp)}<span style={{fontSize:10,color:C.muted}}>/{cm.mmp}</span></span>
                         </div>
                         <div style={{height:5,background:C.panel2,borderRadius:3,overflow:"hidden"}}>
                           <div style={{height:"100%",width:`${cmMpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.4s",borderRadius:3}}/>
@@ -4633,11 +4781,11 @@ export default function ArcadiaCh2() {
         <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>{activeLoc}</div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>
-            <span style={{color:isHpLow?C.red:C.accent2,animation:isHpLow?"dngr 0.8s infinite":"none"}}>HP {hp}</span>
+            <span style={{color:isHpLow?C.red:C.accent2,animation:isHpLow?"dngr 0.8s infinite":"none"}}>HP {Math.round(hp)}</span>
             <span style={{color:C.muted}}> / </span>
             <span style={{color:C.muted}}>{mhp}</span>
           </div>
-          <div style={{fontSize:10,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>MP {mp}</div>
+          <div style={{fontSize:10,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>MP {Math.round(mp)}</div>
           <div style={{fontSize:10,color:C.gold,fontFamily:"'Share Tech Mono',monospace"}}>💰 {elk}</div>
           <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>Lv.{lv}</div>
         </div>
@@ -4876,8 +5024,8 @@ export default function ArcadiaCh2() {
                 {[
                   ["Lv", lv],
                   ["EXP", `${exp} / ${EXP_TABLE[lv] || "MAX"}`],
-                  ["HP", `${hp} / ${mhp}`],
-                  ["MP", `${mp} / ${mmp}`],
+                  ["HP", `${Math.round(hp)} / ${mhp}`],
+                  ["MP", `${Math.round(mp)} / ${mmp}`],
                   ["ELK", elk],
                   ["武器", weapon],
                   ["物理ATK", weaponPatk + statAlloc.patk],
