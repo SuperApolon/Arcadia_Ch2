@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 
 // @@SECTION:PALETTE
@@ -3454,47 +3455,47 @@ export default function ArcadiaCh2() {
 
   if (phase === "load") return (
     <div
-      style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1020 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32,overflow:"hidden"}}
+      style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1020 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:"16px",overflowY:"auto",overflowX:"hidden",boxSizing:"border-box"}}
       onDragOver={e => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0]); }}
     >
       <style>{loadKeyframes}</style>
-      <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
-      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:480,animation:"fadeIn 1s ease"}}>
-        <div style={{fontSize:10,letterSpacing:8,color:C.muted,marginBottom:8,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
-        <div style={{fontSize:52,fontWeight:700,letterSpacing:12,color:C.white,textShadow:`0 0 30px ${C.accent}`,marginBottom:4}}>ARCADIA</div>
-        <div style={{fontSize:12,letterSpacing:6,color:C.accent,marginBottom:32,fontFamily:"'Share Tech Mono',monospace"}}>─── Lexia の章 ───</div>
-        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 28px"}}/>
+      <div style={{position:"fixed",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:440,animation:"fadeIn 1s ease",display:"flex",flexDirection:"column",gap:0}}>
+        <div style={{fontSize:10,letterSpacing:8,color:C.muted,marginBottom:"clamp(2px,1vh,8px)",fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
+        <div style={{fontSize:"clamp(32px,9vw,52px)",fontWeight:700,letterSpacing:"clamp(4px,2vw,12px)",color:C.white,textShadow:`0 0 30px ${C.accent}`,marginBottom:"clamp(2px,0.5vh,4px)"}}>ARCADIA</div>
+        <div style={{fontSize:12,letterSpacing:6,color:C.accent,marginBottom:"clamp(10px,2vh,24px)",fontFamily:"'Share Tech Mono',monospace"}}>─── Lexia の章 ───</div>
+        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:`0 auto clamp(10px,2vh,20px)`}}/>
 
-        <div style={{fontSize:12,color:C.text,marginBottom:20,letterSpacing:1,lineHeight:1.9}}>
+        <div style={{fontSize:12,color:C.text,marginBottom:"clamp(8px,1.5vh,16px)",letterSpacing:1,lineHeight:1.7}}>
           第一章のセーブデータを読み込んで<br/>エルツのステータスを引き継ぎます。
         </div>
 
         <label
-          style={{display:"block",border:`2px dashed ${dragOver ? C.accent : C.border}`,borderRadius:8,padding:"32px 20px",cursor:"pointer",marginBottom:16,background:dragOver ? "rgba(0,200,255,0.06)" : "rgba(10,26,38,0.4)",animation:dragOver ? "dropZoneOver 0.8s infinite" : "dropZonePulse 2s infinite",transition:"background 0.2s"}}
+          style={{display:"block",border:`2px dashed ${dragOver ? C.accent : C.border}`,borderRadius:8,padding:"clamp(12px,3vh,28px) 20px",cursor:"pointer",marginBottom:"clamp(8px,1.5vh,16px)",background:dragOver ? "rgba(0,200,255,0.06)" : "rgba(10,26,38,0.4)",animation:dragOver ? "dropZoneOver 0.8s infinite" : "dropZonePulse 2s infinite",transition:"background 0.2s"}}
         >
           <input type="file" accept=".json" onChange={e => handleFile(e.target.files?.[0])} style={{display:"none"}} />
-          <div style={{fontSize:32,marginBottom:12}}>{dragOver ? "📂" : "💾"}</div>
+          <div style={{fontSize:"clamp(24px,5vw,32px)",marginBottom:"clamp(4px,1vh,10px)"}}>{dragOver ? "📂" : "💾"}</div>
           <div style={{fontSize:13,color:dragOver ? C.accent : C.text,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
             {dragOver ? "ここにドロップ！" : "クリック or ドラッグ＆ドロップ"}
           </div>
-          <div style={{fontSize:11,color:C.muted,marginTop:8}}>arcadia_save_ch1_*.json または arcadia_save_ch2_*.json</div>
+          <div style={{fontSize:11,color:C.muted,marginTop:6}}>arcadia_save_ch1_*.json または arcadia_save_ch2_*.json</div>
         </label>
 
         {saveError && (
-          <div style={{background:"rgba(255,68,102,0.1)",border:`1px solid ${C.red}`,borderRadius:4,padding:"10px 16px",marginBottom:16,fontSize:12,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"shake 0.4s ease"}}>
+          <div style={{background:"rgba(255,68,102,0.1)",border:`1px solid ${C.red}`,borderRadius:4,padding:"10px 16px",marginBottom:"clamp(8px,1.5vh,16px)",fontSize:12,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"shake 0.4s ease"}}>
             ⚠ {saveError}
           </div>
         )}
-        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 20px"}}/>
+        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:`0 auto clamp(10px,2vh,20px)`}}/>
         <button
           onClick={() => setPhase("title")}
-          style={{width:"100%",padding:"12px 0",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:12,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
+          style={{width:"100%",padding:"clamp(8px,1.5vh,12px) 0",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:12,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
           onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.text; }}
           onMouseLeave={e => { e.currentTarget.style.color = C.muted; e.currentTarget.style.borderColor = C.border; }}
         >新規スタート（引き継ぎなし）</button>
-        <div style={{fontSize:10,color:C.muted,marginTop:8,fontFamily:"'Share Tech Mono',monospace",opacity:0.7}}>※ Lv1・初期ステータスで開始します</div>
+        <div style={{fontSize:10,color:C.muted,marginTop:6,fontFamily:"'Share Tech Mono',monospace",opacity:0.7}}>※ Lv1・初期ステータスで開始します</div>
       </div>
     </div>
   );
@@ -3541,7 +3542,7 @@ export default function ArcadiaCh2() {
 
   // @@SECTION:RENDER_TITLE
   if (phase === "title") return (
-    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg_ch2.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
+    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg_ch2.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflowY:"auto",overflowX:"hidden"}}>
       <style>{keyframes}</style>
       {/* Scanline effect */}
       <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.015) 2px,rgba(0,200,255,0.015) 4px)",pointerEvents:"none",zIndex:1}}/>
@@ -3550,9 +3551,9 @@ export default function ArcadiaCh2() {
         <div key={i} style={{position:"absolute",width:i%5===0?2:1,height:i%5===0?2:1,borderRadius:"50%",background:"#adf",top:`${Math.random()*100}%`,left:`${Math.random()*100}%`,opacity:0.3+Math.random()*0.5,animation:`blnk ${1.5+Math.random()*2}s ${Math.random()*2}s infinite`}}/>
       ))}
 
-      <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 1.5s ease"}}>
-        <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:16,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
-        <div style={{fontSize:72,fontWeight:700,letterSpacing:16,color:C.white,textShadow:`0 0 40px ${C.accent},0 0 80px ${C.accent}44`,lineHeight:1,marginBottom:8}}>ARCADIA</div>
+      <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 1.5s ease",margin:"auto",paddingTop:40,paddingBottom:40,width:"100%",boxSizing:"border-box",padding:"40px 16px"}}>
+        <div style={{fontSize:11,letterSpacing:8,color:C.muted,marginBottom:16,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
+        <div style={{fontSize:"clamp(36px, 14vw, 72px)",fontWeight:700,letterSpacing:"clamp(4px, 2.5vw, 16px)",color:C.white,textShadow:`0 0 40px ${C.accent},0 0 80px ${C.accent}44`,lineHeight:1,marginBottom:8}}>ARCADIA</div>
         <div style={{fontSize:13,letterSpacing:4,color:C.accent2,marginBottom:48,fontFamily:"'Share Tech Mono',monospace",textShadow:`0 0 10px ${C.accent2}`}}>─── Lexia の章 ───</div>
 
         <div style={{width:280,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 40px"}}/>
