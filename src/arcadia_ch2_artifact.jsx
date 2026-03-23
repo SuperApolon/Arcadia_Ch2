@@ -4890,16 +4890,26 @@ export default function ArcadiaCh2() {
               alt=""
               style={{
                 position:"absolute",
-                inset:0,
-                width:"100%",
-                height:"100%",
+                top:"50%",
+                left:"50%",
+                width:"200%",
+                height:"200%",
                 objectFit:"contain",
                 pointerEvents:"none",
                 zIndex:60,
+                transform:"translate(-50%, -50%) scale(1)",
+                transformOrigin:"center center",
+                animation:"dragonRushGrow 2.7s linear forwards",
               }}
               onError={() => setShowAtkAllAnim(false)}
             />
           )}
+          <style>{`
+            @keyframes dragonRushGrow {
+              from { transform: translate(-50%, -50%) scale(1); }
+              to   { transform: translate(-50%, -50%) scale(2.5); }
+            }
+          `}</style>
 
           </div>
           <div style={{
