@@ -1586,7 +1586,7 @@ export default function ArcadiaCh2() {
   const [atkAllAnimKey, setAtkAllAnimKey] = useState(0); // 再マウント用キー
   useEffect(() => {
     if (!showAtkAllAnim) return;
-    const t = setTimeout(() => setShowAtkAllAnim(false), 2700);
+    const t = setTimeout(() => setShowAtkAllAnim(false), 2500);
     return () => clearTimeout(t);
   }, [showAtkAllAnim]);
 
@@ -4435,18 +4435,18 @@ export default function ArcadiaCh2() {
         {/* ── ドラゴン突進フラッシュ（末尾に白く大フラッシュ） ── */}
         {showAtkAllAnim && (
           <>
-            {/* レイヤー1: 2.7秒間 opacity 0.83 で漂う白紫グラデ */}
+            {/* レイヤー1: 2.5秒間 opacity 0.83 で漂う白紫グラデ */}
             <div style={{
               position:"fixed", inset:0, zIndex:500, pointerEvents:"none",
               background:"radial-gradient(ellipse at center, rgba(255,255,255,0.6) 0%, rgba(200,150,255,0.5) 50%, rgba(80,40,180,0.4) 100%)",
-              animation:"dragonFlash 2.7s linear forwards",
+              animation:"dragonFlash 2.5s linear forwards",
             }} />
-            {/* レイヤー2: 2.7秒後に一気に全画面を覆い0.3秒でフェードアウト */}
+            {/* レイヤー2: 2.5秒後に一気に全画面を覆い0.3秒でフェードアウト */}
             <div style={{
               position:"fixed", inset:0, zIndex:501, pointerEvents:"none",
               background:"radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(230,190,255,1) 30%, rgba(160,80,255,0.95) 65%, rgba(80,20,200,0.85) 100%)",
               animationDelay:"3.6s",
-              animation:"dragonFlashBurst 0.3s ease-out 2.7s forwards",
+              animation:"dragonFlashBurst 0.3s ease-out 2.5s forwards",
               opacity:0,
             }} />
           </>
