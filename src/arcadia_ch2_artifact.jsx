@@ -1595,6 +1595,169 @@ export default function ArcadiaCh2() {
   const tapStartYRef  = useRef(0);   // スクロール判定用
   const autoAdvTimerRef = useRef(null); // オート進行タイマー
 
+  // ── SE（効果音）WebAudio API ─────────────────────────────────────────────────
+  // 外部ファイル不要。AudioContext をオンデマンド生成し、プログラムでSEを合成する。
+  // audioUnlocked.current が true のとき（ユーザー操作後）のみ再生。
+  const seCtxRef = useRef(null);
+  const getSECtx = useCallback(() => {
+    if (!seCtxRef.current) {
+      try { seCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    }
+    return seCtxRef.current;
+  }, []);
+
+  // 通常斬撃音: 空気を切り裂く高速スウィッシュ → 金属インパクト
+  const playSEHit = useCallback(() => {
+    if (!audioUnlocked.current) return;
+    const ctx = getSECtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // ─① スウィッシュ（空気を斬る）: 高周波ノイズが素早く通過する ─
+    const swSize = Math.floor(ctx.sampleRate * 0.055);
+    const swBuf  = ctx.createBuffer(1, swSize, ctx.sampleRate);
+    const swData = swBuf.getChannelData(0);
+    for (let i = 0; i < swSize; i++) {
+      const env = Math.sin((i / swSize) * Math.PI); // 山なりエンベロープ
+      swData[i] = (Math.random() * 2 - 1) * env;
+    }
+    const sw = ctx.createBufferSource(); sw.buffer = swBuf;
+    const swFlt = ctx.createBiquadFilter(); swFlt.type = "highpass"; swFlt.frequency.value = 3500;
+    const swFlt2 = ctx.createBiquadFilter(); swFlt2.type = "lowpass";  swFlt2.frequency.value = 9000;
+    const swGain = ctx.createGain();
+    swGain.gain.setValueAtTime(0.0, t);
+    swGain.gain.linearRampToValueAtTime(0.55, t + 0.022);
+    swGain.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
+    sw.connect(swFlt); swFlt.connect(swFlt2); swFlt2.connect(swGain); swGain.connect(ctx.destination);
+    sw.start(t); sw.stop(t + 0.056);
+
+    // ─② 金属インパクト（刃が当たる瞬間）: ホワイトノイズを短く鋭く ─
+    const impSize = Math.floor(ctx.sampleRate * 0.035);
+    const impBuf  = ctx.createBuffer(1, impSize, ctx.sampleRate);
+    const impData = impBuf.getChannelData(0);
+    for (let i = 0; i < impSize; i++) {
+      impData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impSize, 2.5);
+    }
+    const imp = ctx.createBufferSource(); imp.buffer = impBuf;
+    const impFlt = ctx.createBiquadFilter(); impFlt.type = "bandpass"; impFlt.frequency.value = 2200; impFlt.Q.value = 1.2;
+    const impGain = ctx.createGain();
+    impGain.gain.setValueAtTime(0.7, t + 0.04);
+    impGain.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
+    imp.connect(impFlt); impFlt.connect(impGain); impGain.connect(ctx.destination);
+    imp.start(t + 0.04); imp.stop(t + 0.076);
+
+    // ─③ 金属共鳴（刃の余韻）: 短いピッチ下降トーン ─
+    const ring = ctx.createOscillator(); ring.type = "sawtooth";
+    ring.frequency.setValueAtTime(900, t + 0.042);
+    ring.frequency.exponentialRampToValueAtTime(320, t + 0.13);
+    const ringGain = ctx.createGain();
+    ringGain.gain.setValueAtTime(0.12, t + 0.042);
+    ringGain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    const ringFlt = ctx.createBiquadFilter(); ringFlt.type = "lowpass"; ringFlt.frequency.value = 4000;
+    ring.connect(ringFlt); ringFlt.connect(ringGain); ringGain.connect(ctx.destination);
+    ring.start(t + 0.042); ring.stop(t + 0.14);
+  }, [getSECtx]);
+
+  // 弱点ヒット音: 重い二段斬り → 高音の金属共鳴が長く響く
+  const playSEWeakHit = useCallback(() => {
+    if (!audioUnlocked.current) return;
+    const ctx = getSECtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // ─ 2段ヒット ─
+    [0, 0.07].forEach((delay, hi) => {
+      // スウィッシュ
+      const swSize = Math.floor(ctx.sampleRate * 0.05);
+      const swBuf = ctx.createBuffer(1, swSize, ctx.sampleRate);
+      const swData = swBuf.getChannelData(0);
+      for (let i = 0; i < swSize; i++) swData[i] = (Math.random() * 2 - 1) * Math.sin((i / swSize) * Math.PI);
+      const sw = ctx.createBufferSource(); sw.buffer = swBuf;
+      const swF = ctx.createBiquadFilter(); swF.type = "highpass"; swF.frequency.value = 4000;
+      const swG = ctx.createGain();
+      swG.gain.setValueAtTime(0.45, t + delay);
+      swG.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.05);
+      sw.connect(swF); swF.connect(swG); swG.connect(ctx.destination);
+      sw.start(t + delay); sw.stop(t + delay + 0.051);
+
+      // インパクト
+      const impSize = Math.floor(ctx.sampleRate * 0.03);
+      const impBuf = ctx.createBuffer(1, impSize, ctx.sampleRate);
+      const impData = impBuf.getChannelData(0);
+      for (let i = 0; i < impSize; i++) impData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impSize, 3);
+      const imp = ctx.createBufferSource(); imp.buffer = impBuf;
+      const impF = ctx.createBiquadFilter(); impF.type = "bandpass"; impF.frequency.value = 2800; impF.Q.value = 1.5;
+      const impG = ctx.createGain();
+      impG.gain.setValueAtTime(0.8, t + delay + 0.038);
+      impG.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.068);
+      imp.connect(impF); impF.connect(impG); impG.connect(ctx.destination);
+      imp.start(t + delay + 0.038); imp.stop(t + delay + 0.069);
+    });
+
+    // ─ 弱点ヒット特有：高音の金属共鳴が長く残る ─
+    [880, 1320].forEach((freq, i) => {
+      const osc = ctx.createOscillator(); osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t + 0.08 + i * 0.01);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.55, t + 0.38);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.09, t + 0.08 + i * 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(t + 0.08 + i * 0.01); osc.stop(t + 0.39);
+    });
+  }, [getSECtx]);
+
+  // 討伐音: 重厚な一撃 → 低音ドーン + 金属的な余韻
+  const playSEDefeat = useCallback(() => {
+    if (!audioUnlocked.current) return;
+    const ctx = getSECtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // ─① 重いスウィッシュ（大振り） ─
+    const swSize = Math.floor(ctx.sampleRate * 0.08);
+    const swBuf = ctx.createBuffer(1, swSize, ctx.sampleRate);
+    const swData = swBuf.getChannelData(0);
+    for (let i = 0; i < swSize; i++) swData[i] = (Math.random() * 2 - 1) * Math.sin((i / swSize) * Math.PI);
+    const sw = ctx.createBufferSource(); sw.buffer = swBuf;
+    const swF = ctx.createBiquadFilter(); swF.type = "bandpass"; swF.frequency.value = 1200; swF.Q.value = 0.5;
+    const swG = ctx.createGain();
+    swG.gain.setValueAtTime(0.6, t); swG.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    sw.connect(swF); swF.connect(swG); swG.connect(ctx.destination);
+    sw.start(t); sw.stop(t + 0.081);
+
+    // ─② 鋭いインパクト（討伐の一撃） ─
+    const impSize = Math.floor(ctx.sampleRate * 0.05);
+    const impBuf = ctx.createBuffer(1, impSize, ctx.sampleRate);
+    const impData = impBuf.getChannelData(0);
+    for (let i = 0; i < impSize; i++) impData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impSize, 2);
+    const imp = ctx.createBufferSource(); imp.buffer = impBuf;
+    const impF = ctx.createBiquadFilter(); impF.type = "bandpass"; impF.frequency.value = 1800; impF.Q.value = 0.9;
+    const impG = ctx.createGain();
+    impG.gain.setValueAtTime(1.0, t + 0.06); impG.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+    imp.connect(impF); impF.connect(impG); impG.connect(ctx.destination);
+    imp.start(t + 0.06); imp.stop(t + 0.111);
+
+    // ─③ 低音ドーン（ボディブロー感） ─
+    const boom = ctx.createOscillator(); boom.type = "sine";
+    boom.frequency.setValueAtTime(90, t + 0.06);
+    boom.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+    const boomG = ctx.createGain();
+    boomG.gain.setValueAtTime(0.55, t + 0.06); boomG.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    boom.connect(boomG); boomG.connect(ctx.destination);
+    boom.start(t + 0.06); boom.stop(t + 0.51);
+
+    // ─④ 金属余韻（刃が空気を振動させる） ─
+    [520, 780].forEach((freq, i) => {
+      const osc = ctx.createOscillator(); osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, t + 0.07);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.4, t + 0.45);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.08 - i * 0.02, t + 0.07);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      const flt = ctx.createBiquadFilter(); flt.type = "lowpass"; flt.frequency.value = 3000;
+      osc.connect(flt); flt.connect(g); g.connect(ctx.destination);
+      osc.start(t + 0.07); osc.stop(t + 0.46);
+    });
+  }, [getSECtx]);
+
   // ── ヒット・討伐エフェクト発火ヘルパー ────────────────────────────────────────
   // slotIdx: multiEnemies の配列インデックス（単体バトルは常に 0）
   const fireHitEffect = useCallback((slotIdx, dmg, type = "normal") => {
@@ -1604,13 +1767,17 @@ export default function ArcadiaCh2() {
     // シェイク：追加 → 300ms後に除去
     setHitSlots(prev => { const s = new Set(prev); s.add(slotIdx); return s; });
     setTimeout(() => setHitSlots(prev => { const s = new Set(prev); s.delete(slotIdx); return s; }), 320);
-  }, []);
+    // SE再生
+    if (type === "weak") playSEWeakHit(); else playSEHit();
+  }, [playSEHit, playSEWeakHit]);
 
   const fireDefeatEffect = useCallback((slotIdx) => {
     const id = ++hitEffectIdRef.current;
     setDefeatEffects(prev => [...prev, { id, slotIdx }]);
     setTimeout(() => setDefeatEffects(prev => prev.filter(e => e.id !== id)), 1300);
-  }, []);
+    // SE再生
+    playSEDefeat();
+  }, [playSEDefeat]);
 
   // @@SECTION:BGM_CONTROL ──────────────────────────────────────────────────────
   // BGM制御 ref・fadeOut/fadeIn/switchBgm/unlockAudio/playFanfare
@@ -1684,6 +1851,10 @@ export default function ArcadiaCh2() {
   // ユーザーの最初の操作でAudioContextをアンロックし、pendingBGMを再生する
   const unlockAudio = useCallback((bgmId) => {
     audioUnlocked.current = true;
+    // WebAudio AudioContext が suspended の場合に resume（iOS対策）
+    if (seCtxRef.current && seCtxRef.current.state === "suspended") {
+      seCtxRef.current.resume().catch(() => {});
+    }
     const target = bgmId ?? pendingBgmRef.current;
     pendingBgmRef.current = null;
     if (target && currentBgmRef.current !== target) {
