@@ -1583,10 +1583,11 @@ export default function ArcadiaCh2() {
   // ── ヒット・討伐エフェクト ─────────────────────────────────────────────────
   // hitEffects:   [{ id, slotIdx, dmg, type }]  type="normal"|"weak"|"elem_break"|"heal"
   // defeatEffects:[{ id, slotIdx }]
-  // hitSlots:     Set<slotIdx> -- 現在シェイク中のスロット
+  // hitSlotIds:   Map<slotIdx, latestHitId> -- 最後に発火したヒットIDをスロットごとに保持
+  //               スロットがヒット中かどうかは hitSlotIds.has(slotIdx) で判定する
   const [hitEffects,    setHitEffects   ] = useState([]);
   const [defeatEffects, setDefeatEffects] = useState([]);
-  const [hitSlots,      setHitSlots     ] = useState(new Set());
+  const [hitSlotIds,    setHitSlotIds   ] = useState(new Map());
   const hitEffectIdRef = useRef(0);
 
   const typeTimerRef = useRef(null);
@@ -1764,9 +1765,13 @@ export default function ArcadiaCh2() {
     const id = ++hitEffectIdRef.current;
     setHitEffects(prev => [...prev, { id, slotIdx, dmg, type }]);
     setTimeout(() => setHitEffects(prev => prev.filter(e => e.id !== id)), 700);
-    // シェイク：追加 → 300ms後に除去
-    setHitSlots(prev => { const s = new Set(prev); s.add(slotIdx); return s; });
-    setTimeout(() => setHitSlots(prev => { const s = new Set(prev); s.delete(slotIdx); return s; }), 320);
+    // hitSlotIds にこのスロットの最新IDを登録
+    // 320ms後、自分のIDがまだ最新なら削除（後発のヒットに上書きされていれば何もしない）
+    setHitSlotIds(prev => { const m = new Map(prev); m.set(slotIdx, id); return m; });
+    setTimeout(() => setHitSlotIds(prev => {
+      if (prev.get(slotIdx) !== id) return prev; // 後発のヒットが来ていれば何もしない
+      const m = new Map(prev); m.delete(slotIdx); return m;
+    }), 320);
     // SE再生
     if (type === "weak") playSEWeakHit(); else playSEHit();
   }, [playSEHit, playSEWeakHit]);
@@ -1775,8 +1780,8 @@ export default function ArcadiaCh2() {
     const id = ++hitEffectIdRef.current;
     setDefeatEffects(prev => [...prev, { id, slotIdx }]);
     setTimeout(() => setDefeatEffects(prev => prev.filter(e => e.id !== id)), 1300);
-    // 討伐時は hitSlots・hitEffects を即クリア（白フラッシュが残らないよう）
-    setHitSlots(new Set());
+    // 討伐時は全スロットのヒット状態を即クリア
+    setHitSlotIds(new Map());
     setHitEffects(prev => prev.filter(e => e.slotIdx !== slotIdx));
     // SE再生
     playSEDefeat();
@@ -2963,7 +2968,7 @@ export default function ArcadiaCh2() {
     const allDefeated = curEnemies.every(e => e.defeated);
     if (allDefeated) {
       setVictory(true);
-      setHitSlots(new Set()); setHitEffects([]);  // フラッシュ残留リセット
+      setHitSlotIds(new Map()); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
       const totalElk = curEnemies.reduce((s, e) => s + (e.def.elk ?? 0), 0);
       const totalExp = curEnemies.reduce((s, e) => s + (e.def.exp ?? 0), 0);
@@ -2978,7 +2983,7 @@ export default function ArcadiaCh2() {
     } else if (curHp <= 0) {
       // エルツが行動不能 → 即敗北
       setDefeat(true);
-      setHitSlots(new Set()); setHitEffects([]);  // フラッシュ残留リセット
+      setHitSlotIds(new Map()); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
       setBtlLogs(prev => [...prev, "💀 エルツが行動不能！ 敗北..."]);
     } else {
@@ -3541,7 +3546,7 @@ export default function ArcadiaCh2() {
     if (curEnemyHp <= 0) {
       setBtlLogs(prev => [...prev, ...logs].slice(-18));
       setVictory(true);
-      setHitSlots(new Set()); setHitEffects([]);  // フラッシュ残留リセット
+      setHitSlotIds(new Map()); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
       setBtlLogs(prev => [...prev, `🏆 ${ed.name}を倒した！`]);
       if (ed.elk > 0) { setElk(e => e + ed.elk); showNotif(`💰 ${ed.elk} ELK 獲得！`); }
@@ -3563,7 +3568,7 @@ export default function ArcadiaCh2() {
       // エルツが行動不能 → 即敗北
       setBtlLogs(prev => [...prev, ...logs].slice(-18));
       setDefeat(true);
-      setHitSlots(new Set()); setHitEffects([]);  // フラッシュ残留リセット
+      setHitSlotIds(new Map()); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
       setBtlLogs(prev => [...prev, "💀 エルツが行動不能！ 敗北..."]);
     } else {
@@ -4608,7 +4613,7 @@ export default function ArcadiaCh2() {
                         }}>
                           {/* シェイクラッパー：ヒット時のみ揺れる */}
                           <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",
-                            animation: (!me.defeated && hitSlots.has(idx)) ? "hitShake 0.32s ease-out" : "none",
+                            animation: (!me.defeated && hitSlotIds.has(idx)) ? "hitShake 0.32s ease-out" : "none",
                           }}>
                           {meImg
                             ? <img src={meImg} alt={meDef.name} style={{
@@ -4620,7 +4625,7 @@ export default function ArcadiaCh2() {
                                   ? (meIsBoss
                                     ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
                                     : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
-                                  : (!me.defeated && hitSlots.has(idx)
+                                  : (!me.defeated && hitSlotIds.has(idx)
                                     ? "brightness(2.0) saturate(0.4) " + (meIsBoss
                                         ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
                                         : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
@@ -4726,7 +4731,7 @@ export default function ArcadiaCh2() {
                }}>
                  {/* シェイクラッパー：ヒット時のみ揺れる */}
                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:"100%",
-                   animation: (!victory && hitSlots.has(0)) ? "hitShake 0.32s ease-out" : "none",
+                   animation: (!victory && hitSlotIds.has(0)) ? "hitShake 0.32s ease-out" : "none",
                  }}>
                  {enemyImgUrl
                    ? <img src={enemyImgUrl} alt={ed.name} style={{
@@ -4738,7 +4743,7 @@ export default function ArcadiaCh2() {
                        animation: victory ? "none" : (isBoss?"bossFloat 2s infinite":"idle 2s infinite"),
                        filter: victory
                          ? (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
-                         : (!victory && hitSlots.has(0)
+                         : (!victory && hitSlotIds.has(0)
                            ? "brightness(2.0) saturate(0.4) " + (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
                            : (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")),
                        transform: (!victory && btlAnimEnemy) ? "scale(1.05)" : "scale(1)",
