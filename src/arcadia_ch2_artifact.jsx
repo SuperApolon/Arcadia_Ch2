@@ -4889,12 +4889,11 @@ export default function ArcadiaCh2() {
               src="https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/dragon_rush.webp"
               alt=""
               style={{
-                position:"fixed",
-                top:0,
-                left:0,
-                width: isPortrait ? "100vw" : "62vw",
-                height: isPortrait ? (isTablet ? "58vh" : "55vh") : "100vh",
-                objectFit:"fill",
+                position:"absolute",
+                inset:0,
+                width:"100%",
+                height:"100%",
+                objectFit:"contain",
                 pointerEvents:"none",
                 zIndex:60,
               }}
