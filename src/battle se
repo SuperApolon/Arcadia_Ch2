@@ -10,7 +10,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 //   ELEMENT_SYSTEM     277    属性定義 ELEMENT_NAMES / ELEMENT_SKILL_DEFS
 //   UTILS              298    randInt / EXP_TABLE / ALL_CHAR_DEFS / buildPartyInit / BATTLE_PARTY_MAP
 //   NOVEL_TEXTS        350    NOVEL_STATUS / novelUrl / NOVEL_FETCH_ERR
-//   ASSETS             400    ASSET_STATUS / assetUrl / movieUrl / bgmUrl
+//   ASSETS             400    ASSET_STATUS / assetUrl / movieUrl / bgmUrl / seUrl
 //   BGM_MAPS           521    PHASE_BGM / LOC_BGM / BATTLE_BGM / resolveBgmId
 //   SPRITE_SIZE        657    SPRITE_SIZE / SPRITE_MAP / LOC_TO_SCENE_IMG
 //   ENEMY_SIZE         699    ENEMY_IMG_SIZE / ENEMY_IMG_MAP / SIMULUU_IMG_URL / BATTLE_BG_MAP
@@ -502,6 +502,10 @@ const ASSET_STATUS = {
   "bgm/eibisplain":          true,   // エイビス平原
   "bgm/battle_normal2":      true,   // PvP用BGM
   "bgm/battle_boss2":        true,   // PvP用BGM
+  // ── SE (ヒット効果音) ── false のときはプログラム合成にフォールバック ──────
+  "se/hit":                  true,  // 通常斬撃音（アップロード後 true に変更）
+  "se/weak_hit":             true,  // 弱点ヒット音（アップロード後 true に変更）
+  "se/defeat":               true,  // 討伐音（アップロード後 true に変更）
 };
 
 function assetUrl(key) {
@@ -515,6 +519,12 @@ function movieUrl(key) {
 
 // BGM URL解決ヘルパー -- 拡張子は .mp3 固定
 function bgmUrl(key) {
+  return ASSET_STATUS[key] ? `${BASE_URL}${key}.mp3` : null;
+}
+
+// SE URL解決ヘルパー -- 拡張子は .mp3 固定
+// ASSET_STATUS[key] が false のときは null を返し、プログラム合成にフォールバックする
+function seUrl(key) {
   return ASSET_STATUS[key] ? `${BASE_URL}${key}.mp3` : null;
 }
 
@@ -1644,9 +1654,12 @@ export default function ArcadiaCh2() {
     return seCtxRef.current;
   }, []);
 
-  // 通常斬撃音: 空気を切り裂く高速スウィッシュ → 金属インパクト
+  // 通常斬撃音: MP3があればそちらを再生。なければ AudioContext 合成にフォールバック。
   const playSEHit = useCallback(() => {
     if (!audioUnlocked.current) return;
+    const url = seUrl("se/hit");
+    if (url) { try { const a = new Audio(url); a.volume = 0.8; a.play().catch(()=>{}); } catch(e){} return; }
+    // ── フォールバック: プログラム合成 ──────────────────────────────────────
     const ctx = getSECtx(); if (!ctx) return;
     const t = ctx.currentTime;
 
@@ -1695,9 +1708,12 @@ export default function ArcadiaCh2() {
     ring.start(t + 0.042); ring.stop(t + 0.14);
   }, [getSECtx]);
 
-  // 弱点ヒット音: 重い二段斬り → 高音の金属共鳴が長く響く
+  // 弱点ヒット音: MP3があればそちらを再生。なければ AudioContext 合成にフォールバック。
   const playSEWeakHit = useCallback(() => {
     if (!audioUnlocked.current) return;
+    const url = seUrl("se/weak_hit");
+    if (url) { try { const a = new Audio(url); a.volume = 0.85; a.play().catch(()=>{}); } catch(e){} return; }
+    // ── フォールバック: プログラム合成 ──────────────────────────────────────
     const ctx = getSECtx(); if (!ctx) return;
     const t = ctx.currentTime;
 
@@ -1743,9 +1759,12 @@ export default function ArcadiaCh2() {
     });
   }, [getSECtx]);
 
-  // 討伐音: 重厚な一撃 → 低音ドーン + 金属的な余韻
+  // 討伐音: MP3があればそちらを再生。なければ AudioContext 合成にフォールバック。
   const playSEDefeat = useCallback(() => {
     if (!audioUnlocked.current) return;
+    const url = seUrl("se/defeat");
+    if (url) { try { const a = new Audio(url); a.volume = 0.9; a.play().catch(()=>{}); } catch(e){} return; }
+    // ── フォールバック: プログラム合成 ──────────────────────────────────────
     const ctx = getSECtx(); if (!ctx) return;
     const t = ctx.currentTime;
 
