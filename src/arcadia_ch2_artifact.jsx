@@ -1775,10 +1775,12 @@ export default function ArcadiaCh2() {
     const id = ++hitEffectIdRef.current;
     setDefeatEffects(prev => [...prev, { id, slotIdx }]);
     setTimeout(() => setDefeatEffects(prev => prev.filter(e => e.id !== id)), 1300);
+    // 討伐時は hitSlots・hitEffects を即クリア（白フラッシュが残らないよう）
+    setHitSlots(new Set());
+    setHitEffects(prev => prev.filter(e => e.slotIdx !== slotIdx));
     // SE再生
     playSEDefeat();
   }, [playSEDefeat]);
-
   // @@SECTION:BGM_CONTROL ──────────────────────────────────────────────────────
   // BGM制御 ref・fadeOut/fadeIn/switchBgm/unlockAudio/playFanfare
   // AutoPlay Policy 対応：ユーザー操作前は pendingBgmRef に積み、操作後に再生開始
@@ -2961,6 +2963,7 @@ export default function ArcadiaCh2() {
     const allDefeated = curEnemies.every(e => e.defeated);
     if (allDefeated) {
       setVictory(true);
+      setHitSlots(new Set()); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
       const totalElk = curEnemies.reduce((s, e) => s + (e.def.elk ?? 0), 0);
       const totalExp = curEnemies.reduce((s, e) => s + (e.def.exp ?? 0), 0);
@@ -2975,6 +2978,7 @@ export default function ArcadiaCh2() {
     } else if (curHp <= 0) {
       // エルツが行動不能 → 即敗北
       setDefeat(true);
+      setHitSlots(new Set()); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
       setBtlLogs(prev => [...prev, "💀 エルツが行動不能！ 敗北..."]);
     } else {
@@ -3537,6 +3541,7 @@ export default function ArcadiaCh2() {
     if (curEnemyHp <= 0) {
       setBtlLogs(prev => [...prev, ...logs].slice(-18));
       setVictory(true);
+      setHitSlots(new Set()); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
       setBtlLogs(prev => [...prev, `🏆 ${ed.name}を倒した！`]);
       if (ed.elk > 0) { setElk(e => e + ed.elk); showNotif(`💰 ${ed.elk} ELK 獲得！`); }
@@ -3558,6 +3563,7 @@ export default function ArcadiaCh2() {
       // エルツが行動不能 → 即敗北
       setBtlLogs(prev => [...prev, ...logs].slice(-18));
       setDefeat(true);
+      setHitSlots(new Set()); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
       setBtlLogs(prev => [...prev, "💀 エルツが行動不能！ 敗北..."]);
     } else {
@@ -3698,7 +3704,7 @@ export default function ArcadiaCh2() {
     @keyframes defeatEnemyOut { 0%{opacity:1;transform:scale(1) rotate(0deg)} 30%{opacity:1;transform:scale(1.1) rotate(-3deg)} 70%{opacity:0.3;transform:scale(0.6) rotate(8deg) translateY(20px)} 100%{opacity:0;transform:scale(0.2) rotate(15deg) translateY(50px)} }
     @keyframes defeatLabel { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)} 30%{opacity:1;transform:translate(-50%,-50%) scale(1.3)} 60%{opacity:1;transform:translate(-50%,-50%) scale(1.0)} 100%{opacity:0;transform:translate(-50%,-50%) scale(0.8)} }
     @keyframes arcadiaBlnk { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    @keyframes dissolve { 0%{opacity:1;filter:brightness(1.8) blur(0px);transform:scale(1)} 20%{opacity:0.9;filter:brightness(2.5) blur(1px);transform:scale(1.04)} 60%{opacity:0.4;filter:brightness(1) blur(6px);transform:scale(0.88)} 100%{opacity:0;filter:brightness(0.5) blur(14px);transform:scale(0.7)} }
+    @keyframes dissolve { 0%{opacity:1;filter:blur(0px);transform:scale(1)} 20%{opacity:0.85;filter:blur(1px);transform:scale(1.04)} 60%{opacity:0.3;filter:blur(6px);transform:scale(0.88)} 100%{opacity:0;filter:blur(14px);transform:scale(0.7)} }
     @keyframes hitShake { 0%{transform:translateX(0) scale(1)} 15%{transform:translateX(-7px) scale(1.04)} 35%{transform:translateX(6px) scale(1.03)} 55%{transform:translateX(-4px) scale(1.01)} 75%{transform:translateX(3px) scale(1.01)} 100%{transform:translateX(0) scale(1)} }
   `;
 
@@ -4610,13 +4616,19 @@ export default function ArcadiaCh2() {
                                 height:"100%", maxHeight:"100%",
                                 objectFit:"contain",
                                 animation: me.defeated ? "none" : (meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite"),
-                                filter: ((!me.defeated && hitSlots.has(idx))
-                                  ? "brightness(2.0) saturate(0.4) "
-                                  : "") + (meIsBoss
-                                  ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
-                                  : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))"),
-                                transform: btlAnimEnemy ? "scale(1.07)" : "scale(1)",
-                                transition:"transform 0.1s, filter 0.05s",
+                                filter: me.defeated
+                                  ? (meIsBoss
+                                    ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
+                                    : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
+                                  : (!me.defeated && hitSlots.has(idx)
+                                    ? "brightness(2.0) saturate(0.4) " + (meIsBoss
+                                        ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
+                                        : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
+                                    : (meIsBoss
+                                        ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
+                                        : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")),
+                                transform: (!me.defeated && btlAnimEnemy) ? "scale(1.07)" : "scale(1)",
+                                transition: me.defeated ? "none" : "transform 0.1s, filter 0.05s",
                               }} />
                             : <div style={{
                                 fontSize: meIsBoss ? "clamp(64px,10vw,120px)" : "clamp(40px,6vw,80px)",
@@ -4724,9 +4736,13 @@ export default function ArcadiaCh2() {
                        maxHeight:"100%",
                        objectFit:"contain",
                        animation: victory ? "none" : (isBoss?"bossFloat 2s infinite":"idle 2s infinite"),
-                       filter: ((!victory && hitSlots.has(0)) ? "brightness(2.0) saturate(0.4) " : "")
-                         + (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))"),
-                       transform:btlAnimEnemy?"scale(1.05)":"scale(1)", transition:"transform 0.1s, filter 0.05s",
+                       filter: victory
+                         ? (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
+                         : (!victory && hitSlots.has(0)
+                           ? "brightness(2.0) saturate(0.4) " + (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
+                           : (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")),
+                       transform: (!victory && btlAnimEnemy) ? "scale(1.05)" : "scale(1)",
+                       transition: victory ? "none" : "transform 0.1s, filter 0.05s",
                      }} />
                    : <div style={{
                        fontSize:"clamp(60px, 10vh, 140px)",
