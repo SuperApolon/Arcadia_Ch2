@@ -1580,11 +1580,37 @@ export default function ArcadiaCh2() {
   const [waterSphereCooldown,  setWaterSphereCooldown ] = useState(0);
   const [waterSphereActive,    setWaterSphereActive   ] = useState(0);
 
+  // ── ヒット・討伐エフェクト ─────────────────────────────────────────────────
+  // hitEffects:   [{ id, slotIdx, dmg, type }]  type="normal"|"weak"|"elem_break"|"heal"
+  // defeatEffects:[{ id, slotIdx }]
+  // hitSlots:     Set<slotIdx> -- 現在シェイク中のスロット
+  const [hitEffects,    setHitEffects   ] = useState([]);
+  const [defeatEffects, setDefeatEffects] = useState([]);
+  const [hitSlots,      setHitSlots     ] = useState(new Set());
+  const hitEffectIdRef = useRef(0);
+
   const typeTimerRef = useRef(null);
   const notifTimerRef = useRef(null);
   const textScrollRef = useRef(null);
   const tapStartYRef  = useRef(0);   // スクロール判定用
   const autoAdvTimerRef = useRef(null); // オート進行タイマー
+
+  // ── ヒット・討伐エフェクト発火ヘルパー ────────────────────────────────────────
+  // slotIdx: multiEnemies の配列インデックス（単体バトルは常に 0）
+  const fireHitEffect = useCallback((slotIdx, dmg, type = "normal") => {
+    const id = ++hitEffectIdRef.current;
+    setHitEffects(prev => [...prev, { id, slotIdx, dmg, type }]);
+    setTimeout(() => setHitEffects(prev => prev.filter(e => e.id !== id)), 700);
+    // シェイク：追加 → 300ms後に除去
+    setHitSlots(prev => { const s = new Set(prev); s.add(slotIdx); return s; });
+    setTimeout(() => setHitSlots(prev => { const s = new Set(prev); s.delete(slotIdx); return s; }), 320);
+  }, []);
+
+  const fireDefeatEffect = useCallback((slotIdx) => {
+    const id = ++hitEffectIdRef.current;
+    setDefeatEffects(prev => [...prev, { id, slotIdx }]);
+    setTimeout(() => setDefeatEffects(prev => prev.filter(e => e.id !== id)), 1300);
+  }, []);
 
   // @@SECTION:BGM_CONTROL ──────────────────────────────────────────────────────
   // BGM制御 ref・fadeOut/fadeIn/switchBgm/unlockAudio/playFanfare
@@ -2301,6 +2327,9 @@ export default function ArcadiaCh2() {
     let waterSphereUsed   = false;
     let elemBreakTriggered = false;
     let newElemAccum = elemDmgAccum;
+    // エフェクト蓄積バッファ（ターン処理後にまとめてsetStateする）
+    const pendingHitFx    = []; // { slotIdx, dmg, type }
+    const pendingDefeatFx = []; // { slotIdx }
 
     logs.push(`─ ターン ${turn + 1} ─`);
 
@@ -2369,6 +2398,8 @@ export default function ArcadiaCh2() {
           }
           curEnemies[tIdx2].hp = Math.max(0, curEnemies[tIdx2].hp - wsDmg);
           if (curEnemies[tIdx2].hp <= 0) curEnemies[tIdx2].defeated = true;
+          pendingHitFx.push({ slotIdx: tIdx2, dmg: wsDmg, type: "normal" });
+          if (curEnemies[tIdx2].defeated) pendingDefeatFx.push({ slotIdx: tIdx2 });
           logs.push(`${actor.icon}${actor.name} 🌊 ウォータースフィア！ → ${curEnemies[tIdx2].def.em}${curEnemies[tIdx2].def.name} ${wsDmg}ダメージ！ 💧水濡れ状態（3T）`);
           continue;
         }
@@ -2381,6 +2412,8 @@ export default function ArcadiaCh2() {
             if (!e.defeated) {
               curEnemies[i].hp = Math.max(0, e.hp - arDmg);
               if (curEnemies[i].hp <= 0) curEnemies[i].defeated = true;
+              pendingHitFx.push({ slotIdx: i, dmg: arDmg, type: "normal" });
+              if (curEnemies[i].defeated) pendingDefeatFx.push({ slotIdx: i });
               logs.push(`  → ${e.def.em}${e.def.name} ${arDmg}ダメージ！`);
             }
           });
@@ -2413,6 +2446,8 @@ export default function ArcadiaCh2() {
           const actualElemDmg = Math.max(1, Math.round(rawDmg * elemMult));
           curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - actualElemDmg);
           if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+          pendingHitFx.push({ slotIdx: tIdx, dmg: actualElemDmg, type: isWeakHit ? "weak" : "normal" });
+          if (curEnemies[tIdx].defeated) pendingDefeatFx.push({ slotIdx: tIdx });
           if (isWeakHit && !elemBreakTriggered) {
             newElemAccum += actualElemDmg;
             logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} ⚡弱点ヒット！×2 ${actualElemDmg} dmg [蓄積:${Math.min(newElemAccum, ELEMENT_BREAK_THRESHOLD)}/${ELEMENT_BREAK_THRESHOLD}]`);
@@ -2433,6 +2468,8 @@ export default function ArcadiaCh2() {
             const bkDmg = Math.max(1, Math.round(Math.floor(randInt(18, 28) + (isEltz ? atkBonus : 0)) * comboAtkMult));
             curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - bkDmg);
             if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+            pendingHitFx.push({ slotIdx: tIdx, dmg: bkDmg, type: "normal" });
+            if (curEnemies[tIdx].defeated) pendingDefeatFx.push({ slotIdx: tIdx });
             logs.push(`${actor.icon}${actor.name} ⚡ バイカースラッシュ！ → ${tEnemy.def.em}${tEnemy.def.name} ${bkDmg}ダメージ！ 🔺攻撃力上昇！`);
           } else if (skillId === "sansanka") {
             sansankaUsed = true;
@@ -2444,6 +2481,8 @@ export default function ArcadiaCh2() {
             const total = hits.reduce((a, b) => a + b, 0);
             curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - total);
             if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+            pendingHitFx.push({ slotIdx: tIdx, dmg: total, type: "normal" });
+            if (curEnemies[tIdx].defeated) pendingDefeatFx.push({ slotIdx: tIdx });
             logs.push(`${actor.icon}${actor.name} ⚔⚔⚔ 三散華！ → ${tEnemy.def.em}${tEnemy.def.name} ${hits[0]}+${hits[1]}+${hits[2]}=${total}ダメージ！`);
           } else if (skillId === "stinger_bite") {
             stingerUsed = true;
@@ -2452,6 +2491,8 @@ export default function ArcadiaCh2() {
             const stDmg = Math.max(1, Math.round(randInt(16, 24) * stMult * comboAtkMult));
             curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - stDmg);
             if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+            pendingHitFx.push({ slotIdx: tIdx, dmg: stDmg, type: "normal" });
+            if (curEnemies[tIdx].defeated) pendingDefeatFx.push({ slotIdx: tIdx });
             const bonusLabel = isStunned2 ? "（×2 行動不能ボーナス！）" : "";
             logs.push(`${actor.icon}${actor.name} 🗡 スティンガーバイト！ → ${tEnemy.def.em}${tEnemy.def.name} ${stDmg}ダメージ！${bonusLabel}`);
           } else if (skillId === "straight_shot") {
@@ -2459,6 +2500,8 @@ export default function ArcadiaCh2() {
             const ssDmg = Math.max(1, Math.round(randInt(18, 28) * comboAtkMult));
             curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - ssDmg);
             if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+            pendingHitFx.push({ slotIdx: tIdx, dmg: ssDmg, type: "normal" });
+            if (curEnemies[tIdx].defeated) pendingDefeatFx.push({ slotIdx: tIdx });
             logs.push(`${actor.icon}${actor.name} 🏹 ストレートショット！ → ${tEnemy.def.em}${tEnemy.def.name} ${ssDmg}ダメージ！ 😵2T行動不能！`);
           } else {
             // atk のみ（counter/dodgeはスキップ済み）
@@ -2474,6 +2517,8 @@ export default function ArcadiaCh2() {
               // dodge中も含め直撃（atk vs dodge はプレイヤー攻撃が通る）
               curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - rawDmg);
               if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+              pendingHitFx.push({ slotIdx: tIdx, dmg: rawDmg, type: "normal" });
+              if (curEnemies[tIdx].defeated) pendingDefeatFx.push({ slotIdx: tIdx });
               logs.push(`${actor.icon}${actor.name} ⚔ → ${tEnemy.def.em}${tEnemy.def.name} ${rawDmg}ダメージ！`);
             }
           }
@@ -2547,8 +2592,10 @@ export default function ArcadiaCh2() {
           if (tDodge) {
             const csk = BATTLE_SKILLS.find(s => s.id === "dodge");
             const dodgeDmg = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult));
-            curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp = Math.max(0, e.hp - dodgeDmg);
-            if (curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp <= 0) curEnemies[curEnemies.findIndex(en => en.slot === slot)].defeated = true;
+            const eIdx = curEnemies.findIndex(en => en.slot === slot);
+            curEnemies[eIdx].hp = Math.max(0, e.hp - dodgeDmg);
+            if (curEnemies[eIdx].hp <= 0) { curEnemies[eIdx].defeated = true; pendingDefeatFx.push({ slotIdx: eIdx }); }
+            pendingHitFx.push({ slotIdx: eIdx, dmg: dodgeDmg, type: "normal" });
             logs.push(`${tMember.icon}${tMember.name} 💨 回避成功！ ${e.def.name}のカウンターをかわし → ${e.def.em}${e.def.name}に${dodgeDmg}ダメージで反撃！`);
           } else if (tCounter) {
             logs.push(`🔄 カウンター相殺！ ${tMember.icon}${tMember.name} vs ${e.def.em}${e.def.name}（互いの攻撃無効化）`);
@@ -2564,8 +2611,10 @@ export default function ArcadiaCh2() {
           if (tCounter) {
             const csk = BATTLE_SKILLS.find(s => s.id === "counter");
             const bd = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) * 1.5 + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult));
-            curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp = Math.max(0, e.hp - bd);
-            if (curEnemies[curEnemies.findIndex(en => en.slot === slot)].hp <= 0) curEnemies[curEnemies.findIndex(en => en.slot === slot)].defeated = true;
+            const eIdx = curEnemies.findIndex(en => en.slot === slot);
+            curEnemies[eIdx].hp = Math.max(0, e.hp - bd);
+            if (curEnemies[eIdx].hp <= 0) { curEnemies[eIdx].defeated = true; pendingDefeatFx.push({ slotIdx: eIdx }); }
+            pendingHitFx.push({ slotIdx: eIdx, dmg: bd, type: "normal" });
             logs.push(`${tMember.icon}${tMember.name} 🔄カウンター成功！ → ${e.def.em}${e.def.name} ${bd}ダメージ（×1.5）！ ${tMember.name}は被弾を免れた！`);
           } else {
             // dodge も atk も通常被弾
@@ -2700,6 +2749,15 @@ export default function ArcadiaCh2() {
     setPartyHp(curPartyHp);
     setPartyMp(curPartyMp);
     setMultiEnemies(curEnemies);
+    // ── エフェクト発火（スロットごとに総ダメージを合算して1エフェクト） ─────
+    const hitFxBySlot = {};
+    pendingHitFx.forEach(fx => {
+      if (!hitFxBySlot[fx.slotIdx]) hitFxBySlot[fx.slotIdx] = { dmg: 0, type: "normal" };
+      hitFxBySlot[fx.slotIdx].dmg += fx.dmg;
+      if (fx.type === "weak") hitFxBySlot[fx.slotIdx].type = "weak";
+    });
+    Object.entries(hitFxBySlot).forEach(([slotIdx, fx]) => fireHitEffect(Number(slotIdx), fx.dmg, fx.type));
+    pendingDefeatFx.forEach(fx => fireDefeatEffect(fx.slotIdx));
     setElemDmgAccum(newElemAccum);
     if (multiElemCycle) setEnemyElementIdx(multiNextElemIdx);
     setTurn(t => t + 1);
@@ -2766,6 +2824,7 @@ export default function ArcadiaCh2() {
     straightShotCooldown, straightShotActive, arrowRainCooldown,
     waterSphereCooldown, waterSphereActive,
     noDmgStreak, turn, lv, showNotif, handleExpGain,
+    fireHitEffect, fireDefeatEffect,
   ]);
 
   // @@SECTION:LOGIC_PARTY_TURN ──────────────────────────────────────────────────
@@ -2843,6 +2902,9 @@ export default function ArcadiaCh2() {
     // このターンで敵行動が割り込んだ後の全メンバーの被弾フラグ
     const memberDmg = Object.fromEntries(currentPartyKeys.map(k => [k, 0]));  // 各メンバーの受けたダメージ合計
     const memberHeal = Object.fromEntries(currentPartyKeys.map(k => [k, 0])); // 各メンバーのメインフェイズ回復量
+    // エフェクト蓄積バッファ（単体バトルでは slotIdx = 0 固定）
+    const pendingHitFx    = []; // { slotIdx, dmg, type }
+    const pendingDefeatFx = []; // { slotIdx }
 
     // ── 現在有効なバフ・デバフ表示 ──────────────────────────────────────
     logs.push(`─ ターン ${turn + 1} ─`);
@@ -2907,11 +2969,13 @@ export default function ArcadiaCh2() {
           if (currentElementKey === "none") {
             const dmg = Math.max(1, Math.round(rawDmg * 0.5));
             curEnemyHp = Math.max(0, curEnemyHp - dmg);
+            pendingHitFx.push({ slotIdx: 0, dmg, type: "normal" });
             logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}（無属性・蓄積なし） → ${dmg} ダメージ`);
           } else if (isWeakHit) {
             const weakDmg = Math.round(rawDmg * 2);
             newElemAccum += weakDmg;
             curEnemyHp = Math.max(0, curEnemyHp - weakDmg);
+            pendingHitFx.push({ slotIdx: 0, dmg: weakDmg, type: "weak" });
             logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}！ ⚡弱点ヒット！×2 ${weakDmg} dmg [蓄積:${Math.min(newElemAccum, ELEMENT_BREAK_THRESHOLD)}/${ELEMENT_BREAK_THRESHOLD}]`);
             if (newElemAccum >= ELEMENT_BREAK_THRESHOLD && !elemBreakTriggered) {
               elemBreakTriggered = true;
@@ -2923,6 +2987,7 @@ export default function ArcadiaCh2() {
           } else {
             const dmg = Math.max(1, Math.round(rawDmg * 0.5));
             curEnemyHp = Math.max(0, curEnemyHp - dmg);
+            pendingHitFx.push({ slotIdx: 0, dmg, type: "normal" });
             logs.push(`${actor.icon} ${actor.name} ${elemSk.icon} ${elemSk.label}（属性劣勢・½） → ${dmg} ダメージ`);
           }
 
@@ -2958,6 +3023,7 @@ export default function ArcadiaCh2() {
           bikerSlashUsed = true;
           const rawDmg = Math.max(1, Math.round((randInt(18, 28) + (isEltz ? atkBonus : 0)) * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - rawDmg);
+          pendingHitFx.push({ slotIdx: 0, dmg: rawDmg, type: "normal" });
           logs.push(`${actor.icon} ${actor.name} ⚡ バイカースラッシュ！ → ${rawDmg} ダメージ！ 🔺攻撃力上昇！`);
         } else if (skillId === "sansanka") {
           sansankaUsed = true;
@@ -2966,6 +3032,7 @@ export default function ArcadiaCh2() {
           const h3 = Math.max(1, Math.round((randInt(8, 14) + (isEltz ? atkBonus : 0)) * comboAtkMult));
           const total = h1 + h2 + h3;
           curEnemyHp = Math.max(0, curEnemyHp - total);
+          pendingHitFx.push({ slotIdx: 0, dmg: total, type: "normal" });
           logs.push(`${actor.icon} ${actor.name} ⚔⚔⚔ 三散華！ ${h1}+${h2}+${h3}=${total} ダメージ！`);
         } else if (skillId === "stinger_bite") {
           stingerUsed = true;
@@ -2973,22 +3040,26 @@ export default function ArcadiaCh2() {
           const stMult = isStunned2 ? 2.0 : 1.0;
           const stDmg = Math.max(1, Math.round(randInt(16, 24) * stMult * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - stDmg);
+          pendingHitFx.push({ slotIdx: 0, dmg: stDmg, type: "normal" });
           const bonusLabel = isStunned2 ? "（×2 行動不能ボーナス！）" : "";
           logs.push(`${actor.icon} ${actor.name} 🗡 スティンガーバイト！ → ${stDmg} ダメージ！${bonusLabel}`);
         } else if (skillId === "straight_shot") {
           straightShotUsed = true;
           const ssDmg = Math.max(1, Math.round(randInt(18, 28) * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - ssDmg);
+          pendingHitFx.push({ slotIdx: 0, dmg: ssDmg, type: "normal" });
           logs.push(`${actor.icon} ${actor.name} 🏹 ストレートショット！ → ${ssDmg} ダメージ！ 😵2T行動不能！`);
         } else if (skillId === "arrow_rain") {
           arrowRainUsed = true;
           const arDmg = Math.max(1, Math.round(randInt(8, 14) * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - arDmg);
+          pendingHitFx.push({ slotIdx: 0, dmg: arDmg, type: "normal" });
           logs.push(`${actor.icon} ${actor.name} 🏹 アローレイン！ → ${arDmg} ダメージ！（全体攻撃）`);
         } else if (skillId === "water_sphere") {
           waterSphereUsed = true;
           const wsDmg = Math.max(1, Math.round((randInt(16, 26) + (isEltz ? atkBonus : 0)) * comboAtkMult));
           curEnemyHp = Math.max(0, curEnemyHp - wsDmg);
+          pendingHitFx.push({ slotIdx: 0, dmg: wsDmg, type: "normal" });
           logs.push(`${actor.icon} ${actor.name} 🌊 ウォータースフィア！ → ${wsDmg} ダメージ！ 💧水濡れ（3T）`);
         } else {
           // atk のみ（counter/dodgeはスキップ済み）
@@ -3004,6 +3075,7 @@ export default function ArcadiaCh2() {
           } else {
             // dodge中も含め直撃（dodge vs atk はプレイヤー攻撃が通る）
             curEnemyHp = Math.max(0, curEnemyHp - rawDmg);
+            pendingHitFx.push({ slotIdx: 0, dmg: rawDmg, type: "normal" });
             logs.push(`${actor.icon} ${actor.name} ⚔ 強攻 → ${rawDmg} ダメージ！`);
           }
         }
@@ -3085,6 +3157,7 @@ export default function ArcadiaCh2() {
             const csk = BATTLE_SKILLS.find(s => s.id === "dodge");
             const dodgeDmg = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult));
             curEnemyHp = Math.max(0, curEnemyHp - dodgeDmg);
+            pendingHitFx.push({ slotIdx: 0, dmg: dodgeDmg, type: "normal" });
             logs.push(`${targetMember.icon} ${targetMember.name} 💨 回避成功！ ${ed.name}のカウンターをかわし → ${dodgeDmg} ダメージで反撃！`);
           } else if (tCounter) {
             logs.push(`🔄 カウンター相殺！ ${targetMember.icon}${targetMember.name} vs ${ed.name}（互いの攻撃を無効化）`);
@@ -3109,6 +3182,7 @@ export default function ArcadiaCh2() {
             const csk = BATTLE_SKILLS.find(s => s.id === "counter");
             const bonusDmg = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) * 1.5 + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult));
             curEnemyHp = Math.max(0, curEnemyHp - bonusDmg);
+            pendingHitFx.push({ slotIdx: 0, dmg: bonusDmg, type: "normal" });
             logs.push(`${targetMember.icon} ${targetMember.name} 🔄 カウンター成功！ → ${ed.name}に ${bonusDmg} ダメージ（×1.5）！ ${targetMember.name}は被弾を免れた！`);
           } else {
             // dodge も atk も通常被弾
@@ -3278,6 +3352,15 @@ export default function ArcadiaCh2() {
     setWaterSphereCooldown(nextWaterSphereCooldown);
     setWaterSphereActive(nextWaterSphereActive);
     setBtlAnimEnemy(true); setTimeout(() => setBtlAnimEnemy(false), 400);
+    // ── エフェクト発火（スロットごとに総ダメージを合算して1エフェクト） ─────
+    const hitFxBySlot2 = {};
+    pendingHitFx.forEach(fx => {
+      if (!hitFxBySlot2[fx.slotIdx]) hitFxBySlot2[fx.slotIdx] = { dmg: 0, type: "normal" };
+      hitFxBySlot2[fx.slotIdx].dmg += fx.dmg;
+      if (fx.type === "weak") hitFxBySlot2[fx.slotIdx].type = "weak";
+    });
+    Object.entries(hitFxBySlot2).forEach(([slotIdx, fx]) => fireHitEffect(Number(slotIdx), fx.dmg, fx.type));
+    if (curEnemyHp <= 0 && pendingHitFx.length > 0) fireDefeatEffect(0);
 
     // ── 勝敗判定 ────────────────────────────────────────────────────────────
     if (curEnemyHp <= 0) {
@@ -3329,6 +3412,7 @@ export default function ArcadiaCh2() {
     enemyHp, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, noDmgStreak, lv,
     showNotif, handleExpGain, turn,
+    fireHitEffect, fireDefeatEffect,
   ]);
 
   // @@SECTION:LOGIC_PENDING_EXEC ────────────────────────────────────────────────
@@ -3438,6 +3522,14 @@ export default function ArcadiaCh2() {
     @keyframes pbPulse { 0%,100%{opacity:0.6;r:6} 50%{opacity:1;r:8} }
     @keyframes pbGlow { 0%,100%{filter:drop-shadow(0 0 4px #00c8ff88)} 50%{filter:drop-shadow(0 0 10px #00c8ffcc) drop-shadow(0 0 20px #00c8ff44)} }
     @keyframes lvPulse { 0%,100%{filter:drop-shadow(0 0 4px #f0c04088)} 50%{filter:drop-shadow(0 0 12px #f0c040cc) drop-shadow(0 0 24px #f0c04044)} }
+    @keyframes hitFloat { 0%{opacity:1;transform:translate(-50%,-50%) scale(1.2)} 60%{opacity:1;transform:translate(-50%,-130%) scale(1)} 100%{opacity:0;transform:translate(-50%,-180%) scale(0.7)} }
+    @keyframes hitFlash { 0%{opacity:0.85} 50%{opacity:0.2} 100%{opacity:0} }
+    @keyframes defeatFlash { 0%{opacity:0} 20%{opacity:0.7} 60%{opacity:0.4} 100%{opacity:0} }
+    @keyframes defeatEnemyOut { 0%{opacity:1;transform:scale(1) rotate(0deg)} 30%{opacity:1;transform:scale(1.1) rotate(-3deg)} 70%{opacity:0.3;transform:scale(0.6) rotate(8deg) translateY(20px)} 100%{opacity:0;transform:scale(0.2) rotate(15deg) translateY(50px)} }
+    @keyframes defeatLabel { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)} 30%{opacity:1;transform:translate(-50%,-50%) scale(1.3)} 60%{opacity:1;transform:translate(-50%,-50%) scale(1.0)} 100%{opacity:0;transform:translate(-50%,-50%) scale(0.8)} }
+    @keyframes arcadiaBlnk { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes dissolve { 0%{opacity:1;filter:brightness(1.8) blur(0px);transform:scale(1)} 20%{opacity:0.9;filter:brightness(2.5) blur(1px);transform:scale(1.04)} 60%{opacity:0.4;filter:brightness(1) blur(6px);transform:scale(0.88)} 100%{opacity:0;filter:brightness(0.5) blur(14px);transform:scale(0.7)} }
+    @keyframes hitShake { 0%{transform:translateX(0) scale(1)} 15%{transform:translateX(-7px) scale(1.04)} 35%{transform:translateX(6px) scale(1.03)} 55%{transform:translateX(-4px) scale(1.01)} 75%{transform:translateX(3px) scale(1.01)} 100%{transform:translateX(0) scale(1)} }
   `;
 
   // @@SECTION:RENDER_VICTORY
@@ -4131,6 +4223,84 @@ export default function ArcadiaCh2() {
         <style>{keyframes}</style>
         {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease"}}>{notif}</div>}
 
+        {/* ── ヒット・討伐エフェクト フルスクリーンオーバーレイ ────────────────
+             overflow:hidden を持つ子コンテナを避けるため fixed で最前面に描画。
+             エネミー表示エリアは横長時に画面左62%、縦長時に上52%を占める。
+             マルチ敵(3枠)は等幅分割、単体敵は中央。                          */}
+        {(() => {
+          const enemyAreaW = isPortrait ? 100 : 62;   // vw%
+          const enemyAreaH = isPortrait ? 52 : 100;   // vh%
+          const slotCount  = multiEnemies ? multiEnemies.length : 1;
+
+          // スロットインデックス → 画面座標（vw/vh）
+          const slotCenter = (idx) => {
+            const slotW = enemyAreaW / slotCount;
+            const cx = slotW * idx + slotW * 0.5;     // vw
+            const cy = isPortrait ? enemyAreaH * 0.42 : 42; // vh
+            return { cx, cy };
+          };
+
+          return (
+            <>
+              {/* ヒット数字 */}
+              {hitEffects.map(fx => {
+                const { cx, cy } = slotCenter(fx.slotIdx);
+                const isWeak = fx.type === "weak";
+                return (
+                  <div key={fx.id} style={{
+                    position:"fixed",
+                    left:`${cx}vw`, top:`${cy}vh`,
+                    transform:"translate(-50%,-50%)",
+                    pointerEvents:"none", zIndex:300,
+                    fontFamily:"'Share Tech Mono',monospace",fontWeight:900,letterSpacing:2,
+                    fontSize: isWeak
+                      ? (multiEnemies ? "clamp(26px,4.5vw,40px)" : "clamp(38px,7vw,62px)")
+                      : (multiEnemies ? "clamp(20px,3.5vw,32px)" : "clamp(30px,6vw,52px)"),
+                    color: isWeak ? "#ffee44" : "#ffffff",
+                    textShadow: isWeak ? "0 0 16px #ffcc00, 0 0 32px #ff8800" : "0 0 10px #00ffccaa, 0 0 2px #000",
+                    animation:"hitFloat 0.65s ease-out forwards",
+                    whiteSpace:"nowrap",
+                  }}>
+                    {isWeak && <span style={{fontSize:"0.65em",marginRight:3}}>⚡</span>}
+                    -{fx.dmg}
+                  </div>
+                );
+              })}
+
+              {/* 討伐フラッシュ */}
+              {defeatEffects.map(fx => {
+                const { cx, cy } = slotCenter(fx.slotIdx);
+                const flashW = multiEnemies ? Math.round(100 / slotCount) : 62;
+                return (
+                  <React.Fragment key={fx.id}>
+                    <div style={{
+                      position:"fixed",
+                      left:`${cx}vw`, top:`${cy}vh`,
+                      width:`${flashW}vw`, height:`${isPortrait ? 52 : 70}vh`,
+                      transform:"translate(-50%,-50%)",
+                      pointerEvents:"none", zIndex:299,
+                      background:"radial-gradient(ellipse at center, rgba(255,220,80,0.65) 0%, rgba(255,100,0,0.3) 45%, transparent 72%)",
+                      animation:"defeatFlash 1.2s ease-out forwards",
+                    }}/>
+                    <div style={{
+                      position:"fixed",
+                      left:`${cx}vw`, top:`${cy}vh`,
+                      transform:"translate(-50%,-50%)",
+                      pointerEvents:"none", zIndex:300,
+                      fontFamily:"'Share Tech Mono',monospace",fontWeight:900,
+                      letterSpacing: multiEnemies ? 3 : 6,
+                      fontSize: multiEnemies ? "clamp(11px,2vw,18px)" : "clamp(20px,4vw,34px)",
+                      color:C.gold, whiteSpace:"nowrap",
+                      textShadow:`0 0 24px ${C.gold}, 0 0 48px #ff8800, 0 0 2px #000`,
+                      animation:"defeatLabel 1.1s ease-out forwards",
+                    }}>DEFEATED</div>
+                  </React.Fragment>
+                );
+              })}
+            </>
+          );
+        })()}
+
         {/* ── 戦闘SKIP ─────────────────────────────────────────────────────── */}
         {!victory && !defeat && (
           <button
@@ -4251,32 +4421,41 @@ export default function ArcadiaCh2() {
                           </div>
                         )}
                         {me.defeated && (
-                          <div style={{fontSize:meIsBoss?36:24,lineHeight:1,marginTop:8}}>💀</div>
+                          <div style={{fontSize:meIsBoss?36:24,lineHeight:1,marginTop:8,animation:"fadeIn 0.4s 1.0s ease both"}}>💀</div>
                         )}
                       </div>
 
                       {/* ── 中央：エネミー画像（flex:1 で縦最大） ── */}
-                      {!me.defeated && (
-                        <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minHeight:0,padding:"3px 0"}}>
+                      {(!me.defeated || true) && (
+                        <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minHeight:0,padding:"3px 0",
+                          animation: me.defeated ? "dissolve 1.0s ease-out forwards" : "none",
+                        }}>
+                          {/* シェイクラッパー：ヒット時のみ揺れる */}
+                          <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",
+                            animation: (!me.defeated && hitSlots.has(idx)) ? "hitShake 0.32s ease-out" : "none",
+                          }}>
                           {meImg
                             ? <img src={meImg} alt={meDef.name} style={{
                                 width:"100%", maxWidth:"96%",
                                 height:"100%", maxHeight:"100%",
                                 objectFit:"contain",
-                                animation: meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite",
-                                filter: meIsBoss
+                                animation: me.defeated ? "none" : (meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite"),
+                                filter: ((!me.defeated && hitSlots.has(idx))
+                                  ? "brightness(2.0) saturate(0.4) "
+                                  : "") + (meIsBoss
                                   ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
-                                  : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))",
+                                  : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))"),
                                 transform: btlAnimEnemy ? "scale(1.07)" : "scale(1)",
-                                transition:"transform 0.1s",
+                                transition:"transform 0.1s, filter 0.05s",
                               }} />
                             : <div style={{
                                 fontSize: meIsBoss ? "clamp(64px,10vw,120px)" : "clamp(40px,6vw,80px)",
                                 lineHeight:1,
-                                animation: meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite",
+                                animation: me.defeated ? "none" : (meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite"),
                                 filter: meIsBoss ? "drop-shadow(0 0 12px #ff4466)" : "none",
                               }}>{meDef.em}</div>
                           }
+                          </div>
                         </div>
                       )}
 
@@ -4307,6 +4486,8 @@ export default function ArcadiaCh2() {
                       {isTargetable && (
                         <div style={{position:"absolute",bottom:-12,left:"50%",transform:"translateX(-50%)",fontSize:16,animation:"idle 0.8s infinite"}}>👆</div>
                       )}
+
+                      {/* エフェクトはフルスクリーンオーバーレイで描画（overflow:hiddenを回避） */}
                     </div>
                   );
                 })}
@@ -4358,7 +4539,13 @@ export default function ArcadiaCh2() {
             )}
 
                {/* 背面：エネミー画像 */}
-               <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+               <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",
+                 animation: victory ? "dissolve 1.0s ease-out forwards" : "none",
+               }}>
+                 {/* シェイクラッパー：ヒット時のみ揺れる */}
+                 <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:"100%",
+                   animation: (!victory && hitSlots.has(0)) ? "hitShake 0.32s ease-out" : "none",
+                 }}>
                  {enemyImgUrl
                    ? <img src={enemyImgUrl} alt={ed.name} style={{
                        width:"auto",
@@ -4366,18 +4553,20 @@ export default function ArcadiaCh2() {
                        maxWidth:"96%",
                        maxHeight:"100%",
                        objectFit:"contain",
-                       animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
-                       filter:isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))",
-                       transform:btlAnimEnemy?"scale(1.05)":"scale(1)", transition:"transform 0.1s",
+                       animation: victory ? "none" : (isBoss?"bossFloat 2s infinite":"idle 2s infinite"),
+                       filter: ((!victory && hitSlots.has(0)) ? "brightness(2.0) saturate(0.4) " : "")
+                         + (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))"),
+                       transform:btlAnimEnemy?"scale(1.05)":"scale(1)", transition:"transform 0.1s, filter 0.05s",
                      }} />
                    : <div style={{
                        fontSize:"clamp(60px, 10vh, 140px)",
                        lineHeight:1,
-                       animation:isBoss?"bossFloat 2s infinite":"idle 2s infinite",
+                       animation: victory ? "none" : (isBoss?"bossFloat 2s infinite":"idle 2s infinite"),
                        filter:isBoss?`drop-shadow(0 0 24px ${C.red})`:"none",
                        transform:btlAnimEnemy?"scale(1.08)":"scale(1)", transition:"transform 0.1s",
                      }}>{ed.em}</div>
                  }
+                 </div>
                </div>
 
                {/* 前面上段：BOSSラベル + 属性インジケーター（top固定） */}
@@ -4448,6 +4637,8 @@ export default function ArcadiaCh2() {
                    })()}
                  </div>
                </div>
+
+               {/* エフェクトはフルスクリーンオーバーレイで描画（overflow:hiddenを回避） */}
              </div>
             </>
           )}
