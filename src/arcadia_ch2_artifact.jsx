@@ -1637,6 +1637,18 @@ export default function ArcadiaCh2() {
   const [hitFlashTick, setHitFlashTick ] = useState(0); // 再レンダリング用カウンター
   const hitEffectIdRef = useRef(0);
 
+  // ── ヒットスプライトアニメーション（Attack00 連番PNG）────────────────────────
+  // hitSprites: [{ id, slotIdx, frame }]  frame: 0→1→2 (12fps, 0.25s = 3frames)
+  const [hitSprites, setHitSprites] = useState([]);
+  const HIT_SPRITE_URLS = [
+    "https://superapolon.github.io/Arcadia_Assets/Animation/playerskill/Attack00/Eff_Attack00_1.png",
+    "https://superapolon.github.io/Arcadia_Assets/Animation/playerskill/Attack00/Eff_Attack00_2.png",
+    "https://superapolon.github.io/Arcadia_Assets/Animation/playerskill/Attack00/Eff_Attack00_3.png",
+  ];
+  const HIT_SPRITE_FPS    = 12;
+  const HIT_SPRITE_FRAMES = 3;
+  const HIT_SPRITE_INTERVAL = Math.round(1000 / HIT_SPRITE_FPS); // ≒83ms
+
   const typeTimerRef = useRef(null);
   const notifTimerRef = useRef(null);
   const textScrollRef = useRef(null);
@@ -1833,6 +1845,20 @@ export default function ArcadiaCh2() {
     }, 320);
     // SE再生
     if (type === "weak") playSEWeakHit(); else playSEHit();
+
+    // ── ヒットスプライトアニメーション起動（Attack00 連番PNG 12fps/3f） ──────
+    const spriteId = id;
+    setHitSprites(prev => [...prev, { id: spriteId, slotIdx, frame: 0 }]);
+    let sprFrame = 0;
+    const advance = setInterval(() => {
+      sprFrame++;
+      if (sprFrame < HIT_SPRITE_FRAMES) {
+        setHitSprites(prev => prev.map(s => s.id === spriteId ? { ...s, frame: sprFrame } : s));
+      } else {
+        clearInterval(advance);
+        setHitSprites(prev => prev.filter(s => s.id !== spriteId));
+      }
+    }, HIT_SPRITE_INTERVAL);
   }, [playSEHit, playSEWeakHit]);
 
   const fireDefeatEffect = useCallback((slotIdx) => {
@@ -4517,6 +4543,28 @@ export default function ArcadiaCh2() {
 
           return (
             <>
+              {/* ヒットスプライト（Attack00 連番PNG 12fps/3f 背景透過） */}
+              {hitSprites.map(sp => {
+                const { cx, cy } = slotCenter(sp.slotIdx);
+                const sprSize = multiEnemies ? "clamp(130px,16vw,140px)" : "clamp(160px,22vw,200px)";
+                return (
+                  <img
+                    key={sp.id}
+                    src={HIT_SPRITE_URLS[sp.frame]}
+                    style={{
+                      position:"fixed",
+                      left:`${cx}vw`, top:`${cy}vh`,
+                      transform:"translate(-50%,-50%)",
+                      width:sprSize, height:sprSize,
+                      pointerEvents:"none", zIndex:299,
+                      imageRendering:"pixelated",
+                      mixBlendMode:"screen",
+                    }}
+                    alt=""
+                  />
+                );
+              })}
+
               {/* ヒット数字 */}
               {hitEffects.map(fx => {
                 const { cx, cy } = slotCenter(fx.slotIdx);
