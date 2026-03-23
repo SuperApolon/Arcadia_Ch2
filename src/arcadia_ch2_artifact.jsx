@@ -1580,6 +1580,15 @@ export default function ArcadiaCh2() {
   const [waterSphereCooldown,  setWaterSphereCooldown ] = useState(0);
   const [waterSphereActive,    setWaterSphereActive   ] = useState(0);
 
+  // ── 全体攻撃アニメーション（dragon_rush.webp） ──────────────────────────────
+  // true の間エネミー領域に WebP をオーバーレイ表示。再生終了で false にリセット。
+  const [showAtkAllAnim, setShowAtkAllAnim] = useState(false);
+  useEffect(() => {
+    if (!showAtkAllAnim) return;
+    const t = setTimeout(() => setShowAtkAllAnim(false), 2500);
+    return () => clearTimeout(t);
+  }, [showAtkAllAnim]);
+
   // ── ヒット・討伐エフェクト ─────────────────────────────────────────────────
   // hitEffects:   [{ id, slotIdx, dmg, type }]  type="normal"|"weak"|"elem_break"|"heal"
   // defeatEffects:[{ id, slotIdx }]
@@ -2762,6 +2771,7 @@ export default function ArcadiaCh2() {
           curHp = Math.max(0, curHp - dmg);
           for (const k of currentPartyKeys.filter(k => k !== "eltz")) curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - dmg);
           Object.keys(memberDmg).forEach(k => memberDmg[k] += dmg);
+          setShowAtkAllAnim(true);
         } else if (eAction === "unavoidable") {
           // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
           const [minD, maxD] = e.def.unavoidableAtk ?? [30,45];
@@ -3308,6 +3318,7 @@ export default function ArcadiaCh2() {
             curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - dmg);
             memberDmg[k] = (memberDmg[k] ?? 0) + dmg;
           }
+          setShowAtkAllAnim(true);
 
         } else if (resolvedEAction === "unavoidable") {
           // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
@@ -3716,6 +3727,10 @@ export default function ArcadiaCh2() {
     @keyframes arcadiaBlnk { 0%,100%{opacity:1} 50%{opacity:0.3} }
     @keyframes dissolve { 0%{opacity:1;filter:blur(0px);transform:scale(1)} 20%{opacity:0.85;filter:blur(1px);transform:scale(1.04)} 60%{opacity:0.3;filter:blur(6px);transform:scale(0.88)} 100%{opacity:0;filter:blur(14px);transform:scale(0.7)} }
     @keyframes hitShake { 0%{transform:translateX(0) scale(1)} 15%{transform:translateX(-7px) scale(1.04)} 35%{transform:translateX(6px) scale(1.03)} 55%{transform:translateX(-4px) scale(1.01)} 75%{transform:translateX(3px) scale(1.01)} 100%{transform:translateX(0) scale(1)} }
+    @keyframes dragonApproach { 0%{transform:translate(0,0)} 10%{transform:translate(-2px,1px)} 20%{transform:translate(2px,-1px)} 30%{transform:translate(-1px,2px)} 40%{transform:translate(1px,-2px)} 50%{transform:translate(-2px,1px)} 60%{transform:translate(2px,0px)} 70%{transform:translate(-1px,1px)} 80%{transform:translate(1px,-1px)} 90%{transform:translate(-2px,2px)} 100%{transform:translate(0,0)} }
+    @keyframes dragonImpact { 0%{transform:translate(0,0) scale(1)} 8%{transform:translate(-18px,8px) scale(1.02)} 16%{transform:translate(16px,-10px) scale(1.03)} 24%{transform:translate(-14px,12px) scale(1.02)} 32%{transform:translate(12px,-8px) scale(1.01)} 40%{transform:translate(-8px,6px) scale(1.01)} 50%{transform:translate(6px,-4px) scale(1)} 60%{transform:translate(-4px,3px) scale(1)} 75%{transform:translate(2px,-2px) scale(1)} 100%{transform:translate(0,0) scale(1)} }
+    @keyframes dragonFlash { 0%{opacity:0.8} 100%{opacity:0} }
+    @keyframes dragonFlashBurst { 0%{opacity:0;transform:scale(0.1)} 5%{opacity:1;transform:scale(1)} 70%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1)} }
   `;
 
   // @@SECTION:RENDER_VICTORY
@@ -4405,8 +4420,29 @@ export default function ArcadiaCh2() {
     const effectiveEnemySpdDisp = Math.max(1, 12 - (enemySpdDebuff > 0 ? 5 : 0));
 
     return (
-      <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:battleBg,fontFamily:"'Noto Serif JP',serif",userSelect:"none",overflow:"hidden"}}>
+      <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:battleBg,fontFamily:"'Noto Serif JP',serif",userSelect:"none",overflow:"hidden",
+        animation: showAtkAllAnim ? "dragonApproach 0.18s linear infinite" : "none",
+      }}>
         <style>{keyframes}</style>
+        {/* ── ドラゴン突進フラッシュ（末尾に白く大フラッシュ） ── */}
+        {showAtkAllAnim && (
+          <>
+            {/* レイヤー1: 3.6秒間 opacity 0.8 で漂う白紫グラデ */}
+            <div style={{
+              position:"fixed", inset:0, zIndex:500, pointerEvents:"none",
+              background:"radial-gradient(ellipse at center, rgba(255,255,255,0.6) 0%, rgba(200,150,255,0.5) 50%, rgba(80,40,180,0.4) 100%)",
+              animation:"dragonFlash 2.5s linear forwards",
+            }} />
+            {/* レイヤー2: 2.5秒後に一気に全画面を覆い0.3秒でフェードアウト */}
+            <div style={{
+              position:"fixed", inset:0, zIndex:501, pointerEvents:"none",
+              background:"radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(230,190,255,1) 30%, rgba(160,80,255,0.95) 65%, rgba(80,20,200,0.85) 100%)",
+              animationDelay:"3.6s",
+              animation:"dragonFlashBurst 0.3s ease-out 2.5s forwards",
+              opacity:0,
+            }} />
+          </>
+        )}
         {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease"}}>{notif}</div>}
 
         {/* ── ヒット・討伐エフェクト フルスクリーンオーバーレイ ────────────────
@@ -4838,9 +4874,25 @@ export default function ArcadiaCh2() {
              </div>
             </>
           )}
-          </div>
+          {/* ── 全体攻撃アニメーション（dragon_rush.webp）オーバーレイ ── */}
+          {showAtkAllAnim && (
+            <img
+              src="https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/dragon_rush.webp"
+              alt=""
+              style={{
+                position:"absolute",
+                inset:0,
+                width:"100%",
+                height:"100%",
+                objectFit:"contain",
+                pointerEvents:"none",
+                zIndex:60,
+              }}
+              onError={() => setShowAtkAllAnim(false)}
+            />
+          )}
 
-          {/* 下段（縦長）or 右カラム（横長）：ログ＋ステータス＋ボタン */}
+          </div>
           <div style={{
             flex: isPortrait ? "1 1 0" : "0 0 38%",
             display:"flex",flexDirection:"column",
