@@ -1581,14 +1581,40 @@ export default function ArcadiaCh2() {
   const [waterSphereActive,    setWaterSphereActive   ] = useState(0);
 
   // ── 全体攻撃アニメーション（dragon_rush.webp） ──────────────────────────────
-  // true の間エネミー領域に WebP をオーバーレイ表示。再生終了で false にリセット。
+  // CSSアニメーションはiPad/Safariで状態が引き継がれるバグがあるため
+  // JS(requestAnimationFrame)でscaleを直接制御する方式に変更
   const [showAtkAllAnim, setShowAtkAllAnim] = useState(false);
   const [atkAllAnimKey, setAtkAllAnimKey] = useState(0); // 再マウント用キー
+  const [atkAllScale, setAtkAllScale] = useState(1);    // JS制御スケール値
+  const atkAllRafRef = useRef(null);
   useEffect(() => {
-    if (!showAtkAllAnim) return;
-    const t = setTimeout(() => setShowAtkAllAnim(false), 2200);
-    return () => clearTimeout(t);
-  }, [showAtkAllAnim]);
+    if (!showAtkAllAnim) {
+      if (atkAllRafRef.current) { cancelAnimationFrame(atkAllRafRef.current); atkAllRafRef.current = null; }
+      setAtkAllScale(1);
+      return;
+    }
+    setAtkAllScale(1);
+    const duration = 2000;
+    const startScale = 0.5;
+    const endScale   = 4;
+    let startTime = null;
+    const step = (ts) => {
+      if (!startTime) startTime = ts;
+      const elapsed = ts - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      setAtkAllScale(startScale + (endScale - startScale) * progress);
+      if (progress < 1) {
+        atkAllRafRef.current = requestAnimationFrame(step);
+      } else {
+        atkAllRafRef.current = null;
+        setShowAtkAllAnim(false);
+      }
+    };
+    atkAllRafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (atkAllRafRef.current) { cancelAnimationFrame(atkAllRafRef.current); atkAllRafRef.current = null; }
+    };
+  }, [showAtkAllAnim, atkAllAnimKey]);
 
   // ── ヒット・討伐エフェクト ─────────────────────────────────────────────────
   // hitEffects:   [{ id, slotIdx, dmg, type }]  type="normal"|"weak"|"elem_break"|"heal"
@@ -4435,18 +4461,18 @@ export default function ArcadiaCh2() {
         {/* ── ドラゴン突進フラッシュ（末尾に白く大フラッシュ） ── */}
         {showAtkAllAnim && (
           <>
-            {/* レイヤー1: 2.2秒間 opacity 0.83 で漂う白紫グラデ */}
+            {/* レイヤー1: 2.0秒間 opacity 0.83 で漂う白紫グラデ */}
             <div style={{
               position:"fixed", inset:0, zIndex:500, pointerEvents:"none",
               background:"radial-gradient(ellipse at center, rgba(255,255,255,0.6) 0%, rgba(200,150,255,0.5) 50%, rgba(80,40,180,0.4) 100%)",
-              animation:"dragonFlash 2.2s linear forwards",
+              animation:"dragonFlash 2.0s linear forwards",
             }} />
-            {/* レイヤー2: 2.2秒後に一気に全画面を覆い0.3秒でフェードアウト */}
+            {/* レイヤー2: 2.0秒後に一気に全画面を覆い0.0秒でフェードアウト */}
             <div style={{
               position:"fixed", inset:0, zIndex:501, pointerEvents:"none",
               background:"radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(230,190,255,1) 30%, rgba(160,80,255,0.95) 65%, rgba(80,20,200,0.85) 100%)",
               animationDelay:"3.6s",
-              animation:"dragonFlashBurst 0.3s ease-out 2.2s forwards",
+              animation:"dragonFlashBurst 0.0s ease-out 2.0s forwards",
               opacity:0,
             }} />
           </>
@@ -4883,37 +4909,27 @@ export default function ArcadiaCh2() {
             </>
           )}
           {/* ── 全体攻撃アニメーション（dragon_rush.webp）オーバーレイ ── */}
+          {/* CSSアニメーション廃止: iPad/SafariでCSS animation stateが引き継がれる問題を回避 */}
+          {/* JS(RAF)でatkAllScaleを直接更新することで毎回必ずscale=1からスタートする    */}
           {showAtkAllAnim && (
-            <>
-              <style>{`
-                @keyframes dragonRushGrow_${atkAllAnimKey} {
-                  0%   { transform: translate(-50%, -50%) scale(1); }
-                  100% { transform: translate(-50%, -50%) scale(2.5); }
-                }
-              `}</style>
-              <img
-                key={atkAllAnimKey}
-                src="https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/dragon_rush.webp"
-                alt=""
-                style={{
-                  position:"absolute",
-                  top:"50%",
-                  left:"50%",
-                  width:"200%",
-                  height:"200%",
-                  objectFit:"contain",
-                  pointerEvents:"none",
-                  zIndex:60,
-                  transform:"translate(-50%, -50%) scale(1)",
-                  transformOrigin:"center center",
-                  willChange:"transform",
-                  animation:`dragonRushGrow_${atkAllAnimKey} 2.7s linear`,
-                  animationFillMode:"none",
-                }}
-                onAnimationEnd={() => setShowAtkAllAnim(false)}
-                onError={() => setShowAtkAllAnim(false)}
-              />
-            </>
+            <img
+              key={atkAllAnimKey}
+              src="https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/dragon_rush.webp"
+              alt=""
+              style={{
+                position:"absolute",
+                top:"50%",
+                left:"50%",
+                width:"250%",
+                height:"250%",
+                objectFit:"contain",
+                pointerEvents:"none",
+                zIndex:60,
+                transform:`translate(-50%, -50%) scale(${atkAllScale})`,
+                transformOrigin:"center center",
+              }}
+              onError={() => setShowAtkAllAnim(false)}
+            />
           )}
 
           </div>
