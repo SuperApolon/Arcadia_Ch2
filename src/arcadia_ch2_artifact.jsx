@@ -4889,11 +4889,12 @@ export default function ArcadiaCh2() {
               src="https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/dragon_rush.webp"
               alt=""
               style={{
-                position:"absolute",
-                inset:0,
-                width:"100%",
-                height:"100%",
-                objectFit:"contain",
+                position:"fixed",
+                top:0,
+                left:0,
+                width: isPortrait ? "100vw" : "62vw",
+                height: isPortrait ? (isTablet ? "58vh" : "55vh") : "100vh",
+                objectFit:"fill",
                 pointerEvents:"none",
                 zIndex:60,
               }}
@@ -5366,6 +5367,55 @@ export default function ArcadiaCh2() {
               {dl.sp}
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            {/* シーンスキップボタン：次のバトルシーンまで飛ぶ */}
+            {(() => {
+              // 現在位置より後ろに battle:true を持つダイアログが存在するか確認
+              let hasBattle = false;
+              for (let si = sceneIdx; si < SCENES.length; si++) {
+                const sc = SCENES[si];
+                if (!sc || !sc.dl) continue;
+                const startDl = si === sceneIdx ? dlIdx + 1 : 0;
+                for (let di = startDl; di < sc.dl.length; di++) {
+                  if (sc.dl[di]?.battle) { hasBattle = true; break; }
+                }
+                if (hasBattle) break;
+              }
+              if (!hasBattle) return null;
+              return (
+                <button
+                  onPointerDown={e => e.stopPropagation()}
+                  onPointerUp={e => e.stopPropagation()}
+                  onClick={e => {
+                    e.stopPropagation();
+                    // 次のバトルダイアログを探してジャンプ
+                    for (let si = sceneIdx; si < SCENES.length; si++) {
+                      const sc = SCENES[si];
+                      if (!sc || !sc.dl) continue;
+                      const startDl = si === sceneIdx ? dlIdx + 1 : 0;
+                      for (let di = startDl; di < sc.dl.length; di++) {
+                        if (sc.dl[di]?.battle) {
+                          setAutoAdv(false);
+                          if (autoAdvTimerRef.current) clearTimeout(autoAdvTimerRef.current);
+                          setFade(true);
+                          setTimeout(() => {
+                            setSceneIdx(si);
+                            setDlIdx(di);
+                            setFade(false);
+                          }, 300);
+                          return;
+                        }
+                      }
+                    }
+                  }}
+                  style={{padding:"2px 8px",fontSize:9,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,cursor:"pointer",borderRadius:2,transition:"all 0.2s",flexShrink:0}}
+                  onMouseEnter={e => { e.currentTarget.style.color=C.gold; e.currentTarget.style.borderColor=C.gold; }}
+                  onMouseLeave={e => { e.currentTarget.style.color=C.muted; e.currentTarget.style.borderColor=C.border; }}
+                  title="次の戦闘シーンまでスキップ"
+                >
+                  ⚔ SKIP
+                </button>
+              );
+            })()}
             <button
               onPointerDown={e => e.stopPropagation()}
               onPointerUp={e => e.stopPropagation()}
