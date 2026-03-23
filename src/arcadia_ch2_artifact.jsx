@@ -1583,9 +1583,10 @@ export default function ArcadiaCh2() {
   // ── 全体攻撃アニメーション（dragon_rush.webp） ──────────────────────────────
   // true の間エネミー領域に WebP をオーバーレイ表示。再生終了で false にリセット。
   const [showAtkAllAnim, setShowAtkAllAnim] = useState(false);
+  const [atkAllAnimKey, setAtkAllAnimKey] = useState(0); // 再マウント用キー
   useEffect(() => {
     if (!showAtkAllAnim) return;
-    const t = setTimeout(() => setShowAtkAllAnim(false), 2500);
+    const t = setTimeout(() => setShowAtkAllAnim(false), 2700);
     return () => clearTimeout(t);
   }, [showAtkAllAnim]);
 
@@ -2771,7 +2772,8 @@ export default function ArcadiaCh2() {
           curHp = Math.max(0, curHp - dmg);
           for (const k of currentPartyKeys.filter(k => k !== "eltz")) curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - dmg);
           Object.keys(memberDmg).forEach(k => memberDmg[k] += dmg);
-          setShowAtkAllAnim(true);
+          setShowAtkAllAnim(false); // 一旦リセットして再マウントを強制
+          setTimeout(() => { setAtkAllAnimKey(k => k + 1); setShowAtkAllAnim(true); }, 0);
         } else if (eAction === "unavoidable") {
           // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
           const [minD, maxD] = e.def.unavoidableAtk ?? [30,45];
@@ -3318,7 +3320,8 @@ export default function ArcadiaCh2() {
             curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - dmg);
             memberDmg[k] = (memberDmg[k] ?? 0) + dmg;
           }
-          setShowAtkAllAnim(true);
+          setShowAtkAllAnim(false); // 一旦リセットして再マウントを強制
+          setTimeout(() => { setAtkAllAnimKey(k => k + 1); setShowAtkAllAnim(true); }, 0);
 
         } else if (resolvedEAction === "unavoidable") {
           // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
@@ -3729,7 +3732,7 @@ export default function ArcadiaCh2() {
     @keyframes hitShake { 0%{transform:translateX(0) scale(1)} 15%{transform:translateX(-7px) scale(1.04)} 35%{transform:translateX(6px) scale(1.03)} 55%{transform:translateX(-4px) scale(1.01)} 75%{transform:translateX(3px) scale(1.01)} 100%{transform:translateX(0) scale(1)} }
     @keyframes dragonApproach { 0%{transform:translate(0,0)} 10%{transform:translate(-2px,1px)} 20%{transform:translate(2px,-1px)} 30%{transform:translate(-1px,2px)} 40%{transform:translate(1px,-2px)} 50%{transform:translate(-2px,1px)} 60%{transform:translate(2px,0px)} 70%{transform:translate(-1px,1px)} 80%{transform:translate(1px,-1px)} 90%{transform:translate(-2px,2px)} 100%{transform:translate(0,0)} }
     @keyframes dragonImpact { 0%{transform:translate(0,0) scale(1)} 8%{transform:translate(-18px,8px) scale(1.02)} 16%{transform:translate(16px,-10px) scale(1.03)} 24%{transform:translate(-14px,12px) scale(1.02)} 32%{transform:translate(12px,-8px) scale(1.01)} 40%{transform:translate(-8px,6px) scale(1.01)} 50%{transform:translate(6px,-4px) scale(1)} 60%{transform:translate(-4px,3px) scale(1)} 75%{transform:translate(2px,-2px) scale(1)} 100%{transform:translate(0,0) scale(1)} }
-    @keyframes dragonFlash { 0%{opacity:0.8} 100%{opacity:0} }
+    @keyframes dragonFlash { 0%{opacity:0.83} 100%{opacity:0} }
     @keyframes dragonFlashBurst { 0%{opacity:0;transform:scale(0.1)} 5%{opacity:1;transform:scale(1)} 70%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1)} }
   `;
 
@@ -3791,7 +3794,7 @@ export default function ArcadiaCh2() {
 
         <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(240,192,64,0.02) 3px,rgba(240,192,64,0.02) 4px)",pointerEvents:"none",zIndex:1}}/>
 
-        <div style={{position:"relative",zIndex:2,textAlign:"center",padding:"0 24px",width:"100%",maxWidth:460}}>
+        <div style={{position:"relative",zIndex:2,textAlign:"center",padding:"0 24px",width:"100%",maxWidth:"min(460px, 90vw)"}}>
 
           {/* ロゴ */}
           <div style={{fontSize:11,letterSpacing:10,color:C.muted,marginBottom:10,fontFamily:"'Share Tech Mono',monospace",animation:"fadeIn 0.8s ease"}}>VRMMORPG</div>
@@ -3945,7 +3948,7 @@ export default function ArcadiaCh2() {
     >
       <style>{loadKeyframes}</style>
       <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
-      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:480,animation:"fadeIn 1s ease"}}>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"min(640px, 92vw)",animation:"fadeIn 1s ease"}}>
         <div style={{fontSize:10,letterSpacing:8,color:C.muted,marginBottom:8,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
         <div style={{fontSize:52,fontWeight:700,letterSpacing:12,color:C.white,textShadow:`0 0 30px ${C.accent}`,marginBottom:4}}>ARCADIA</div>
         <div style={{fontSize:12,letterSpacing:6,color:C.accent,marginBottom:32,fontFamily:"'Share Tech Mono',monospace"}}>─── Lexia の章 ───</div>
@@ -3991,7 +3994,7 @@ export default function ArcadiaCh2() {
     return (
       <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32}}>
         <style>{loadKeyframes}</style>
-        <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:480,animation:"fadeIn 0.6s ease"}}>
+        <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"min(640px, 92vw)",animation:"fadeIn 0.6s ease"}}>
           <div style={{fontSize:11,letterSpacing:6,color:C.accent2,marginBottom:16,fontFamily:"'Share Tech Mono',monospace"}}>── SAVE DATA LOADED ──</div>
           <div style={{background:"rgba(10,26,38,0.85)",border:`1px solid ${C.border}`,borderRadius:8,padding:"20px 28px",marginBottom:24,textAlign:"left"}}>
             <div style={{fontSize:10,letterSpacing:6,color:C.muted,marginBottom:10,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>CHAPTER {saveFile.chapter ?? 1} DATA</div>
@@ -4130,7 +4133,7 @@ export default function ArcadiaCh2() {
         <style>{keyframes}</style>
         <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
 
-        <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 0.6s ease",width:"100%",maxWidth:480,padding:"0 24px"}}>
+        <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 0.6s ease",width:"100%",maxWidth:"min(640px, 92vw)",padding:"0 24px"}}>
           <div style={{fontSize:10,letterSpacing:6,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:8}}>MODE SELECT</div>
           <div style={{fontSize:18,color:C.white,fontWeight:700,letterSpacing:3,marginBottom:4}}>モードを選択</div>
           <div style={{width:200,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 28px"}}/>
@@ -4296,7 +4299,7 @@ export default function ArcadiaCh2() {
     return (
       <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#030a06 0%,#0a1a0a 50%,#0d2010 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:40}}>
         <style>{keyframes}</style>
-        <div style={{animation:"fadeIn 2s ease",maxWidth:480,width:"100%"}}>
+        <div style={{animation:"fadeIn 2s ease",maxWidth:"min(640px, 92vw)",width:"100%"}}>
           <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:20,fontFamily:"'Share Tech Mono',monospace"}}>─ EPISODE 2 END ─</div>
           <div style={{fontSize:48,fontWeight:700,color:C.white,textShadow:`0 0 30px ${C.accent2}`,marginBottom:16}}>ARCADIA</div>
           <div style={{fontSize:18,color:C.accent2,letterSpacing:4,marginBottom:40}}>旅立ちの日は明日──</div>
@@ -4398,7 +4401,12 @@ export default function ArcadiaCh2() {
         : `linear-gradient(180deg,${ed.bg[0]} 0%,${ed.bg[1]} 50%,${ed.bg[2]} 100%)`;
 
     // ── レイアウト：縦長（portrait）判定 ────────────────────────────────────
+    // iPad横向き（1024×768等）は横長レイアウト、縦向きはportrait
+    // タブレット判定: 短辺が600px以上かつ長辺が900px以上
+    const isTablet = Math.min(windowSize.w, windowSize.h) >= 600 && Math.max(windowSize.w, windowSize.h) >= 900;
     const isPortrait = windowSize.h > windowSize.w;
+    // portrait時の敵エリア比率：タブレットは58%、スマホは55%
+    const portraitEnemyFlex = isTablet ? "0 0 58%" : "0 0 55%";
 
     // ── 属性システム表示用データ ────────────────────────────────────────────
     const elementCycle = ed.elementCycle || null;
@@ -4427,18 +4435,18 @@ export default function ArcadiaCh2() {
         {/* ── ドラゴン突進フラッシュ（末尾に白く大フラッシュ） ── */}
         {showAtkAllAnim && (
           <>
-            {/* レイヤー1: 3.6秒間 opacity 0.8 で漂う白紫グラデ */}
+            {/* レイヤー1: 2.7秒間 opacity 0.83 で漂う白紫グラデ */}
             <div style={{
               position:"fixed", inset:0, zIndex:500, pointerEvents:"none",
               background:"radial-gradient(ellipse at center, rgba(255,255,255,0.6) 0%, rgba(200,150,255,0.5) 50%, rgba(80,40,180,0.4) 100%)",
-              animation:"dragonFlash 2.5s linear forwards",
+              animation:"dragonFlash 2.7s linear forwards",
             }} />
-            {/* レイヤー2: 2.5秒後に一気に全画面を覆い0.3秒でフェードアウト */}
+            {/* レイヤー2: 2.7秒後に一気に全画面を覆い0.3秒でフェードアウト */}
             <div style={{
               position:"fixed", inset:0, zIndex:501, pointerEvents:"none",
               background:"radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(230,190,255,1) 30%, rgba(160,80,255,0.95) 65%, rgba(80,20,200,0.85) 100%)",
               animationDelay:"3.6s",
-              animation:"dragonFlashBurst 0.3s ease-out 2.5s forwards",
+              animation:"dragonFlashBurst 0.3s ease-out 2.7s forwards",
               opacity:0,
             }} />
           </>
@@ -4451,7 +4459,7 @@ export default function ArcadiaCh2() {
              マルチ敵(3枠)は等幅分割、単体敵は中央。                          */}
         {(() => {
           const enemyAreaW = isPortrait ? 100 : 62;   // vw%
-          const enemyAreaH = isPortrait ? 52 : 100;   // vh%
+          const enemyAreaH = isPortrait ? (isTablet ? 58 : 55) : 100;   // vh%
           const slotCount  = multiEnemies ? multiEnemies.length : 1;
 
           // スロットインデックス → 画面座標（vw/vh）
@@ -4498,7 +4506,7 @@ export default function ArcadiaCh2() {
                     <div style={{
                       position:"fixed",
                       left:`${cx}vw`, top:`${cy}vh`,
-                      width:`${flashW}vw`, height:`${isPortrait ? 52 : 70}vh`,
+                      width:`${flashW}vw`, height:`${isPortrait ? (isTablet ? 58 : 55) : 70}vh`,
                       transform:"translate(-50%,-50%)",
                       pointerEvents:"none", zIndex:299,
                       background:"radial-gradient(ellipse at center, rgba(255,220,80,0.65) 0%, rgba(255,100,0,0.3) 45%, transparent 72%)",
@@ -4564,7 +4572,7 @@ export default function ArcadiaCh2() {
 
           {/* 上段（縦長）or 左カラム（横長）：エネミー表示 */}
           <div style={{
-            flex: isPortrait ? "0 0 52%" : "0 0 62%",
+            flex: isPortrait ? portraitEnemyFlex : "0 0 62%",
             display:"flex",flexDirection:"column",
             alignItems:"center",
             justifyContent:multiEnemies?"stretch":"flex-start",
@@ -4777,7 +4785,7 @@ export default function ArcadiaCh2() {
                  {enemyImgUrl
                    ? <img src={enemyImgUrl} alt={ed.name} style={{
                        width:"auto",
-                       height:"clamp(120px, 63vh, 500px)",
+                       height: isTablet ? "clamp(160px, 70vh, 600px)" : "clamp(120px, 63vh, 500px)",
                        maxWidth:"96%",
                        maxHeight:"100%",
                        objectFit:"contain",
@@ -4877,6 +4885,7 @@ export default function ArcadiaCh2() {
           {/* ── 全体攻撃アニメーション（dragon_rush.webp）オーバーレイ ── */}
           {showAtkAllAnim && (
             <img
+              key={atkAllAnimKey}
               src="https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/dragon_rush.webp"
               alt=""
               style={{
