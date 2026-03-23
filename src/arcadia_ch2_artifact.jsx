@@ -4632,19 +4632,22 @@ export default function ArcadiaCh2() {
                                     : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
                                   : (!me.defeated && hitSlotIdsRef.current.has(idx)
                                     ? (meIsBoss
-                                        ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
-                                        : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
+                                        ? "brightness(3) drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
+                                        : "brightness(3) drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
                                     : (meIsBoss
                                         ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
                                         : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")),
                                 transform: (!me.defeated && btlAnimEnemy) ? "scale(1.07)" : "scale(1)",
-                                transition: me.defeated ? "none" : "transform 0.1s",
+                                transition: me.defeated ? "none" : "transform 0.1s, filter 0.05s",
                               }} />
                             : <div style={{
                                 fontSize: meIsBoss ? "clamp(64px,10vw,120px)" : "clamp(40px,6vw,80px)",
                                 lineHeight:1,
                                 animation: me.defeated ? "none" : (meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite"),
-                                filter: meIsBoss ? "drop-shadow(0 0 12px #ff4466)" : "none",
+                                filter: (!me.defeated && hitSlotIdsRef.current.has(idx))
+                                  ? (meIsBoss ? "brightness(3) drop-shadow(0 0 12px #ff4466)" : "brightness(3)")
+                                  : (meIsBoss ? "drop-shadow(0 0 12px #ff4466)" : "none"),
+                                transition: "filter 0.05s",
                               }}>{meDef.em}</div>
                           }
                           </div>
@@ -4749,17 +4752,19 @@ export default function ArcadiaCh2() {
                        filter: victory
                          ? (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
                          : (!victory && hitSlotIdsRef.current.has(0)
-                           ? (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
+                           ? (isBoss?`brightness(3) drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:`brightness(3) drop-shadow(0 4px 16px rgba(0,0,0,0.7))`)
                            : (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")),
                        transform: (!victory && btlAnimEnemy) ? "scale(1.05)" : "scale(1)",
-                       transition: victory ? "none" : "transform 0.1s",
+                       transition: victory ? "none" : "transform 0.1s, filter 0.05s",
                      }} />
                    : <div style={{
                        fontSize:"clamp(60px, 10vh, 140px)",
                        lineHeight:1,
                        animation: victory ? "none" : (isBoss?"bossFloat 2s infinite":"idle 2s infinite"),
-                       filter:isBoss?`drop-shadow(0 0 24px ${C.red})`:"none",
-                       transform:btlAnimEnemy?"scale(1.08)":"scale(1)", transition:"transform 0.1s",
+                       filter: (!victory && hitSlotIdsRef.current.has(0))
+                         ? (isBoss?`brightness(3) drop-shadow(0 0 24px ${C.red})`:"brightness(3)")
+                         : (isBoss?`drop-shadow(0 0 24px ${C.red})`:"none"),
+                       transform:btlAnimEnemy?"scale(1.08)":"scale(1)", transition:"transform 0.1s, filter 0.05s",
                      }}>{ed.em}</div>
                  }
                  </div>
