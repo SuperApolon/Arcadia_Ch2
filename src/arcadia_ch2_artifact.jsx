@@ -4631,7 +4631,7 @@ export default function ArcadiaCh2() {
                                     ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
                                     : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
                                   : (!me.defeated && hitSlotIdsRef.current.has(idx)
-                                    ? "brightness(2.0) saturate(0.4) " + (meIsBoss
+                                    ? (meIsBoss
                                         ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
                                         : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")
                                     : (meIsBoss
@@ -4749,7 +4749,7 @@ export default function ArcadiaCh2() {
                        filter: victory
                          ? (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
                          : (!victory && hitSlotIdsRef.current.has(0)
-                           ? "brightness(2.0) saturate(0.4) " + (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
+                           ? (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")
                            : (isBoss?`drop-shadow(0 0 24px ${C.red}) drop-shadow(0 0 6px #ff000066)`:"drop-shadow(0 4px 16px rgba(0,0,0,0.7))")),
                        transform: (!victory && btlAnimEnemy) ? "scale(1.05)" : "scale(1)",
                        transition: victory ? "none" : "transform 0.1s",
