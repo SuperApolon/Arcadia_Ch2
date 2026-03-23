@@ -3477,9 +3477,8 @@ export default function ArcadiaCh2() {
       : (battleEnemy ? battleEnemy.exp : 0);
     const displayExp = Math.round(baseExp * totalMult);
     setBattleResult({ gainExp:displayExp, gainElk, comboMult:battleResultBonus.comboMult??1.0, gradeMult:battleResultBonus.gradeMult??1.0 });
-    setMultiEnemies(null);
     setFade(true);
-    setTimeout(() => { setPhase("victory"); setFade(false); }, 300);
+    setTimeout(() => { setMultiEnemies(null); setPhase("victory"); setFade(false); }, 300);
   }, [defeat, mhp, mmp, battleNext, sceneIdx, showNotif, battleEnemy, battleResultBonus, multiEnemies]);
 
   // ──────────── RENDER ────────────
