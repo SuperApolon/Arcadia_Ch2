@@ -1517,6 +1517,7 @@ export default function ArcadiaCh2() {
   // { memberId → targetIdx } ターゲット決定済みバッファ
   const [pendingTargets, setPendingTargets] = useState({});
   const [dlUrl, setDlUrl] = useState(null); // エンディング セーブエクスポート用
+  const [endPhase, setEndPhase] = useState("rank"); // エンディング内フェーズ: "rank" → "save"
 
   // ── 属性システム（第二章） ────────────────────────────────────────────────
   const [enemyElementIdx, setEnemyElementIdx] = useState(0);
@@ -2186,6 +2187,11 @@ export default function ArcadiaCh2() {
       if (autoAdvTimerRef.current) clearTimeout(autoAdvTimerRef.current);
     };
   }, []);
+
+  // エンディング再突入時に endPhase をランク画面へリセット
+  useEffect(() => {
+    if (phase === "end") setEndPhase("rank");
+  }, [phase]);
 
   // ウィンドウリサイズ・画面回転をトラッキング
   useEffect(() => {
@@ -2975,8 +2981,8 @@ export default function ArcadiaCh2() {
       else logs.push(`🔗 コンボ継続 ${newStreak}！ MP +${gain}`);
     } else {
       logs.push(`💥 コンボ断絶`);
-      // シナリオフルコンボ即時リセット（MapScan繰り返し戦闘は除外）
-      if (isScenarioBattleRef.current) { setScenarioFullCombo(0); comboMissedRef.current = true; }
+      // ミスした戦闘はシナリオフルコンボに加算しない（既存カウントはリセットしない）
+      if (isScenarioBattleRef.current) { comboMissedRef.current = true; }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -3551,8 +3557,8 @@ export default function ArcadiaCh2() {
       else logs.push(`🔗 コンボ継続 ${newStreak}！ MP +${gain}`);
     } else {
       logs.push(`💥 コンボ断絶`);
-      // シナリオフルコンボ即時リセット（MapScan繰り返し戦闘は除外）
-      if (isScenarioBattleRef.current) { setScenarioFullCombo(0); comboMissedRef.current = true; }
+      // ミスした戦闘はシナリオフルコンボに加算しない（既存カウントはリセットしない）
+      if (isScenarioBattleRef.current) { comboMissedRef.current = true; }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -3825,6 +3831,11 @@ export default function ArcadiaCh2() {
     @keyframes dragonImpact { 0%{transform:translate(0,0) scale(1)} 8%{transform:translate(-18px,8px) scale(1.02)} 16%{transform:translate(16px,-10px) scale(1.03)} 24%{transform:translate(-14px,12px) scale(1.02)} 32%{transform:translate(12px,-8px) scale(1.01)} 40%{transform:translate(-8px,6px) scale(1.01)} 50%{transform:translate(6px,-4px) scale(1)} 60%{transform:translate(-4px,3px) scale(1)} 75%{transform:translate(2px,-2px) scale(1)} 100%{transform:translate(0,0) scale(1)} }
     @keyframes dragonFlash { 0%{opacity:0.83} 100%{opacity:0} }
     @keyframes dragonFlashBurst { 0%{opacity:0;transform:scale(0.1)} 5%{opacity:1;transform:scale(1)} 70%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1)} }
+    @keyframes rankReveal { 0%{opacity:0;transform:scale(0.3) rotate(-12deg)} 50%{opacity:1;transform:scale(1.18) rotate(3deg)} 75%{transform:scale(0.96) rotate(-1deg)} 100%{opacity:1;transform:scale(1) rotate(0deg)} }
+    @keyframes rankGlow { 0%,100%{opacity:1} 50%{opacity:0.82} }
+    @keyframes rankPlatePulse { 0%,100%{box-shadow:0 0 20px rgba(0,200,255,0.25),inset 0 0 20px rgba(0,200,255,0.05)} 50%{box-shadow:0 0 50px rgba(0,200,255,0.5),inset 0 0 40px rgba(0,200,255,0.12)} }
+    @keyframes rankParticle { 0%{opacity:0;transform:translateY(0) scale(0)} 20%{opacity:1;transform:translateY(-20px) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(0.3)} }
+    @keyframes rankSlideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
   `;
 
   // @@SECTION:RENDER_VICTORY
@@ -4360,6 +4371,40 @@ export default function ArcadiaCh2() {
 
   // @@SECTION:RENDER_ENDING
   if (phase === "end") {
+    // ── ランクテーブル ──────────────────────────────────────────────────────
+    const RANK_TABLE = [
+      { min:0,  max:0,  rank:"H",   color:"#4a7a9a", glow:"#4a7a9a",     shadow:"rgba(74,122,154,0.6)" },
+      { min:1,  max:1,  rank:"G",   color:"#5a8a6a", glow:"#5a8a6a",     shadow:"rgba(90,138,106,0.6)" },
+      { min:2,  max:2,  rank:"F",   color:"#7a9a5a", glow:"#7a9a5a",     shadow:"rgba(122,154,90,0.6)" },
+      { min:3,  max:3,  rank:"E",   color:"#9aaa4a", glow:"#9aaa4a",     shadow:"rgba(154,170,74,0.6)" },
+      { min:4,  max:4,  rank:"D",   color:"#c8a030", glow:"#c8a030",     shadow:"rgba(200,160,48,0.6)" },
+      { min:5,  max:5,  rank:"C",   color:"#e0803a", glow:"#e0803a",     shadow:"rgba(224,128,58,0.6)" },
+      { min:6,  max:6,  rank:"B",   color:"#e06060", glow:"#e06060",     shadow:"rgba(224,96,96,0.6)" },
+      { min:7,  max:7,  rank:"A",   color:"#d040d0", glow:"#d040d0",     shadow:"rgba(208,64,208,0.7)" },
+      { min:8,  max:8,  rank:"AA",  color:"#8060ff", glow:"#8060ff",     shadow:"rgba(128,96,255,0.7)" },
+      { min:9,  max:9,  rank:"AAA", color:"#00c8ff", glow:"#00c8ff",     shadow:"rgba(0,200,255,0.8)" },
+      { min:10, max:10, rank:"S",   color:"#f0c040", glow:"#f0c040",     shadow:"rgba(240,192,64,0.9)" },
+      { min:11, max:99, rank:"SS",  color:"#ffffff", glow:"#00ffcc",     shadow:"rgba(0,255,204,1.0)" },
+    ];
+    const rankInfo = RANK_TABLE.find(r => scenarioFullCombo >= r.min && scenarioFullCombo <= r.max) ?? RANK_TABLE[0];
+
+    // ランク別の称号メッセージ
+    const RANK_TITLES = {
+      "H":   { title:"旅の始まり",         msg:"旅はまだ始まったばかり──\n次の冒険ではさらなる高みへ。" },
+      "G":   { title:"一歩を踏み出した者", msg:"一歩一歩が、英雄への道となる。\n諦めるな、冒険者よ。" },
+      "F":   { title:"見習い冒険者",       msg:"確かな成長の跡が見える。\n磨けば光る原石がここにある。" },
+      "E":   { title:"駆け出しの勇者",     msg:"戦いの感覚が、少しずつ\n掴めてきたのではないか。" },
+      "D":   { title:"歴戦の冒険者",       msg:"数々の戦いを潜り抜けてきた。\nその経験は必ず力となる。" },
+      "C":   { title:"誇り高き剣士",       msg:"その剣筋は真っ直ぐだ。\n仲間もきっと信頼している。" },
+      "B":   { title:"勇猛果敢な戦士",     msg:"戦場での冷静さと勇気──\n共に持ち合わせた証である。" },
+      "A":   { title:"伝説への挑戦者",     msg:"その力、本物だ。\nアルカディアが震えている。" },
+      "AA":  { title:"精鋭の冒険者",       msg:"並外れた判断力と技術──\n語り継がれるに値する戦いだった。" },
+      "AAA": { title:"頂を目指す者",       msg:"完璧に近いプレイ。\n世界はその名を覚えている。" },
+      "S":   { title:"ARCADIA の英雄",     msg:"全てのバトルで力を出し切った。\nこれ以上の冒険者はそうはいない。" },
+      "SS":  { title:"伝説の冒険者",       msg:"完全無欠──！\n君の名は、永遠に刻まれるだろう。" },
+    };
+    const rankMsg = RANK_TITLES[rankInfo.rank] ?? RANK_TITLES["H"];
+
     // ── セーブデータ生成 ────────────────────────────────────────────────────
     const buildSaveData = () => ({
       version:    "arcadia_ch2_v1",
@@ -4393,10 +4438,120 @@ export default function ArcadiaCh2() {
       setHasPb(false); setHasMapScan(false); setInCom(false);
     };
 
+    // ── endPhase: "rank" → "save" ───────────────────────────────────────────
+
+    // ランクのフォントサイズ（文字数で調整）
+    const rankFontSize = rankInfo.rank.length === 1 ? 180 : rankInfo.rank.length === 2 ? 140 : 110;
+
+    // SS専用：虹色グロー
+    const isSS = rankInfo.rank === "SS";
+    const rankLetterStyle = {
+      fontFamily:"'Share Tech Mono',monospace",
+      fontSize:rankFontSize,
+      fontWeight:700,
+      color: rankInfo.color,
+      lineHeight:1,
+      animation:"rankReveal 0.9s cubic-bezier(0.22,1,0.36,1) forwards, rankGlow 2.4s ease-in-out 1s infinite",
+      display:"block",
+      letterSpacing: rankInfo.rank.length > 1 ? 8 : 0,
+      filter: isSS
+        ? "drop-shadow(0 0 30px #00ffcc) drop-shadow(0 0 60px #00c8ff)"
+        : `drop-shadow(0 0 20px ${rankInfo.glow}) drop-shadow(0 0 40px ${rankInfo.glow}88)`,
+    };
+
+    // ── ランク画面 ──────────────────────────────────────────────────────────
+    if (endPhase === "rank") return (
+      <div
+        style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`radial-gradient(ellipse at 50% 40%, ${rankInfo.shadow} 0%, #030508 55%, #010205 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32,overflow:"hidden",cursor:"pointer"}}
+        onClick={() => setEndPhase("save")}
+      >
+        <style>{keyframes}</style>
+
+        {/* 背景スキャンライン */}
+        <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.08) 3px,rgba(0,0,0,0.08) 4px)",pointerEvents:"none"}}/>
+
+        {/* パーティクル装飾（ランクA以上） */}
+        {["A","AA","AAA","S","SS"].includes(rankInfo.rank) && [0,1,2,3,4,5,6,7].map(i => (
+          <div key={i} style={{
+            position:"absolute",
+            left:`${12 + i * 11}%`,
+            bottom:`${15 + (i % 3) * 12}%`,
+            width:6,
+            height:6,
+            borderRadius:"50%",
+            background:rankInfo.glow,
+            animation:`rankParticle ${1.4 + i * 0.3}s ease-out ${i * 0.4}s infinite`,
+            opacity:0,
+            pointerEvents:"none",
+          }}/>
+        ))}
+
+        <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"min(640px, 92vw)",animation:"fadeIn 0.8s ease"}}>
+
+          {/* ヘッダー */}
+          <div style={{fontSize:10,letterSpacing:10,color:"rgba(255,255,255,0.3)",marginBottom:8,fontFamily:"'Share Tech Mono',monospace",animation:"rankSlideIn 0.8s ease"}}>
+            ─ ADVENTURER RANK ─
+          </div>
+          <div style={{fontSize:11,letterSpacing:6,color:"rgba(255,255,255,0.2)",marginBottom:40,fontFamily:"'Share Tech Mono',monospace",animation:"rankSlideIn 0.9s ease"}}>
+            SCENARIO FULL COMBO : {scenarioFullCombo}
+          </div>
+
+          {/* ランク文字 メインディスプレイ */}
+          <div style={{
+            position:"relative",
+            margin:"0 auto 32px",
+            width:"min(320px, 80vw)",
+            height: rankFontSize * 1.3,
+            display:"flex",
+            alignItems:"center",
+            justifyContent:"center",
+            borderRadius:12,
+            border:`1px solid ${rankInfo.glow}44`,
+            background:`radial-gradient(ellipse at 50% 50%, ${rankInfo.shadow} 0%, rgba(0,0,0,0.4) 70%)`,
+            animation:"rankPlatePulse 2.5s ease-in-out 0.8s infinite",
+          }}>
+            <span style={rankLetterStyle}>{rankInfo.rank}</span>
+          </div>
+
+          {/* 称号 */}
+          <div style={{
+            fontSize:16,
+            fontWeight:700,
+            color:rankInfo.color,
+            letterSpacing:4,
+            marginBottom:16,
+            animation:"rankSlideIn 1.2s ease",
+            textShadow:`0 0 12px ${rankInfo.glow}88`,
+          }}>
+            ─ {rankMsg.title} ─
+          </div>
+
+          {/* メッセージ */}
+          <div style={{
+            fontSize:13,
+            color:"rgba(200,232,248,0.85)",
+            lineHeight:2.2,
+            letterSpacing:1,
+            marginBottom:48,
+            whiteSpace:"pre-line",
+            animation:"rankSlideIn 1.4s ease",
+          }}>
+            {rankMsg.msg}
+          </div>
+
+          {/* 進行ヒント */}
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.2)",letterSpacing:3,fontFamily:"'Share Tech Mono',monospace",animation:"blnk 1.6s ease-in-out infinite"}}>
+            TAP TO CONTINUE
+          </div>
+        </div>
+      </div>
+    );
+
+    // ── セーブ画面（従来のエンディング） ────────────────────────────────────
     return (
       <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#030a06 0%,#0a1a0a 50%,#0d2010 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:40}}>
         <style>{keyframes}</style>
-        <div style={{animation:"fadeIn 2s ease",maxWidth:"min(640px, 92vw)",width:"100%"}}>
+        <div style={{animation:"fadeIn 1.2s ease",maxWidth:"min(640px, 92vw)",width:"100%"}}>
           <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:20,fontFamily:"'Share Tech Mono',monospace"}}>─ EPISODE 2 END ─</div>
           <div style={{fontSize:48,fontWeight:700,color:C.white,textShadow:`0 0 30px ${C.accent2}`,marginBottom:16}}>ARCADIA</div>
           <div style={{fontSize:18,color:C.accent2,letterSpacing:4,marginBottom:40}}>旅立ちの日は明日──</div>
