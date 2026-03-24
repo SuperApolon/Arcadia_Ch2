@@ -5051,12 +5051,12 @@ export default function ArcadiaCh2() {
             <div style={{flex:1,overflowY:"auto",padding:"5px 10px",minHeight:0}}>
               {/* ── シナリオフルコンボ（ログ1行目・枠区切り） ── */}
               {isScenarioBattleRef.current && (
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${C.border}55`,marginBottom:3}}>
-                  <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>SCENARIO FULL COMBO</span>
+                <div style={{display:"flex",alignItems:"baseline",gap:6,borderBottom:`1px solid ${C.border}55`,marginBottom:3,flexWrap:"nowrap",overflow:"hidden"}}>
+                  <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,flexShrink:0,whiteSpace:"nowrap"}}>SCENARIO FULL COMBO</span>
                   <span style={{fontSize:13,fontWeight:700,fontFamily:"'Share Tech Mono',monospace",
                     color: scenarioFullCombo === 0 ? C.muted : C.gold,
                     textShadow: scenarioFullCombo > 0 ? `0 0 8px ${C.gold}88` : "none",
-                    letterSpacing:1,
+                    letterSpacing:1,flexShrink:0,
                   }}>{scenarioFullCombo}</span>
                 </div>
               )}
