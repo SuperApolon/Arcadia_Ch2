@@ -1489,6 +1489,14 @@ export default function ArcadiaCh2() {
   const [defeat, setDefeat] = useState(false);
   const [turn, setTurn] = useState(0);
   const [battleNext, setBattleNext] = useState(null);
+  // ── シナリオ引継ぎフルコンボ ──────────────────────────────────────────────
+  // MapScan繰り返し戦闘（select/pbのMapScan起動）はカウントしない。
+  // コンボミス発生ターン中に即時0リセット。シナリオバトル完全勝利ごとに+1。
+  const [scenarioFullCombo, setScenarioFullCombo] = useState(0);
+  // true = シナリオ/ダイアログ起動バトル（フルコンボカウント対象）
+  // false = MapScan・select画面起動バトル（カウント対象外）
+  const isScenarioBattleRef = useRef(false);
+  const comboMissedRef = useRef(false); // バトル中にコンボミスが1度でも発生したか
   const sceneIdxBeforeBattle = useRef(0); // 敗北時の戻り先シーン
   const [btlAnimEnemy, setBtlAnimEnemy] = useState(false);
   const [btlAnimPlayer, setBtlAnimPlayer] = useState(false);
@@ -2220,6 +2228,8 @@ export default function ArcadiaCh2() {
     // ── バトル突入フラグ ────────────────────────────────────────────────────
     if (dl.battle) {
       sceneIdxBeforeBattle.current = sceneIdx; // 敗北時の戻り先を記録
+      isScenarioBattleRef.current = true; // シナリオ起動バトル（フルコンボカウント対象）
+      comboMissedRef.current = false; // コンボミスフラグをリセット
       // マルチ敵バトル
       if (dl.multiEnemyTypes && Array.isArray(dl.multiEnemyTypes)) {
         const types = dl.multiEnemyTypes;
@@ -2315,6 +2325,8 @@ export default function ArcadiaCh2() {
     }
     if (ch.battle) {
       sceneIdxBeforeBattle.current = sceneIdx; // 敗北時の戻り先を記録
+      isScenarioBattleRef.current = true; // シナリオ起動バトル（フルコンボカウント対象）
+      comboMissedRef.current = false; // コンボミスフラグをリセット
       // ── マルチ敵バトル（ch.multiEnemyTypes が配列の場合） ────────────────
       if (ch.multiEnemyTypes && Array.isArray(ch.multiEnemyTypes)) {
         const types = ch.multiEnemyTypes;
@@ -2963,6 +2975,8 @@ export default function ArcadiaCh2() {
       else logs.push(`🔗 コンボ継続 ${newStreak}！ MP +${gain}`);
     } else {
       logs.push(`💥 コンボ断絶`);
+      // シナリオフルコンボ即時リセット（MapScan繰り返し戦闘は除外）
+      if (isScenarioBattleRef.current) { setScenarioFullCombo(0); comboMissedRef.current = true; }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -3058,6 +3072,8 @@ export default function ArcadiaCh2() {
       setVictory(true);
       hitSlotIdsRef.current.clear(); setHitFlashTick(t => t + 1); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
+      // シナリオ起動バトルかつ最終ターンコンボOKなら継続フルコンボ+1（MapScan除外・コンボミス除外）
+      if (isScenarioBattleRef.current && !comboMissedRef.current) setScenarioFullCombo(v => v + 1);
       const totalElk = curEnemies.reduce((s, e) => s + (e.def.elk ?? 0), 0);
       const totalExp = curEnemies.reduce((s, e) => s + (e.def.exp ?? 0), 0);
       const maxLv = Math.max(...curEnemies.map(e => e.def.lv ?? 1));
@@ -3535,6 +3551,8 @@ export default function ArcadiaCh2() {
       else logs.push(`🔗 コンボ継続 ${newStreak}！ MP +${gain}`);
     } else {
       logs.push(`💥 コンボ断絶`);
+      // シナリオフルコンボ即時リセット（MapScan繰り返し戦闘は除外）
+      if (isScenarioBattleRef.current) { setScenarioFullCombo(0); comboMissedRef.current = true; }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -3638,6 +3656,8 @@ export default function ArcadiaCh2() {
       setVictory(true);
       hitSlotIdsRef.current.clear(); setHitFlashTick(t => t + 1); setHitEffects([]);  // フラッシュ残留リセット
       setInputPhase("command"); setCmdInputIdx(0);
+      // シナリオ起動バトルかつ最終ターンコンボOKなら継続フルコンボ+1（MapScan除外・コンボミス除外）
+      if (isScenarioBattleRef.current && !comboMissedRef.current) setScenarioFullCombo(v => v + 1);
       setBtlLogs(prev => [...prev, `🏆 ${ed.name}を倒した！`]);
       if (ed.elk > 0) { setElk(e => e + ed.elk); showNotif(`💰 ${ed.elk} ELK 獲得！`); }
       if (ed.exp > 0) {
@@ -3972,6 +3992,7 @@ export default function ArcadiaCh2() {
   const validateSave = (obj) => {
     if (!obj || typeof obj !== "object")         return "JSONの形式が不正です";
     if (!obj.version?.startsWith("arcadia_ch"))  return "ARCADIAのセーブデータではありません";
+    if (obj.version?.startsWith("arcadia_ch2"))  return "第二章のセーブデータは第二章には引き継げません。第三章で読み込んでください。";
     if (!obj.player)                             return "player データが見つかりません";
     if (typeof obj.player.lv !== "number")       return "セーブデータが破損しています（lv）";
     return null;
@@ -3989,6 +4010,8 @@ export default function ArcadiaCh2() {
     setHasPb(true);
     setHasMapScan(true);
     setInCom(p.inCom ?? false);
+    // 第一章からのシナリオフルコンボ引き継ぎ（フィールドがなければ0）
+    setScenarioFullCombo(sd.scenarioCombo ?? 0);
   };
 
   const handleFile = (file) => {
@@ -4026,7 +4049,8 @@ export default function ArcadiaCh2() {
         <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 28px"}}/>
 
         <div style={{fontSize:12,color:C.text,marginBottom:20,letterSpacing:1,lineHeight:1.9}}>
-          第一章のセーブデータを読み込んで<br/>エルツのステータスを引き継ぎます。
+          第一章のセーブデータを読み込んで<br/>エルツのステータスを引き継ぎます。<br/>
+          <span style={{color:C.muted,fontSize:11}}>※ 第二章のセーブデータは第二章では引き継げません</span>
         </div>
 
         <label
@@ -4037,7 +4061,7 @@ export default function ArcadiaCh2() {
           <div style={{fontSize:13,color:dragOver ? C.accent : C.text,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
             {dragOver ? "ここにドロップ！" : "クリック or ドラッグ＆ドロップ"}
           </div>
-          <div style={{fontSize:11,color:C.muted,marginTop:8}}>arcadia_save_ch1_*.json または arcadia_save_ch2_*.json</div>
+          <div style={{fontSize:11,color:C.muted,marginTop:8}}>arcadia_save_ch1_*.json</div>
         </label>
 
         {saveError && (
@@ -4140,6 +4164,7 @@ export default function ArcadiaCh2() {
     // バトル直接起動ヘルパー
     const startBattle = (types) => {
       unlockAudio(null);
+      isScenarioBattleRef.current = false; // MapScan起動（フルコンボカウント対象外）
       const isMulti = Array.isArray(types);
       const firstKey = isMulti ? types[0] : types;
       const ed = battleDefs[firstKey];
@@ -4348,6 +4373,7 @@ export default function ArcadiaCh2() {
         statAlloc: { ...statAlloc },
         hasPb, hasMapScan, inCom,
       },
+      scenarioCombo: scenarioFullCombo,
     });
 
     const handleExport = () => {
@@ -4398,7 +4424,8 @@ export default function ArcadiaCh2() {
           {/* ── セーブデータエクスポート ─────────────────────────────────── */}
           <div style={{marginBottom:16,fontSize:12,color:C.muted,letterSpacing:1,lineHeight:1.8}}>
             第三章へ引き継ぐには、セーブデータをダウンロードして<br/>
-            ARCADIA Ch.3 で読み込んでください。
+            ARCADIA Ch.3 で読み込んでください。<br/>
+            <span style={{color:`${C.red}cc`,fontSize:11}}>※ このセーブデータは第二章には引き継げません</span>
           </div>
           <button
             onClick={handleExport}
@@ -4524,6 +4551,8 @@ export default function ArcadiaCh2() {
         )}
         {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease"}}>{notif}</div>}
 
+
+
         {/* ── ヒット・討伐エフェクト フルスクリーンオーバーレイ ────────────────
              overflow:hidden を持つ子コンテナを避けるため fixed で最前面に描画。
              エネミー表示エリアは横長時に画面左62%、縦長時に上52%を占める。
@@ -4634,6 +4663,7 @@ export default function ArcadiaCh2() {
               } else {
                 setEnemyHp(0);
               }
+              setScenarioFullCombo(0);
               setVictory(true);
             }}
             style={{position:"absolute",top:6,right:8,zIndex:200,padding:"3px 10px",fontSize:10,letterSpacing:2,fontFamily:"'Share Tech Mono',monospace",background:"rgba(5,13,20,0.7)",border:`1px solid ${C.muted}`,color:C.muted,borderRadius:3,cursor:"pointer",opacity:0.6}}
@@ -5019,6 +5049,17 @@ export default function ArcadiaCh2() {
 
             {/* バトルログ */}
             <div style={{flex:1,overflowY:"auto",padding:"5px 10px",minHeight:0}}>
+              {/* ── シナリオフルコンボ（ログ1行目・枠区切り） ── */}
+              {isScenarioBattleRef.current && (
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${C.border}55`,marginBottom:3}}>
+                  <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>SCENARIO FULL COMBO</span>
+                  <span style={{fontSize:13,fontWeight:700,fontFamily:"'Share Tech Mono',monospace",
+                    color: scenarioFullCombo === 0 ? C.muted : C.gold,
+                    textShadow: scenarioFullCombo > 0 ? `0 0 8px ${C.gold}88` : "none",
+                    letterSpacing:1,
+                  }}>{scenarioFullCombo}</span>
+                </div>
+              )}
               {btlLogs.map((l,i) => {
                 // ログ色判定
                 let logColor;
@@ -5695,6 +5736,7 @@ export default function ArcadiaCh2() {
                           <button onClick={() => {
                             setOverlay(null);
                             setBattleDefs(prev => prev); // flush
+                            isScenarioBattleRef.current = false; // MapScan起動（フルコンボカウント対象外）
                             const ed = battleDefs[key];
                             setBattleEnemy(ed);
                             setCurrentEnemyType(key);
