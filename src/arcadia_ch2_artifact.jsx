@@ -2815,8 +2815,7 @@ export default function ArcadiaCh2() {
         if (elemBreakTriggered || takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0 || straightShotUsed || straightShotActive > 0) {
           const stunLabel = (takedownUsed || takedownActive > 0) ? "🦵 テイクダウン" : (straightShotUsed || straightShotActive > 0) ? "😵 ストレートショット" : "😴 スリープ";
           logs.push(`${e.def.em}${e.def.name} ${stunLabel}で行動不能！`);
-          const slotIdx = curEnemies.findIndex(en => en.slot === slot);
-          if (slotIdx >= 0) curEnemies[slotIdx].turnIdx = (e.turnIdx + 1) % e.def.pattern.length;
+          // turnIdx更新はアップデートフェイズで一括処理するためここでは更新しない
           continue;
         }
 
@@ -2910,8 +2909,7 @@ export default function ArcadiaCh2() {
             logs.push(`${e.def.em}${rageLabel}⚔${e.def.name}！${halfLabel} ${tMember.icon}${tMember.name}に${d}ダメージ！${dodgeLabel}`);
           }
         }
-        const slotIdx = curEnemies.findIndex(en => en.slot === slot);
-        if (slotIdx >= 0) curEnemies[slotIdx].turnIdx = (e.turnIdx + 1) % e.def.pattern.length;
+        // turnIdx更新はアップデートフェイズで一括処理
       }
     }
 
@@ -3030,6 +3028,12 @@ export default function ArcadiaCh2() {
     };
 
     // ステート一括更新
+    // ── アップデートフェイズで全生存敵のturnIdxを進める（メインフェイズでは変更しない） ──
+    curEnemies.forEach((e, i) => {
+      if (!e.defeated) {
+        curEnemies[i].turnIdx = (e.turnIdx + 1) % e.def.pattern.length;
+      }
+    });
     setHp(Math.min(curHp, mhp));
     setMp(Math.max(0, curMp));
     setPartyHp(curPartyHp);
@@ -4384,7 +4388,8 @@ export default function ArcadiaCh2() {
       { min:8,  max:8,  rank:"AA",  color:"#8060ff", glow:"#8060ff",     shadow:"rgba(128,96,255,0.7)" },
       { min:9,  max:9,  rank:"AAA", color:"#00c8ff", glow:"#00c8ff",     shadow:"rgba(0,200,255,0.8)" },
       { min:10, max:10, rank:"S",   color:"#f0c040", glow:"#f0c040",     shadow:"rgba(240,192,64,0.9)" },
-      { min:11, max:99, rank:"SS",  color:"#ffffff", glow:"#00ffcc",     shadow:"rgba(0,255,204,1.0)" },
+      { min:11, max:11, rank:"SS",  color:"#ffffff", glow:"#00ffcc",     shadow:"rgba(0,255,204,1.0)" },
+      { min:12, max:99, rank:"SSS", color:"#ffffff", glow:"#ff80ff",     shadow:"rgba(255,128,255,1.0)" },
     ];
     const rankInfo = RANK_TABLE.find(r => scenarioFullCombo >= r.min && scenarioFullCombo <= r.max) ?? RANK_TABLE[0];
 
@@ -4402,6 +4407,7 @@ export default function ArcadiaCh2() {
       "AAA": { title:"頂を目指す者",       msg:"完璧に近いプレイ。\n世界はその名を覚えている。" },
       "S":   { title:"ARCADIA の英雄",     msg:"全てのバトルで力を出し切った。\nこれ以上の冒険者はそうはいない。" },
       "SS":  { title:"伝説の冒険者",       msg:"完全無欠──！\n君の名は、永遠に刻まれるだろう。" },
+      "SSS": { title:"神話の体現者",       msg:"これは──もはや伝説の域を超えている。\nアルカディアに、新たな神話が生まれた。" },
     };
     const rankMsg = RANK_TITLES[rankInfo.rank] ?? RANK_TITLES["H"];
 
@@ -4443,8 +4449,8 @@ export default function ArcadiaCh2() {
     // ランクのフォントサイズ（文字数で調整）
     const rankFontSize = rankInfo.rank.length === 1 ? 180 : rankInfo.rank.length === 2 ? 140 : 110;
 
-    // SS専用：虹色グロー
-    const isSS = rankInfo.rank === "SS";
+    // SS/SSS専用：虹色グロー
+    const isSS = rankInfo.rank === "SS" || rankInfo.rank === "SSS";
     const rankLetterStyle = {
       fontFamily:"'Share Tech Mono',monospace",
       fontSize:rankFontSize,
@@ -4454,7 +4460,9 @@ export default function ArcadiaCh2() {
       animation:"rankReveal 0.9s cubic-bezier(0.22,1,0.36,1) forwards, rankGlow 2.4s ease-in-out 1s infinite",
       display:"block",
       letterSpacing: rankInfo.rank.length > 1 ? 8 : 0,
-      filter: isSS
+      filter: rankInfo.rank === "SSS"
+        ? "drop-shadow(0 0 30px #ff80ff) drop-shadow(0 0 60px #00ffcc) drop-shadow(0 0 90px #ff80ff)"
+        : isSS
         ? "drop-shadow(0 0 30px #00ffcc) drop-shadow(0 0 60px #00c8ff)"
         : `drop-shadow(0 0 20px ${rankInfo.glow}) drop-shadow(0 0 40px ${rankInfo.glow}88)`,
     };
@@ -4471,7 +4479,7 @@ export default function ArcadiaCh2() {
         <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.08) 3px,rgba(0,0,0,0.08) 4px)",pointerEvents:"none"}}/>
 
         {/* パーティクル装飾（ランクA以上） */}
-        {["A","AA","AAA","S","SS"].includes(rankInfo.rank) && [0,1,2,3,4,5,6,7].map(i => (
+        {["A","AA","AAA","S","SS","SSS"].includes(rankInfo.rank) && [0,1,2,3,4,5,6,7].map(i => (
           <div key={i} style={{
             position:"absolute",
             left:`${12 + i * 11}%`,
