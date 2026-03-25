@@ -1601,12 +1601,13 @@ export default function ArcadiaCh2() {
    // ── プレイング分析ステート ──────────────────────────────────────────────
    const [battleAnalytics, setBattleAnalytics] = useState([]);
    const [totalElemBreaks, setTotalElemBreaks] = useState(0);
-   const [currentBattleCmdCounts, setCurrentBattleCmdCounts] = useState({});
-   const [currentBattleElemBreaks, setCurrentBattleElemBreaks] = useState(0);
+   const [currentBattleTotalTurns, setcurrentBattleTotalTurns] = useState(0);
+   const [currentBattleComboTurns, setcurrentBattleComboTurns] = useState(0);
+   const [currentBattleElemBreaks, setcurrentBattleElemBreaks] = useState(0);
    const [powerCandyUsed, setPowerCandyUsed] = useState({});
    const [speedCandyUsed, setSpeedCandyUsed] = useState({});
    const [eltzSpdBonus, setEltzSpdBonus] = useState(0);
-   const [currentBattleComboTurns, seturrentBattleComboTurns] = useState(0);
+   const currentBattleCmdCountsRef = useRef({});
 
   // ── 全体攻撃アニメーション（dragon_rush.webp） ──────────────────────────────
   // CSSアニメーションはiPad/Safariで状態が引き継がれるバグがあるため
@@ -2522,15 +2523,6 @@ export default function ArcadiaCh2() {
       setPendingCommands(newCmds);
       setCmdInputIdx(nextIdx);
     } else {
-     // ── プレイング分析：ターン確定時コマンド数カウント ────────────────
-     setCurrentBattleCmdCounts(prev => {
-      const next = { ...prev };
-      Object.keys(newCmds).forEach(mid => {
-        if (!next[mid]) next[mid] = { total: 0, combo: 0 };
-        next[mid] = { ...next[mid], total: next[mid].total + 1 };
-      });
-      return next;
-    });
       setPendingCommands({});
       if (multiEnemies) setPendingTargets({});
       setCmdInputIdx(0);
@@ -2637,6 +2629,7 @@ export default function ArcadiaCh2() {
     const pendingDefeatFx = []; // { slotIdx }
 
     logs.push(`─ ターン ${turn + 1} ─`);
+    setcurrentBattleTotalTurns(prev => prev + 1);
 
     // ══════════════════════════════════════════════════════════════════
     // プリフェイズ：回避・カウンター宣言
@@ -2760,7 +2753,7 @@ export default function ArcadiaCh2() {
               elemBreakTriggered = true; newElemAccum = 0;
               logs.push(`💥 ELEMENT BREAK！ ${tEnemy.def.em}${tEnemy.def.name}の行動を無効化した！`);
               setElemBreakAnim(true); setTimeout(() => setElemBreakAnim(false), 1500);
-              setCurrentBattleElemBreaks(prev => prev + 1);
+              setcurrentBattleElemBreaks(prev => prev + 1);
             }
           } else if (isResistHit) {
             logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} 属性劣勢½ ${actualElemDmg}ダメージ！`);
@@ -3001,14 +2994,7 @@ export default function ArcadiaCh2() {
       for (const k of Object.keys(curPartyMp)) curPartyMp[k] = Math.min((curPartyMp[k] ?? 0) + gain, partyMmp[k] ?? 0);
       if (newStreak >= 3) logs.push(`✨PARTY COMBO ${newStreak}! 全員MP+${gain}！`);
       else logs.push(`🔗 コンボ継続 ${newStreak}！ MP +${gain}`);
-      setCurrentBattleCmdCounts(prev => {
-        const next = { ...prev };
-        currentPartyKeys.forEach(k => {
-          if (!next[k]) next[k] = { total: 0, combo: 0 };
-          next[k] = { ...next[k], combo: next[k].combo + 1 };
-        });
-        return next;
-      });
+      setcurrentBattleComboTurns(prev => prev + 1);
     } else {
       logs.push(`💥 コンボ断絶`);
       // ミスした戦闘はシナリオフルコンボに加算しない（既存カウントはリセットしない）
@@ -3234,6 +3220,7 @@ export default function ArcadiaCh2() {
 
     // ── 現在有効なバフ・デバフ表示 ──────────────────────────────────────
     logs.push(`─ ターン ${turn + 1} ─`);
+    setcurrentBattleTotalTurns(prev => prev + 1);
     if (enemySpdDebuff > 0)     logs.push(`⬇️ ${ed.name} SPD -5 デバフ中（残${enemySpdDebuff}T）`);
     if (enrageCount > 0)        logs.push(`🔴 ${ed.name} 怒り状態！ 攻撃力×2（残${enrageCount}T）-- 氷結斬で解除可能`);
     if (enemyAtkDebuff > 0)     logs.push(`🔥 ${ed.name} ATK半減中（残${enemyAtkDebuff}T）`);
@@ -3309,7 +3296,7 @@ export default function ArcadiaCh2() {
               logs.push(`💫 属性破壊！ ${currentElemInfo.label}属性を突破！ 以後の敵行動を無効化！`);
               setElemBreakAnim(true);
               setTimeout(() => setElemBreakAnim(false), 1500);
-              setCurrentBattleElemBreaks(prev => prev + 1);
+              setcurrentBattleElemBreaks(prev => prev + 1);
             }
           } else {
             const dmg = Math.max(1, Math.round(rawDmg * 0.5));
@@ -3592,14 +3579,7 @@ export default function ArcadiaCh2() {
       }
       if (newStreak >= 3) logs.push(`✨ PARTY COMBO ${newStreak}! 全員MP +${gain} 回復！`);
       else logs.push(`🔗 コンボ継続 ${newStreak}！ MP +${gain}`);
-      setCurrentBattleCmdCounts(prev => {
-        const next = { ...prev };
-        currentPartyKeys.forEach(k => {
-          if (!next[k]) next[k] = { total: 0, combo: 0 };
-          next[k] = { ...next[k], combo: next[k].combo + 1 };
-        });
-        return next;
-      });
+      setcurrentBattleComboTurns(prev => prev + 1);
     } else {
       logs.push(`💥 コンボ断絶`);
       // ミスした戦闘はシナリオフルコンボに加算しない（既存カウントはリセットしない）
@@ -3813,13 +3793,15 @@ export default function ArcadiaCh2() {
     if (isScenarioBattleRef.current) {
       setBattleAnalytics(prev => [...prev, {
         battleType: currentEnemyType,
-        cmdCounts: currentBattleCmdCounts,
+        totalTurns: currentBattleTotalTurns,
+        comboTurns: currentBattleComboTurns,
         elemBreaks: currentBattleElemBreaks,
       }]);
       setTotalElemBreaks(prev => prev + currentBattleElemBreaks);
     }
-    setCurrentBattleCmdCounts({});
-    setCurrentBattleElemBreaks(0);
+    setcurrentBattleTotalTurns(0);
+    setcurrentBattleComboTurns(0);
+    setcurrentBattleElemBreaks(0);
     // マルチバトルの場合は全敵のELK/EXPを合算
     const totalMult = (battleResultBonus.comboMult ?? 1.0) * (battleResultBonus.gradeMult ?? 1.0);
     const gainElk = multiEnemies
@@ -5989,11 +5971,8 @@ export default function ArcadiaCh2() {
                 <div style={{color:C.muted,fontSize:10,padding:"8px 0"}}>── 記録なし（シナリオバトルを戦うと記録されます）──</div>
               ) : (
                 battleAnalytics.map((b, idx) => {
-                  const allKeys = Object.keys(b.cmdCounts);
-                  const totalAll = allKeys.reduce((s, k) => s + (b.cmdCounts[k]?.total ?? 0), 0);
-                  const comboAll = allKeys.reduce((s, k) => s + (b.cmdCounts[k]?.combo ?? 0), 0);
-                  const pct = totalAll > 0 ? Math.round(comboAll / totalAll * 100) : 0;
-                  const isPerfect = pct >= 100 && totalAll > 0;
+                  const pct = b.totalTurns > 0 ? Math.round(b.comboTurns / b.totalTurns * 100) : 0;
+                  const isPerfect = pct === 100 && b.totalTurns > 0;
                   const used = powerCandyUsed[idx];
                   return (
                     <div key={idx} style={{background:C.panel,border:`1px solid ${isPerfect ? C.gold : C.border}`,borderRadius:4,padding:"8px 10px",marginBottom:6}}>
@@ -6001,28 +5980,16 @@ export default function ArcadiaCh2() {
                         <span style={{fontSize:11,color:C.white}}>Battle {idx + 1}｜{b.battleType}</span>
                         <span style={{fontSize:13,color:isPerfect ? C.gold : C.muted,fontWeight:700,fontFamily:"'Share Tech Mono',monospace"}}>{pct}%</span>
                       </div>
-                      {/* メンバー別コンボ率バー */}
-                      <div style={{display:"flex",flexDirection:"column",gap:3,marginBottom:8}}>
-                        {allKeys.map(k => {
-                          const cnt = b.cmdCounts[k] ?? { total:0, combo:0 };
-                          const mp2 = cnt.total > 0 ? Math.round(cnt.combo / cnt.total * 100) : 0;
-                          const char = ALL_CHAR_DEFS[k];
-                          const barColor = mp2 === 100
-                            ? `linear-gradient(90deg,${C.gold},${C.accent2})`
-                            : `linear-gradient(90deg,${C.accent},${C.accent2})`;
-                          return (
-                            <div key={k} style={{display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{fontSize:9,color:C.muted,minWidth:68,flexShrink:0}}>{char?.icon}{char?.name ?? k}</span>
-                              <div style={{flex:1,height:4,background:C.panel2,borderRadius:2,overflow:"hidden"}}>
-                                <div style={{height:"100%",width:`${mp2}%`,background:barColor,borderRadius:2,transition:"width 0.4s"}}/>
-                              </div>
-                              <span style={{fontSize:9,color:mp2===100?C.gold:C.muted,minWidth:38,textAlign:"right",fontFamily:"'Share Tech Mono',monospace"}}>
-                                {cnt.combo}/{cnt.total}
-                              </span>
+                          {/* コンボ率バー */}
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                            <span style={{fontSize:9,color:C.muted,flexShrink:0}}>コンボ率</span>
+                            <div style={{flex:1,height:6,background:C.panel2,borderRadius:3,overflow:"hidden"}}>
+                              <div style={{height:"100%",width:`${pct}%`,background:isPerfect?`linear-gradient(90deg,${C.gold},${C.accent2})`:`linear-gradient(90deg,${C.accent},${C.accent2})`,borderRadius:3,transition:"width 0.4s"}}/>
                             </div>
-                          );
-                        })}
-                      </div>
+                            <span style={{fontSize:10,color:isPerfect?C.gold:C.muted,minWidth:52,textAlign:"right",fontFamily:"'Share Tech Mono',monospace"}}>
+                              {b.comboTurns}/{b.totalTurns}T
+                            </span>
+                          </div>
                       {isPerfect && !used && (
                         <button
                           onClick={() => {
