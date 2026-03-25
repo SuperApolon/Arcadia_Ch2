@@ -3814,7 +3814,7 @@ export default function ArcadiaCh2() {
     setBattleResult({ gainExp:displayExp, gainElk, comboMult:battleResultBonus.comboMult??1.0, gradeMult:battleResultBonus.gradeMult??1.0 });
     setFade(true);
     setTimeout(() => { setMultiEnemies(null); setPhase("victory"); setFade(false); }, 300);
-  }, [defeat, mhp, mmp, battleNext, sceneIdx, showNotif, battleEnemy, battleResultBonus, multiEnemies]);
+  }, [defeat, mhp, mmp, battleNext, sceneIdx, showNotif, battleEnemy, battleResultBonus, multiEnemies,currentBattleTotalTurns,currentBattleComboTurns,currentBattleElemBreaks,currentEnemyType]);
 
   // ──────────── RENDER ────────────
   const sc = SCENES[sceneIdx] || SCENES[0];
