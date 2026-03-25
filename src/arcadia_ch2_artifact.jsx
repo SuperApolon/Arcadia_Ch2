@@ -1598,6 +1598,15 @@ export default function ArcadiaCh2() {
   const [arrowRainCooldown,    setArrowRainCooldown   ] = useState(0);
   const [waterSphereCooldown,  setWaterSphereCooldown ] = useState(0);
   const [waterSphereActive,    setWaterSphereActive   ] = useState(0);
+   // ── プレイング分析ステート ──────────────────────────────────────────────
+   const [battleAnalytics, setBattleAnalytics] = useState([]);
+   const [totalElemBreaks, setTotalElemBreaks] = useState(0);
+   const [currentBattleCmdCounts, setCurrentBattleCmdCounts] = useState({});
+   const [currentBattleElemBreaks, setCurrentBattleElemBreaks] = useState(0);
+   const [powerCandyUsed, setPowerCandyUsed] = useState({});
+   const [speedCandyUsed, setSpeedCandyUsed] = useState({});
+   const [eltzSpdBonus, setEltzSpdBonus] = useState(0);
+   const [currentBattleComboTurns, seturrentBattleComboTurns] = useState(0);
 
   // ── 全体攻撃アニメーション（dragon_rush.webp） ──────────────────────────────
   // CSSアニメーションはiPad/Safariで状態が引き継がれるバグがあるため
@@ -2403,7 +2412,12 @@ export default function ArcadiaCh2() {
   // @@SECTION:LOGIC_BATTLE
   // ─── パーティ定義（currentPartyKeysから動的生成） ─────────────────────────
   // currentPartyKeys はバトル突入時に BATTLE_PARTY_MAP から設定される
-  const PARTY_DEFS = currentPartyKeys.map(k => ALL_CHAR_DEFS[k]).filter(Boolean);
+  const PARTY_DEFS = currentPartyKeys.map(k => {
+    const c = ALL_CHAR_DEFS[k];
+    if (!c) return null;
+    if (k === "eltz") return { ...c, spd: c.spd + eltzSpdBonus };
+    return c;
+  }).filter(Boolean);
   const ENEMY_BASE_SPD = 12; // シムルー基本SPD
 
   // ─── すくみ判定ヘルパー ────────────────────────────────────────────────
@@ -2737,6 +2751,7 @@ export default function ArcadiaCh2() {
               elemBreakTriggered = true; newElemAccum = 0;
               logs.push(`💥 ELEMENT BREAK！ ${tEnemy.def.em}${tEnemy.def.name}の行動を無効化した！`);
               setElemBreakAnim(true); setTimeout(() => setElemBreakAnim(false), 1500);
+              setCurrentBattleElemBreaks(prev => prev + 1);
             }
           } else if (isResistHit) {
             logs.push(`${actor.icon}${actor.name} ${elemSk.icon}${elemSk.label} → ${tEnemy.def.em}${tEnemy.def.name} 属性劣勢½ ${actualElemDmg}ダメージ！`);
@@ -2977,6 +2992,14 @@ export default function ArcadiaCh2() {
       for (const k of Object.keys(curPartyMp)) curPartyMp[k] = Math.min((curPartyMp[k] ?? 0) + gain, partyMmp[k] ?? 0);
       if (newStreak >= 3) logs.push(`✨PARTY COMBO ${newStreak}! 全員MP+${gain}！`);
       else logs.push(`🔗 コンボ継続 ${newStreak}！ MP +${gain}`);
+      setCurrentBattleCmdCounts(prev => {
+        const next = { ...prev };
+        currentPartyKeys.forEach(k => {
+          if (!next[k]) next[k] = { total: 0, combo: 0 };
+          next[k] = { ...next[k], combo: next[k].combo + 1 };
+        });
+        return next;
+      });
     } else {
       logs.push(`💥 コンボ断絶`);
       // ミスした戦闘はシナリオフルコンボに加算しない（既存カウントはリセットしない）
@@ -3039,6 +3062,19 @@ export default function ArcadiaCh2() {
     setPartyHp(curPartyHp);
     setPartyMp(curPartyMp);
     setMultiEnemies(curEnemies);
+          // ── プレイング分析：ターン確定時コマンド数カウント ────────────────
+          setCurrentBattleCmdCounts(prev => {
+            const next = { ...prev };
+            currentPartyKeys.forEach(k => {
+              if (!next[k]) next[k] = { total: 0, combo: 0 };
+              next[k] = {
+                ...next[k],
+                total: next[k].total + 1
+              };
+            });
+          
+            return next;
+          });
     // ── エフェクト発火（スロットごとに総ダメージを合算して1エフェクト） ─────
     const hitFxBySlot = {};
     pendingHitFx.forEach(fx => {
@@ -3277,6 +3313,7 @@ export default function ArcadiaCh2() {
               logs.push(`💫 属性破壊！ ${currentElemInfo.label}属性を突破！ 以後の敵行動を無効化！`);
               setElemBreakAnim(true);
               setTimeout(() => setElemBreakAnim(false), 1500);
+              setCurrentBattleElemBreaks(prev => prev + 1);
             }
           } else {
             const dmg = Math.max(1, Math.round(rawDmg * 0.5));
@@ -3559,6 +3596,14 @@ export default function ArcadiaCh2() {
       }
       if (newStreak >= 3) logs.push(`✨ PARTY COMBO ${newStreak}! 全員MP +${gain} 回復！`);
       else logs.push(`🔗 コンボ継続 ${newStreak}！ MP +${gain}`);
+      setCurrentBattleCmdCounts(prev => {
+        const next = { ...prev };
+        currentPartyKeys.forEach(k => {
+          if (!next[k]) next[k] = { total: 0, combo: 0 };
+          next[k] = { ...next[k], combo: next[k].combo + 1 };
+        });
+        return next;
+      });
     } else {
       logs.push(`💥 コンボ断絶`);
       // ミスした戦闘はシナリオフルコンボに加算しない（既存カウントはリセットしない）
@@ -3769,6 +3814,16 @@ export default function ArcadiaCh2() {
     }
     const nextSc = battleNext !== null ? battleNext : sceneIdx;
     setVictoryNextSc(nextSc);
+    if (isScenarioBattleRef.current) {
+      setBattleAnalytics(prev => [...prev, {
+        battleType: currentEnemyType,
+        cmdCounts: currentBattleCmdCounts,
+        elemBreaks: currentBattleElemBreaks,
+      }]);
+      setTotalElemBreaks(prev => prev + currentBattleElemBreaks);
+    }
+    setCurrentBattleCmdCounts({});
+    setCurrentBattleElemBreaks(0);
     // マルチバトルの場合は全敵のELK/EXPを合算
     const totalMult = (battleResultBonus.comboMult ?? 1.0) * (battleResultBonus.gradeMult ?? 1.0);
     const gainElk = multiEnemies
@@ -5810,7 +5865,7 @@ export default function ArcadiaCh2() {
           </div>
           {/* Tabs */}
           <div style={{display:"flex",borderBottom:`1px solid ${C.border}`}}>
-            {["STATUS","MAIL","MAP"].map((tab,i) => (
+            {["STATUS","MAIL","MAP","ANALYSIS"].map((tab,i) => (
               <button key={i} onClick={() => setPbTab(i)} style={{flex:1,padding:"8px 4px",background:"transparent",border:"none",borderBottom:pbTab===i?`2px solid ${C.accent}`:"2px solid transparent",color:pbTab===i?C.accent:C.muted,fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
                 {tab}
               </button>
@@ -5923,6 +5978,129 @@ export default function ArcadiaCh2() {
                 ) : <div style={{color:C.muted,padding:8}}>MapScan 未解放<br/><span style={{fontSize:10}}>交易所のローズと話すと解放されます</span></div>}
               </div>
             )}
+            {pbTab === 3 && (
+          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
+            <div style={{color:C.accent,marginBottom:12,letterSpacing:2,fontSize:11}}>── PLAYING ANALYSIS ──</div>
+
+            {/* ── パワーキャンディ：コンボ100%達成戦闘 ── */}
+            <div style={{marginBottom:24}}>
+              <div style={{color:C.gold,fontSize:11,letterSpacing:2,marginBottom:6}}>⚔ POWER CANDY</div>
+              <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.7}}>
+                各バトルで全コマンドをコンボ達成（全員無被弾）すると、<br/>
+                エルツの物理攻撃力 <span style={{color:C.accent2}}>+1</span> を贈呈します。
+              </div>
+              {battleAnalytics.length === 0 ? (
+                <div style={{color:C.muted,fontSize:10,padding:"8px 0"}}>── 記録なし（シナリオバトルを戦うと記録されます）──</div>
+              ) : (
+                battleAnalytics.map((b, idx) => {
+                  const allKeys = Object.keys(b.cmdCounts);
+                  const totalAll = allKeys.reduce((s, k) => s + (b.cmdCounts[k]?.total ?? 0), 0);
+                  const comboAll = allKeys.reduce((s, k) => s + (b.cmdCounts[k]?.combo ?? 0), 0);
+                  const pct = totalAll > 0 ? Math.round(comboAll / totalAll * 100) : 0;
+                  const isPerfect = pct >= 100 && totalAll > 0;
+                  const used = powerCandyUsed[idx];
+                  return (
+                    <div key={idx} style={{background:C.panel,border:`1px solid ${isPerfect ? C.gold : C.border}`,borderRadius:4,padding:"8px 10px",marginBottom:6}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <span style={{fontSize:11,color:C.white}}>Battle {idx + 1}｜{b.battleType}</span>
+                        <span style={{fontSize:13,color:isPerfect ? C.gold : C.muted,fontWeight:700,fontFamily:"'Share Tech Mono',monospace"}}>{pct}%</span>
+                      </div>
+                      {/* メンバー別コンボ率バー */}
+                      <div style={{display:"flex",flexDirection:"column",gap:3,marginBottom:8}}>
+                        {allKeys.map(k => {
+                          const cnt = b.cmdCounts[k] ?? { total:0, combo:0 };
+                          const mp2 = cnt.total > 0 ? Math.round(cnt.combo / cnt.total * 100) : 0;
+                          const char = ALL_CHAR_DEFS[k];
+                          const barColor = mp2 === 100
+                            ? `linear-gradient(90deg,${C.gold},${C.accent2})`
+                            : `linear-gradient(90deg,${C.accent},${C.accent2})`;
+                          return (
+                            <div key={k} style={{display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{fontSize:9,color:C.muted,minWidth:68,flexShrink:0}}>{char?.icon}{char?.name ?? k}</span>
+                              <div style={{flex:1,height:4,background:C.panel2,borderRadius:2,overflow:"hidden"}}>
+                                <div style={{height:"100%",width:`${mp2}%`,background:barColor,borderRadius:2,transition:"width 0.4s"}}/>
+                              </div>
+                              <span style={{fontSize:9,color:mp2===100?C.gold:C.muted,minWidth:38,textAlign:"right",fontFamily:"'Share Tech Mono',monospace"}}>
+                                {cnt.combo}/{cnt.total}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {isPerfect && !used && (
+                        <button
+                          onClick={() => {
+                            setStatAlloc(sa => ({ ...sa, patk: sa.patk + 1 }));
+                            setPowerCandyUsed(prev => ({ ...prev, [idx]: true }));
+                            showNotif("🍬 パワーキャンディ！ 物理ATK +1！");
+                          }}
+                          style={{width:"100%",padding:"7px",background:`${C.gold}1a`,border:`1px solid ${C.gold}`,color:C.gold,fontSize:11,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,transition:"all 0.2s"}}
+                          onMouseEnter={e => { e.currentTarget.style.background = `${C.gold}33`; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = `${C.gold}1a`; }}
+                        >🍬 パワーキャンディを受け取る（物理ATK +1）</button>
+                      )}
+                      {used && (
+                        <div style={{textAlign:"center",fontSize:10,color:C.muted,padding:"4px 0"}}>✅ 受け取り済み</div>
+                      )}
+                      {!isPerfect && (
+                        <div style={{fontSize:9,color:C.muted,textAlign:"center",padding:"2px 0"}}>コンボ率100%を達成するとキャンディを受け取れます</div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* ── スピードキャンディ：属性ブレイク累計 ── */}
+            <div>
+              <div style={{color:C.accent2,fontSize:11,letterSpacing:2,marginBottom:6}}>💨 SPEED CANDY</div>
+              <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.7}}>
+                属性ブレイク累計達成でエルツのSPD <span style={{color:C.accent2}}>+1</span>（最大3回）<br/>
+                <span style={{fontSize:9}}>属性スキルで弱点に蓄積50ダメ以上与えるとブレイク発生</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 12px"}}>
+                <span style={{fontSize:10,color:C.muted,flex:1}}>累計属性ブレイク数</span>
+                <span style={{fontSize:18,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>{totalElemBreaks}</span>
+                <span style={{fontSize:10,color:C.muted}}>回</span>
+              </div>
+              {[1,2,3].map(threshold => {
+                const achieved = totalElemBreaks >= threshold;
+                const used2 = speedCandyUsed[threshold];
+                return (
+                  <div key={threshold} style={{background:C.panel,border:`1px solid ${achieved ? C.accent2 : C.border}`,borderRadius:4,padding:"8px 12px",marginBottom:6,display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{flex:1}}>
+                      <span style={{fontSize:11,color:achieved ? C.accent2 : C.muted}}>
+                        💫 {threshold}回ブレイク達成
+                      </span>
+                      <div style={{fontSize:9,color:C.muted,marginTop:2}}>
+                        {achieved ? "達成済み ✓" : `あと ${threshold - totalElemBreaks} 回`}
+                      </div>
+                    </div>
+                    {achieved && !used2 && (
+                      <button
+                        onClick={() => {
+                          setEltzSpdBonus(prev => prev + 1);
+                          setSpeedCandyUsed(prev => ({ ...prev, [threshold]: true }));
+                          showNotif("🍬 スピードキャンディ！ SPD +1！");
+                        }}
+                        style={{padding:"6px 14px",background:`${C.accent2}1a`,border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:10,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,whiteSpace:"nowrap",flexShrink:0,transition:"all 0.2s"}}
+                        onMouseEnter={e => { e.currentTarget.style.background = `${C.accent2}33`; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = `${C.accent2}1a`; }}
+                      >🍬 SPD +1</button>
+                    )}
+                    {used2 && <span style={{fontSize:10,color:C.muted,flexShrink:0}}>✅ 受取済</span>}
+                    {!achieved && <span style={{fontSize:10,color:`${C.muted}66`,flexShrink:0}}>未達成</span>}
+                  </div>
+                );
+              })}
+              {eltzSpdBonus > 0 && (
+                <div style={{marginTop:10,padding:"6px 12px",background:`${C.accent2}11`,border:`1px solid ${C.accent2}44`,borderRadius:4,fontSize:10,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>
+                  現在のSPDボーナス: +{eltzSpdBonus}（エルツ SPD {12 + eltzSpdBonus}）
+                </div>
+              )}
+            </div>
+          </div>
+        )}
           </div>
         </div>
       )}
