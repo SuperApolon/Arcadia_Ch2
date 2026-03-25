@@ -2522,6 +2522,15 @@ export default function ArcadiaCh2() {
       setPendingCommands(newCmds);
       setCmdInputIdx(nextIdx);
     } else {
+     // ── プレイング分析：ターン確定時コマンド数カウント ────────────────
+     setCurrentBattleCmdCounts(prev => {
+      const next = { ...prev };
+      Object.keys(newCmds).forEach(mid => {
+        if (!next[mid]) next[mid] = { total: 0, combo: 0 };
+        next[mid] = { ...next[mid], total: next[mid].total + 1 };
+      });
+      return next;
+    });
       setPendingCommands({});
       if (multiEnemies) setPendingTargets({});
       setCmdInputIdx(0);
@@ -3062,19 +3071,6 @@ export default function ArcadiaCh2() {
     setPartyHp(curPartyHp);
     setPartyMp(curPartyMp);
     setMultiEnemies(curEnemies);
-          // ── プレイング分析：ターン確定時コマンド数カウント ────────────────
-          setCurrentBattleCmdCounts(prev => {
-            const next = { ...prev };
-            currentPartyKeys.forEach(k => {
-              if (!next[k]) next[k] = { total: 0, combo: 0 };
-              next[k] = {
-                ...next[k],
-                total: next[k].total + 1
-              };
-            });
-          
-            return next;
-          });
     // ── エフェクト発火（スロットごとに総ダメージを合算して1エフェクト） ─────
     const hitFxBySlot = {};
     pendingHitFx.forEach(fx => {
