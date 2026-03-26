@@ -4592,7 +4592,7 @@ export default function ArcadiaCh2() {
     return (
       <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#030a06 0%,#0a1a0a 50%,#0d2010 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:40}}>
         <style>{keyframes}</style>
-        <div style={{animation:"fadeIn 1.2s ease",maxWidth:"min(640px, 92vw)",width:"100%"}}>
+        <div style={{animation:"fadeIn 1.2s ease",maxWidth:"min(640px, 92vw)",width:"100%",overflowY:"auto",maxHeight:"100%",paddingBottom:40}}>
           <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:20,fontFamily:"'Share Tech Mono',monospace"}}>─ EPISODE 2 END ─</div>
           <div style={{fontSize:48,fontWeight:700,color:C.white,textShadow:`0 0 30px ${C.accent2}`,marginBottom:16}}>ARCADIA</div>
           <div style={{fontSize:18,color:C.accent2,letterSpacing:4,marginBottom:40}}>旅立ちの日は明日──</div>
