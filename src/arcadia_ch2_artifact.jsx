@@ -4860,6 +4860,10 @@ export default function ArcadiaCh2() {
                 setEnemyHp(0);
               }
               setScenarioFullCombo(0);
+              setcurrentBattleTotalTurns(0);
+              setcurrentBattleComboTurns(0);
+              setcurrentBattleElemBreaks(0);
+              isScenarioBattleRef.current = false;
               setVictory(true);
             }}
             style={{position:"absolute",top:6,right:8,zIndex:200,padding:"3px 10px",fontSize:10,letterSpacing:2,fontFamily:"'Share Tech Mono',monospace",background:"rgba(5,13,20,0.7)",border:`1px solid ${C.muted}`,color:C.muted,borderRadius:3,cursor:"pointer",opacity:0.6}}
