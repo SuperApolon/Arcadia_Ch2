@@ -1395,6 +1395,9 @@ export default function ArcadiaCh2() {
   const [saveFile,  setSaveFile]  = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [dragOver,  setDragOver]  = useState(false);
+  const [bbsData,    setBbsData   ] = useState(null);  // null=未取得
+  const [bbsLoading, setBbsLoading] = useState(false);
+  const [bbsError,   setBbsError  ] = useState(false);
   // エネミーパターンをランタイムで編集可能なステートとして保持
   const [battleDefs, setBattleDefs] = useState(INITIAL_BATTLE_DEFS);
   const [sceneIdx, setSceneIdx] = useState(0);
@@ -1409,6 +1412,8 @@ export default function ArcadiaCh2() {
   const [lvUpInfo, setLvUpInfo] = useState(null);
   const [showStatUI, setShowStatUI] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
+  const [bbsSelectedThread, setBbsSelectedThread] = useState(null);
+  const [bbsSelectedPost,   setBbsSelectedPost  ] = useState(null); 
   const autoAdvanceRef = useRef(false);
   const setAutoAdv = (v) => { autoAdvanceRef.current = v; setAutoAdvance(v); };
   const [novelLog, setNovelLog] = useState([]);  // { sp, t, sIdx }[] -- 全ダイアログ履歴
@@ -2009,7 +2014,15 @@ export default function ArcadiaCh2() {
       done();
     });
   }, [fadeOut]);
-
+  // BBS データ fetch（初回のみ）
+  useEffect(() => {
+    if (bbsData || bbsLoading || bbsError) return;
+    setBbsLoading(true);
+    fetch("https://superapolon.github.io/Arcadia_Assets/bbs/ch2.json")
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(json => { setBbsData(json); setBbsLoading(false); })
+      .catch(() => { setBbsError(true); setBbsLoading(false); });
+  }, []);
   // @@SECTION:LOGIC_TYPEWRITER
   const startType = useCallback((text, onDone) => {
     if (typeTimerRef.current) clearTimeout(typeTimerRef.current);
@@ -3772,7 +3785,6 @@ export default function ArcadiaCh2() {
       executePartyTurn(pendingExecution.cmds);
     }
   }, [pendingExecution, executeMultiTurn, executePartyTurn]);
-
   // @@SECTION:LOGIC_BATTLE_CMD ──────────────────────────────────────────────────
   // onCancelCommand（コマンドキャンセル）・exitBattle（バトル終了・勝敗処理）
   // コマンドキャンセル（最後に選んだメンバーの選択を1つ戻す）
@@ -5957,7 +5969,7 @@ export default function ArcadiaCh2() {
           </div>
           {/* Tabs */}
           <div style={{display:"flex",borderBottom:`1px solid ${C.border}`}}>
-            {["STATUS","MAIL","MAP","ANALYSIS","Shop","Inventory"].map((tab,i) => (
+            {["STATUS","MAIL","MAP","ANALYSIS","Shop","Inventory","CityBBS"].map((tab,i) => (
               <button key={i} onClick={() => setPbTab(i)} style={{flex:1,padding:"8px 4px",background:"transparent",border:"none",borderBottom:pbTab===i?`2px solid ${C.accent}`:"2px solid transparent",color:pbTab===i?C.accent:C.muted,fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
                 {tab}
               </button>
@@ -6500,6 +6512,101 @@ export default function ArcadiaCh2() {
                   </div>
                 );
               })()}
+              {pbTab === 6 && (() => {
+  const BBS_URL = "https://superapolon.github.io/Arcadia_Assets/bbs/ch2.json";
+
+  const visibleThreads = (bbsData ?? []).filter(t => sceneIdx >= (t.unlockAt ?? 0));
+
+  const getDepth = (post, posts) => {
+    let depth = 0; let cur = post;
+    while (cur.replyTo) { cur = posts.find(p => p.id === cur.replyTo); if (!cur) break; depth++; }
+    return depth;
+  };
+
+  const INDENT = 14;
+  const selThread = bbsSelectedThread ? visibleThreads.find(t => t.id === bbsSelectedThread) : null;
+  const selPost   = selThread ? selThread.posts.find(p => p.id === bbsSelectedPost) : null;
+
+  return (
+    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: C.text }}>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 9, letterSpacing: 5, color: C.muted, marginBottom: 4 }}>CITY BBS</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <div style={{ fontSize: 14, color: C.accent, fontWeight: 700, letterSpacing: 2 }}>シティBBS</div>
+          {bbsLoading && <div style={{ fontSize: 9, color: C.muted, animation: "arcadiaBlnk 1s step-end infinite" }}>読み込み中...</div>}
+          {bbsError  && (
+            <button
+              onClick={() => { setBbsError(false); setBbsData(null); }}
+              style={{ fontSize: 9, color: C.red, background: "transparent", border: `1px solid ${C.red}55`, borderRadius: 2, padding: "2px 8px", cursor: "pointer" }}
+            >再読込</button>
+          )}
+        </div>
+        <div style={{ width: "100%", height: 1, background: `linear-gradient(90deg,${C.accent}88,transparent)` }} />
+      </div>
+
+      {bbsError ? (
+        <div style={{ color: C.red, fontSize: 11, padding: "16px 0", textAlign: "center" }}>
+          データの読み込みに失敗しました
+        </div>
+      ) : bbsLoading ? (
+        <div style={{ color: C.muted, fontSize: 11, padding: "16px 0", textAlign: "center" }}>
+          ── 接続中 ──
+        </div>
+      ) : visibleThreads.length === 0 ? (
+        <div style={{ color: C.muted, fontSize: 11, padding: "16px 0", textAlign: "center" }}>
+          ── 掲示板は空です ──
+        </div>
+      ) : (
+        visibleThreads.map(thread => (
+          <div key={thread.id} style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 9, color: C.gold, letterSpacing: 3, marginBottom: 6 }}>▼ {thread.board}</div>
+            {thread.posts.map(post => {
+              const depth    = getDepth(post, thread.posts);
+              const isRoot   = depth === 0;
+              const selected = bbsSelectedPost === post.id && bbsSelectedThread === thread.id;
+              const subject  = post.subject ?? thread.subject;
+              return (
+                <div
+                  key={post.id}
+                  onClick={() => {
+                    if (selected) { setBbsSelectedThread(null); setBbsSelectedPost(null); }
+                    else { setBbsSelectedThread(thread.id); setBbsSelectedPost(post.id); }
+                  }}
+                  style={{ paddingLeft: 8 + depth * INDENT, paddingTop: 5, paddingBottom: 5, paddingRight: 8, cursor: "pointer", background: selected ? `${C.accent}11` : "transparent", borderLeft: selected ? `2px solid ${C.accent}` : "2px solid transparent", transition: "all 0.15s", marginBottom: 1 }}
+                  onMouseEnter={e => { if (!selected) e.currentTarget.style.background = `${C.accent}08`; }}
+                  onMouseLeave={e => { if (!selected) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 4, flexWrap: "wrap" }}>
+                    {depth > 0 && <span style={{ fontSize: 10, color: C.muted, flexShrink: 0 }}>{"→".repeat(depth)} </span>}
+                    <span style={{ fontSize: 11, color: selected ? C.accent : isRoot ? C.white : C.text, fontWeight: isRoot ? 700 : 400, flex: 1, minWidth: 0 }}>{subject}</span>
+                    <span style={{ fontSize: 9, color: C.muted, flexShrink: 0, whiteSpace: "nowrap" }}>/{post.author}</span>
+                    <span style={{ fontSize: 9, color: C.muted, flexShrink: 0 }}>({post.authorTag} {post.date})</span>
+                  </div>
+                </div>
+              );
+            })}
+            {bbsSelectedThread === thread.id && selPost && (
+              <div style={{ marginTop: 10, background: "rgba(10,26,38,0.9)", border: `1px solid ${C.border}`, borderTop: `2px solid ${C.accent}55`, borderRadius: 4, padding: "14px 16px", animation: "slideUp 0.2s ease" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 9, color: C.muted }}>□ 投稿者</span>
+                  <span style={{ fontSize: 12, color: C.accent2, fontWeight: 700 }}>{selPost.author}</span>
+                  <span style={{ fontSize: 9, color: C.muted }}>({selPost.authorTag})</span>
+                  <span style={{ fontSize: 9, color: C.muted, marginLeft: "auto" }}>{selPost.date}</span>
+                </div>
+                <div style={{ fontSize: 11, color: C.accent, letterSpacing: 1, marginBottom: 10, borderBottom: `1px solid ${C.border}55`, paddingBottom: 8 }}>
+                  {selPost.subject ?? thread.subject}
+                </div>
+                <div style={{ fontSize: 12, color: C.text, lineHeight: 2, whiteSpace: "pre-wrap", letterSpacing: 0.3 }}>
+                  {selPost.body}
+                </div>
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+})()}
           </div>
         </div>
       )}
