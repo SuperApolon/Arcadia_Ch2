@@ -583,11 +583,9 @@ const SIMULUU_IMG_URL = "https://superapolon.github.io/Arcadia_Assets/enemies/si
 
 const ENEMY_IMG_MAP = {
   seagull:       "enemies/seagull",
-  koza:          "enemies/koza",
   shamerlot:     "enemies/shamelot",
   shamerlot_lv3: "enemies/shamelot",
   shamerlot_lv5: "enemies/shamelot",
-  simuluu:       null, // 直URL使用
   // ── 第二章 ────────────────────────────────────────────────────────────────
   woopy:         "enemies/woopy",
   moocat:        "enemies/moocat",
@@ -717,12 +715,10 @@ const ENEMY_IMG_SIZE = {
 };
 
 const BATTLE_BG_MAP = {
-  seagull:       "battle/bg_coast",
-  koza:          "battle/bg_meadow",
-  shamerlot:     "battle/bg_rocks",
-  shamerlot_lv3: "battle/bg_rocks",
-  shamerlot_lv5: "battle/bg_rocks",
-  simuluu:       "scenes/s26_cave_blue",
+  seagull:       "scenes/s01_beach",
+  shamerlot:     "scenes/s14_rocks",
+  shamerlot_lv3: "scenes/s26_cave_blue",
+  shamerlot_lv5: "scenes/s27_cave_deep",
   // ── 第二章 ────────────────────────────────────────────────────────────────
   woopy:         "scenes/ch2_s11_eivis_plains",
   moocat:        "scenes/ch2_s11_eivis_plains",
@@ -745,12 +741,10 @@ const BATTLE_BG_MAP = {
 // size:     CSS background-size 値（"cover" / "contain" / "120%" など）
 // position: CSS background-position 値（"center" / "top center" / "50% 30%" など）
 const BATTLE_BG_STYLE = {
-  seagull:       { size: "cover", position: "enter 40%" },
-  koza:          { size: "cover", position: "enter 40%" },
-  shamerlot:     { size: "cover", position: "enter 40%" },
-  shamerlot_lv3: { size: "cover", position: "enter 40%" },
-  shamerlot_lv5: { size: "cover", position: "enter 40%" },
-  simuluu:       { size: "cover",   position: "center" },
+  seagull:       { size: "cover", position: "center 40%" },
+  shamerlot:     { size: "cover", position: "center 40%" },
+  shamerlot_lv3: { size: "cover", position: "center 40%" },
+  shamerlot_lv5: { size: "cover", position: "center 40%" },
   // ── 第二章 ────────────────────────────────────────────────────────────────
   woopy:         { size: "cover",   position: "center 40%" },
   moocat:        { size: "cover",   position: "center 40%" },
@@ -1444,7 +1438,10 @@ export default function ArcadiaCh2() {
   const [hasPb, setHasPb] = useState(true);
   const [hasMapScan, setHasMapScan] = useState(true);
   const [inCom, setInCom] = useState(true);
-
+  // ── MapScanバトルドロップカウンター ──────────────────────────────────────
+  // { [enemyKey]: number } 戦闘勝利回数
+  const [mapScanWinCount, setMapScanWinCount] = useState({});
+  const mapScanPendingDropRef = useRef(null); // { dropKey, winCount }
   // @@SECTION:STATE_BATTLE
   const [battleEnemy, setBattleEnemy] = useState(null);
   const [currentEnemyType, setCurrentEnemyType] = useState(null);
@@ -1576,9 +1573,9 @@ export default function ArcadiaCh2() {
    const currentBattleCmdCountsRef = useRef({});
    // ── 所持品ステート ──────────────────────────────────────────────────────
    const [inventory, setInventory] = useState([
-    { id:"copper_sword",   name:"銅の剣",        type:"weapon",    desc:"物理ATK +6",  patk:6,  pdef:0, spd:0 },
-    { id:"travelers_coat", name:"旅人の服",       type:"armor",     desc:"物理DEF +3",  patk:0,  pdef:3, spd:0 },
-    { id:"beginner_cert",  name:"初心者講習の証", type:"accessory", desc:"物理ATK・物理DEF +1", patk:1, pdef:1, spd:0 },
+    { id:"copper_sword",   name:"銅の剣",        type:"weapon",    desc:"物理ATK +6",  patk:6,  pdef:0, spd:0, quantity:1 },
+    { id:"travelers_coat", name:"旅人の服",       type:"armor",     desc:"物理DEF +3",  patk:0,  pdef:3, spd:0, quantity:1 },
+    { id:"beginner_cert",  name:"初心者講習の証", type:"accessory", desc:"物理ATK・物理DEF +1", patk:1, pdef:1, spd:0, quantity:1 },
   ]);
   // { id:string, name:string, type:"weapon"|"armor"|"accessory", desc:string }
   // ── 装備ステート ────────────────────────────────────────────────────────
@@ -2020,10 +2017,15 @@ export default function ArcadiaCh2() {
 
   const gainItem = useCallback((item) => {
     setInventory(prev => {
+      const existing = prev.find(i => i.id === item.id);
+      if (existing) {
+        if (existing.quantity >= 999) { showNotif(`${item.name} はこれ以上持てません`); return prev; }
+        showNotif(`📦 ${item.name} を入手した！ (×${existing.quantity + 1})`);
+        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
       if (prev.length >= 100) { showNotif("所持品がいっぱいです！"); return prev; }
-      if (prev.find(i => i.id === item.id)) { showNotif(`${item.name} はすでに持っています`); return prev; }
       showNotif(`📦 ${item.name} を入手した！`);
-      return [...prev, item];
+      return [...prev, { ...item, quantity: 1 }];
     });
   }, [showNotif]);
 
@@ -3778,8 +3780,27 @@ export default function ArcadiaCh2() {
       setTimeout(() => { setSceneIdx(sceneIdxBeforeBattle.current); setDlIdx(0); setPhase("game"); setFade(false); }, 400);
       return;
     }
-    const nextSc = battleNext !== null ? battleNext : sceneIdx;
-    setVictoryNextSc(nextSc);
+    const isMapscanBattle = battleNext === "mapscan";
+    const nextSc = (battleNext !== null && battleNext !== "mapscan") ? battleNext : sceneIdx;
+    setVictoryNextSc(isMapscanBattle ? "mapscan" : nextSc);
+    if (mapScanPendingDropRef.current) {
+      const { dropKey, winCount } = mapScanPendingDropRef.current;
+      mapScanPendingDropRef.current = null;
+      const table = MAP_SCAN_DROPS[dropKey];
+      if (table) {
+        const isRare = winCount % 3 === 0;
+        const drop = isRare ? table.rare : table.normal;
+        if (drop) {
+          if (drop.type === "elk") {
+            setElk(e => e + drop.amount);
+            setTimeout(() => showNotif(`${isRare ? "💎 レア！ " : "💰 "}${drop.amount} ELK 獲得！`), 100);
+          } else if (drop.type === "item") {
+            gainItem(drop.item);
+            if (isRare) setTimeout(() => showNotif(`💎 レアドロップ！ ${drop.item.name}！`), 100);
+          }
+        }
+      }
+    }
     if (isScenarioBattleRef.current) {
       setBattleAnalytics(prev => [...prev, {
         battleType: currentEnemyType,
@@ -3801,11 +3822,33 @@ export default function ArcadiaCh2() {
       ? multiEnemies.reduce((s, e) => s + (e.def.exp ?? 0), 0)
       : (battleEnemy ? battleEnemy.exp : 0);
     const displayExp = Math.round(baseExp * totalMult);
-    setBattleResult({ gainExp:displayExp, gainElk, comboMult:battleResultBonus.comboMult??1.0, gradeMult:battleResultBonus.gradeMult??1.0 });
-    setFade(true);
-    setTimeout(() => { setMultiEnemies(null); setPhase("victory"); setFade(false); }, 300);
-  }, [defeat, mhp, mmp, battleNext, sceneIdx, showNotif, battleEnemy, battleResultBonus, multiEnemies,currentBattleTotalTurns,currentBattleComboTurns,currentBattleElemBreaks,currentEnemyType]);
-
+    // ドロップ情報を収集してリザルトに渡す
+    const dropInfo = (() => {
+      if (!mapScanPendingDropRef.current) return [];
+      const { dropKey, winCount } = mapScanPendingDropRef.current;
+      const table = MAP_SCAN_DROPS[dropKey];
+      if (!table) return [];
+      const isRare = winCount % 3 === 0;
+      const drop = isRare ? table.rare : table.normal;
+      if (!drop) return [];
+      if (drop.type === "elk") return [{ label:`${isRare?"💎":"💰"} ${drop.amount} ELK`, isRare }];
+      if (drop.type === "item") return [{ label:`${isRare?"💎":"📦"} ${drop.item.name}`, isRare }];
+      return [];
+    })();
+    setBattleResult({ gainExp:displayExp, gainElk, comboMult:battleResultBonus.comboMult??1.0, gradeMult:battleResultBonus.gradeMult??1.0, dropItems:dropInfo });
+        setFade(true);
+        setTimeout(() => { setMultiEnemies(null); setPhase("victory"); setFade(false); }, 300);
+      }, [defeat, mhp, mmp, battleNext, sceneIdx, showNotif, battleEnemy, battleResultBonus, multiEnemies,currentBattleTotalTurns,currentBattleComboTurns,currentBattleElemBreaks,currentEnemyType]);
+  // ── MapScanドロップテーブル ─────────────────────────────────────────────
+  const MAP_SCAN_DROPS = {
+    seagull:       { normal:{ type:"elk", amount:20 },  rare:{ type:"item", item:{ id:"copper_sword", name:"銅の剣", type:"weapon", desc:"物理ATK +6", patk:6, pdef:0, spd:0 } } },
+    shamerlot:     { normal:{ type:"elk", amount:30 },  rare:{ type:"elk", amount:90 } },
+    shamerlot_lv3: { normal:{ type:"elk", amount:50 },  rare:{ type:"elk", amount:150 } },
+    shamerlot_lv5: { normal:{ type:"elk", amount:80 },  rare:{ type:"elk", amount:240  } },
+    moocat:        { normal:{ type:"elk", amount:55 },  rare:{ type:"item", item:{ id:"baroque_sword", name:"バロックソード", type:"weapon", desc:"物理ATK +11", patk:11, pdef:0, spd:0 } } },
+    mandragora:    { normal:{ type:"elk", amount:65 },  rare:{ type:"item", item:{ id:"baroque_armor", name:"バロックアーマー", type:"armor", desc:"物理DEF +11", patk:0, pdef:11, spd:0 } } },
+    cocatris:      { normal:{ type:"elk", amount:88 },  rare:{ type:"item", item:{ id:"baroque_ring", name:"バロックリング", type:"accessory", desc:"物理ATK +2 / 物理DEF +2", patk:2, pdef:2, spd:0 } } },
+  };
   // ──────────── RENDER ────────────
   const sc = SCENES[sceneIdx] || SCENES[0];
   const dl_cur = sc.dl[dlIdx] || sc.dl[0] || {};
@@ -3876,7 +3919,11 @@ export default function ArcadiaCh2() {
       isFanfareRef.current = false;
       setFade(true);
       setTimeout(() => {
-        if (victoryNextSc !== null) {
+        if (victoryNextSc === "mapscan") {
+          setOverlay("pb");
+          setPbTab(2);
+          setPhase("game");
+        } else if (victoryNextSc !== null) {
           setSceneIdx(victoryNextSc);
           setDlIdx(0);
           setPhase("game");
@@ -3991,21 +4038,88 @@ export default function ArcadiaCh2() {
               <span style={{fontSize:14,color:C.accent,fontFamily:"'Share Tech Mono',monospace"}}>{expToNext !== null ? expToNext : "MAX"}</span>
             </div>
 
-            {/* ドロップアイテム（将来実装 -- 今は「なし」表示） */}
+            {/* ドロップ */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0"}}>
               <span style={{fontSize:11,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>ドロップ</span>
-              <span style={{fontSize:12,color:dropItems.length > 0 ? C.accent2 : C.muted,fontFamily:"'Share Tech Mono',monospace"}}>
-                {dropItems.length > 0 ? dropItems.join(" / ") : "なし"}
+              <span style={{fontSize:12,fontFamily:"'Share Tech Mono',monospace",
+                color: dropItems.length > 0 ? (dropItems.some(d=>d.isRare) ? C.gold : C.accent2) : C.muted
+              }}>
+                {dropItems.length > 0 ? dropItems.map(d=>d.label).join(" / ") : "なし"}
               </span>
             </div>
           </div>
 
-          {/* ボタン */}
-          <VictoryButton onFanfareStart={handleFanfareStart} onProceed={handleProceed} />
-        </div>
-      </div>
-    );
-  }
+         {/* ボタン */}
+         <VictoryButton onFanfareStart={handleFanfareStart} onProceed={handleProceed} />
+
+          {/* 連戦ボタン（MapScanバトルのみ表示） */}
+          {victoryNextSc === "mapscan" && (() => {
+            const _eType = currentEnemyType;
+            const _ed    = battleDefs[_eType];
+            if (!_ed) return null;
+            return (
+              <div style={{marginTop:12}}>
+                <button
+                  onClick={() => {
+                    if (fanfareRef.current) { fanfareRef.current.pause(); fanfareRef.current = null; }
+                    isFanfareRef.current = false;
+                    // ドロップ付与（前回戦闘分）
+                    if (mapScanPendingDropRef.current) {
+                      const { dropKey, winCount } = mapScanPendingDropRef.current;
+                      mapScanPendingDropRef.current = null;
+                      const table = MAP_SCAN_DROPS[dropKey];
+                      if (table) {
+                        const isRare = winCount % 3 === 0;
+                        const drop = isRare ? table.rare : table.normal;
+                        if (drop) {
+                          if (drop.type === "elk") { setElk(e => e + drop.amount); showNotif(`${isRare?"💎 レア！ ":"💰 "}${drop.amount} ELK！`); }
+                          else if (drop.type === "item") { gainItem(drop.item); }
+                        }
+                      }
+                    }
+                    // 連戦開始
+                    const _wins = (mapScanWinCount[_eType] ?? 0) + 1;
+                    setMapScanWinCount(prev => ({ ...prev, [_eType]: _wins }));
+                    mapScanPendingDropRef.current = { dropKey: _eType, winCount: _wins };
+                    setBattleEnemy(_ed);
+                    setCurrentEnemyType(_eType);
+                    setEnemyHp(_ed.maxHp);
+                    setBtlLogs([`⚔ ${_ed.name} との戦闘が始まった！`]);
+                    setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
+                    setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
+                    setEnemyTurnIdx(0); setEnemyNextAction((_ed.pattern||["atk"])[0]);
+                    setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+                    const pKeys = BATTLE_PARTY_MAP[_eType] || DEFAULT_PARTY_KEYS;
+                    setCurrentPartyKeys(pKeys);
+                    const pi = buildPartyInit(pKeys);
+                    setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp);
+                    setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
+                    setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);
+                    setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0);
+                    setSleepCooldown(0); setSleepActive(0); setOverhealCooldown(0);
+                    setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });
+                    setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0);
+                    setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0);
+                    setWaterSphereCooldown(0); setWaterSphereActive(0);
+                    setMultiEnemies(null);
+                    setBattleNext("mapscan");
+                    setFade(true);
+                    setTimeout(() => { setPhase("battle"); setFade(false); }, 300);
+                  }}
+                  style={{padding:"10px 36px",background:"transparent",border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:13,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",transition:"all 0.3s"}}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${C.accent2}22`; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  {_ed.em} 連戦 ▶
+                </button>
+              </div>
+            );
+          })()}
+
+          </div>
+          </div>
+          );
+          }
 
 
   // ============================================================
@@ -5898,6 +6012,12 @@ export default function ArcadiaCh2() {
                       const canFight = true;
                       const expNote = lvDiff >= 1 ? `EXP ×${lvDiff>=3?2.0:lvDiff===2?1.5:1.2}` : lvDiff === 0 ? "EXP 等倍" : "経験値なし";
                       const expColor = lvDiff >= 1 ? C.accent2 : lvDiff === 0 ? C.muted : C.red;
+                      const dropTable = MAP_SCAN_DROPS[key];
+                      const wins = mapScanWinCount[key] ?? 0;
+                      const nextWins = wins + 1;
+                      const nextIsRare = nextWins % 3 === 0;
+                      const nextDrop = dropTable ? (nextIsRare ? dropTable.rare : dropTable.normal) : null;
+                      const nextDropLabel = !nextDrop ? "" : nextDrop.type === "elk" ? `${nextDrop.amount} ELK` : nextDrop.item.name;
                       const rowStyle = { display:"flex", alignItems:"center", gap:6, padding:"7px 8px", marginBottom:4, background:C.panel, border:`1px solid ${C.border}`, borderRadius:2 };
                       return (
                         <div key={key} style={rowStyle}>
@@ -5907,6 +6027,32 @@ export default function ArcadiaCh2() {
                             <div style={{color:C.muted,fontSize:9}}>{note} &nbsp;
                               <span style={{color:expColor}}>{expNote}</span>
                             </div>
+                            {dropTable && (
+                              <div style={{marginTop:3,display:"flex",flexDirection:"column",gap:1}}>
+                                {/* 通常ドロップ（毎回） */}
+                                <div style={{fontSize:8,fontFamily:"'Share Tech Mono',monospace",display:"flex",gap:4,alignItems:"center"}}>
+                                  <span style={{color:C.muted}}>毎回:</span>
+                                  <span style={{color:C.accent2}}>
+                                    {dropTable.normal.type==="elk" ? `💰 ${dropTable.normal.amount} ELK` : `📦 ${dropTable.normal.item.name}`}
+                                  </span>
+                                </div>
+                                {/* レアドロップ（3回ごと） */}
+                                <div style={{fontSize:8,fontFamily:"'Share Tech Mono',monospace",display:"flex",gap:4,alignItems:"center"}}>
+                                  <span style={{color:C.muted}}>3回毎:</span>
+                                  <span style={{color:C.gold}}>
+                                    {dropTable.rare.type==="elk" ? `💎 ${dropTable.rare.amount} ELK` : `💎 ${dropTable.rare.item.name}`}
+                                  </span>
+                                </div>
+                                {/* 次回ドロップ予告 */}
+                                <div style={{fontSize:8,fontFamily:"'Share Tech Mono',monospace",display:"flex",gap:4,alignItems:"center"}}>
+                                  <span style={{color:C.muted}}>次回:</span>
+                                  <span style={{color: nextIsRare ? C.gold : C.accent2}}>
+                                    {nextIsRare ? "💎 " : "💰 "}{nextDropLabel}
+                                  </span>
+                                  <span style={{color:`${C.muted}88`}}>({wins}勝)</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <button onClick={() => {
                             setOverlay(null);
@@ -5920,7 +6066,10 @@ export default function ArcadiaCh2() {
                             setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
                             setBattleResultBonus({ comboMult: 1.0, gradeMult: 1.0 });
                             setEnemyTurnIdx(0); setEnemyNextAction((ed.pattern||["atk"])[0]);
-                            setBattleNext(sceneIdx);
+                            const _curWins = (mapScanWinCount[key] ?? 0) + 1;
+                            setMapScanWinCount(prev => ({ ...prev, [key]: _curWins }));
+                            mapScanPendingDropRef.current = { dropKey: key, winCount: _curWins };
+                            setBattleNext("mapscan");
                             setPhase("battle");
                           }} style={{padding:"4px 10px",background:`${C.accent}11`,border:`1px solid ${C.accent}44`,color:C.accent,fontSize:10,cursor:"pointer",letterSpacing:1,flexShrink:0}}>
                             戦う
@@ -6042,9 +6191,9 @@ export default function ArcadiaCh2() {
         )}
         {pbTab === 4 && (() => {
   const SHOP_ITEMS = [
-    { id:"baroque_sword",  name:"バロックソード",  type:"weapon",    desc:"物理ATK +11", patk:11, pdef:0,  price:200 },
-    { id:"baroque_armor",  name:"バロックアーマー", type:"armor",     desc:"物理DEF +11", patk:0,  pdef:11, price:280 },
-    { id:"baroque_ring",   name:"バロックリング",   type:"accessory", desc:"物理ATK +2 / 物理DEF +2", patk:2, pdef:2, price:160 },
+    { id:"baroque_sword",  name:"バロックソード",  type:"weapon",    desc:"物理ATK +11", patk:11, pdef:0,  price:150 },
+    { id:"baroque_armor",  name:"バロックアーマー", type:"armor",     desc:"物理DEF +11", patk:0,  pdef:11, price:150 },
+    { id:"baroque_ring",   name:"バロックリング",   type:"accessory", desc:"物理ATK +2 / 物理DEF +2", patk:2, pdef:2, price:120 },
   ];
   return (
     <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
@@ -6099,6 +6248,10 @@ export default function ArcadiaCh2() {
                           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
                             <span style={{fontSize:9,color:typeColor,border:`1px solid ${typeColor}55`,borderRadius:2,padding:"1px 5px",flexShrink:0}}>{typeLabel}</span>
                             <span style={{fontSize:12,color:C.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</span>
+                            {(item.quantity ?? 1) > 1 && (
+                              <span style={{fontSize:10,color:C.gold,fontFamily:"'Share Tech Mono',monospace",flexShrink:0,marginLeft:4}}>×{item.quantity}</span>
+                            )}
+
                           </div>
                           {item.desc && (
                             <div style={{fontSize:9,color:C.muted,lineHeight:1.5}}>{item.desc}</div>
