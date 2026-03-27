@@ -861,7 +861,7 @@ function VictoryButton({ onFanfareStart, onProceed }) {
 
 
 // @@SECTION:SAVE_LOAD
-// セーブJSON: { version, chapter, savedAt, player:{hp,mhp,mp,mmp,elk,lv,exp,weapon,weaponPatk,statPoints,statAlloc,hasPb,hasMapScan,inCom} }
+// セーブJSON: { version, chapter, savedAt, player:{hp,mhp,mp,mmp,elk,lv,exp,weapon,weaponPatk,statPoints,statAlloc,hasPb,hasMapScan,inCom,hasBbs} }
 
 // ============================================================
 // @@SECTION:SCENES_CH2 -- 第二章シナリオデータ
@@ -1193,8 +1193,7 @@ const SCENES = [
     { sp:"ナレーション", t:"カウンターの女性が丁寧に説明してくれた。\n\nシティＢＢＳ──ギルド運営の冒険者交流掲示板。\n申し込み料：100ELK。\n\n項目：攻略 / 雑談 / パーティのお誘い\n　　　アイテムトレード / 人員募集" },
     { sp:"SYSTEM", t:"── CityBBS 申し込み ──\n\n100 ELK を支払いました\n\n✅ CityBBS へのアクセスが\n　 解放されました" },
     { sp:"ナレーション", t:"広場のベンチでPBを開き、攻略掲示板を検索。\nキーワード：Lv上げ＋Lv5\n\n「Lv5からはセパレイトパーティでの\nコカトリス狩りが主流。\nコカ狩りってのは最初にぶち当たる壁だよ」" },
-    { sp:"エルツ", t:"「最初の壁か......\nよし、パーティのお誘い掲示板を見てみよう」" },
-    { sp:"SYSTEM", t:"── CityBBS パーティのお誘い ──\n\nLv検索: Lv5 / 時間検索: 今日\n検索結果：7件\n\n●Cocatris狩りのお誘い\n　Aries（Lv5 水術士）\n　13:00〜 3〜4名予定\n　セパ経験問わず、獲物等分" },
+    { sp:"エルツ", t:"「最初の壁か......\nよし、パーティのお誘い掲示板を見てみよう」",openBbs:true },
     { sp:"エルツ", t:"「よし、経験者の輪に割り込んだ方が\n覚えが早いかもな」\n\nエルツは返信を書き込んだ。\n「13:00に西門か。もうすぐだな」\n\n踊りだす胸の鼓動──\nオンラインゲームの醍醐味は冒険者との触れ合い。\nそこにはソロでは味わえない可能性が広がっている。", next:24 }
   ]},
 
@@ -1220,7 +1219,7 @@ const SCENES = [
     { sp:"アリエス", t:"「エルツさん、良かったらフレンドになってくれませんか？」" },
     { sp:"ナレーション", t:"フレンド申請を受諾するエルツ。"},
     { sp:"ナレーション",t:"翌朝──今度はエルツ自らが\nCityBBSでパーティ募集を立てた。", loc:"スティアルーフ B&B宿屋", sprites:["🧑"] },
-    { sp:"SYSTEM", t:"── CityBBS パーティのお誘い ──\n\n□投稿者 Elz / コカ狩りのお誘い\n当方 長剣使い。\n9:00〜12:00 コカ狩り予定。\n3名で先着2名様。初心者・熟練者問わず。\n\n□返信 Toma（槍/Lv5）参加希望\n□返信 Pelsia（弓/Lv5 EXP91）参加希望☆\n□返信 Ponkiti うぁぁ一歩出遅れたぁｗｗｗ" ,loc:"スティアルーフ B&B宿屋", sprites:["🧑"]},
+    { sp:"SYSTEM", t:"── CityBBS パーティのお誘い ──\n\n□投稿者 Elz " ,loc:"スティアルーフ B&B宿屋", sprites:["🧑"],openBbs:true},
     { sp:"ナレーション", t:"待ち合わせの西門に現れたのは\nツインテールの白銀髪の女の子──ペルシア。\n\n弓を肩に掛け、可愛らしく頭を下げる。\n「お待たせしてすみません。ペルシアです。よろしくお願いします」",loc:"スティアルーフ 西門", sprites:["🧑","🤫","🌸"] },
     { sp:"ナレーション",t:"平原には数多くのコカトリスが群れていた", loc:"エイビス平原 西", sprites:["🧑","🤫","🌸"]},
     { sp:"トマ", t:"「う～ん、緊張するなぁ。僕は戦闘があまり得意でなくてね。\n君たちの足を引っ張らないといいんだが。」" , sprites:["🧑","🤫","🌸"]},
@@ -1398,6 +1397,7 @@ export default function ArcadiaCh2() {
   const [bbsData,    setBbsData   ] = useState(null);  // null=未取得
   const [bbsLoading, setBbsLoading] = useState(false);
   const [bbsError,   setBbsError  ] = useState(false);
+  const [bbsForceOpen, setBbsForceOpen] = useState(false);
   // エネミーパターンをランタイムで編集可能なステートとして保持
   const [battleDefs, setBattleDefs] = useState(INITIAL_BATTLE_DEFS);
   const [sceneIdx, setSceneIdx] = useState(0);
@@ -1442,6 +1442,7 @@ export default function ArcadiaCh2() {
   const [statAlloc, setStatAlloc] = useState({patk:10,pdef:10,matk:10,spd:10});
   const [hasPb, setHasPb] = useState(true);
   const [hasMapScan, setHasMapScan] = useState(true);
+  const [hasBbs, setHasBbs] = useState(false);
   const [inCom, setInCom] = useState(true);
   const [showWGInvite, setShowWGInvite] = useState(false);
   const [wgInviteData, setWgInviteData] = useState(null);
@@ -2088,6 +2089,14 @@ export default function ArcadiaCh2() {
       if (ed) handleExpGain(ed.exp, ed.lv);
     }
     if (dl.joinCom) setInCom(true);
+    if (dl.openBbs) {
+      setHasBbs(true);
+      setTimeout(() => {
+        setOverlay("pb");
+        setPbTab(6);
+        setBbsForceOpen(true);
+      },1600);
+    }
 
     // Battle フラグあり → テキストを表示してタップを待つ（onTapDlg でバトル突入）
     // ※ showDl からは即バトル突入しない。タップ・オートで onTapDlg が処理する。
@@ -4203,6 +4212,7 @@ export default function ArcadiaCh2() {
     setHasPb(true);
     setHasMapScan(true);
     setInCom(p.inCom ?? false);
+    setHasBbs(p.hasBbs ?? false);
     // 第一章からのシナリオフルコンボ引き継ぎ（フィールドがなければ0）
     setScenarioFullCombo(sd.scenarioCombo ?? 0);
   };
@@ -4577,7 +4587,7 @@ export default function ArcadiaCh2() {
         weapon, weaponPatk,
         statPoints,
         statAlloc: { ...statAlloc },
-        hasPb, hasMapScan, inCom,
+        hasPb, hasMapScan, inCom, hasBbs,
       },
       scenarioCombo: scenarioFullCombo,
     });
@@ -4596,7 +4606,7 @@ export default function ArcadiaCh2() {
       setLv(1); setExp(0);
       setWeapon("銅の短剣"); setWeaponPatk(3);
       setStatPoints(0); setStatAlloc({patk:10,pdef:10,matk:10,spd:10});
-      setHasPb(false); setHasMapScan(false); setInCom(false);
+      setHasPb(false); setHasMapScan(false); setInCom(false); setHasBbs(false);
     };
 
     // ── endPhase: "rank" → "save" ───────────────────────────────────────────
@@ -5969,7 +5979,7 @@ export default function ArcadiaCh2() {
           </div>
           {/* Tabs */}
           <div style={{display:"flex",borderBottom:`1px solid ${C.border}`}}>
-            {["STATUS","MAIL","MAP","ANALYSIS","Shop","Inventory","CityBBS"].map((tab,i) => (
+            {["STATUS","MAIL","MAP","ANALYSIS","Shop","Inventory",...(hasBbs ? ["CityBBS"] : [])].map((tab,i) => (
               <button key={i} onClick={() => setPbTab(i)} style={{flex:1,padding:"8px 4px",background:"transparent",border:"none",borderBottom:pbTab===i?`2px solid ${C.accent}`:"2px solid transparent",color:pbTab===i?C.accent:C.muted,fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
                 {tab}
               </button>
@@ -6513,6 +6523,8 @@ export default function ArcadiaCh2() {
                 );
               })()}
               {pbTab === 6 && (() => {
+  // 強制表示フラグのリセット
+  if (bbsForceOpen) setBbsForceOpen(false);
   const BBS_URL = "https://superapolon.github.io/Arcadia_Assets/bbs/ch2.json";
 
   const visibleThreads = (bbsData ?? []).filter(t => sceneIdx >= (t.unlockAt ?? 0));
