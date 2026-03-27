@@ -1572,11 +1572,25 @@ export default function ArcadiaCh2() {
    const [eltzSpdBonus, setEltzSpdBonus] = useState(0);
    const currentBattleCmdCountsRef = useRef({});
    // ── 所持品ステート ──────────────────────────────────────────────────────
-   const [inventory, setInventory] = useState([
-    { id:"copper_sword",   name:"銅の剣",        type:"weapon",    desc:"物理ATK +6",  patk:6,  pdef:0, spd:0, quantity:1 },
-    { id:"travelers_coat", name:"旅人の服",       type:"armor",     desc:"物理DEF +3",  patk:0,  pdef:3, spd:0, quantity:1 },
-    { id:"beginner_cert",  name:"初心者講習の証", type:"accessory", desc:"物理ATK・物理DEF +1", patk:1, pdef:1, spd:0, quantity:1 },
-  ]);
+    // ── 品質ステータス計算ヘルパー ─────────────────────────────────────
+    const QUALITY_RANK = { N:0, R:1, SR:2, SSR:3 };
+    const QUALITY_MULT = 1.125;
+    const applyQuality = (baseVal, quality) => {
+      const rank = QUALITY_RANK[quality] ?? 0;
+      if (baseVal === 0) return 0;
+      return Math.ceil(baseVal * Math.pow(QUALITY_MULT, rank));
+    };
+    // アイテムの実効ステータスを品質込みで返す
+    const effectiveStats = (item) => ({
+      patk: applyQuality(item.basePatk ?? item.patk, item.quality ?? "N"),
+      pdef: applyQuality(item.basePdef ?? item.pdef, item.quality ?? "N"),
+    });
+
+    const [inventory, setInventory] = useState([
+      { id:"copper_sword",   name:"銅の剣",        type:"weapon",    basePatk:6,  basePdef:0, spd:0, quality:"N", quantity:1 },
+      { id:"travelers_coat", name:"旅人の服",       type:"armor",     basePatk:0,  basePdef:3, spd:0, quality:"N", quantity:1 },
+      { id:"beginner_cert",  name:"初心者講習の証", type:"accessory", basePatk:1,  basePdef:1, spd:0, quality:"N", quantity:1 },
+    ]);
   // { id:string, name:string, type:"weapon"|"armor"|"accessory", desc:string }
   // ── 装備ステート ────────────────────────────────────────────────────────
   const [equippedWeapon,    setEquippedWeapon   ] = useState(null);
@@ -2016,16 +2030,17 @@ export default function ArcadiaCh2() {
   }, []);
 
   const gainItem = useCallback((item) => {
+    const q = item.quality ?? "N";
     setInventory(prev => {
-      const existing = prev.find(i => i.id === item.id);
+      const existing = prev.find(i => i.id === item.id && (i.quality ?? "N") === q);
       if (existing) {
         if (existing.quantity >= 999) { showNotif(`${item.name} はこれ以上持てません`); return prev; }
-        showNotif(`📦 ${item.name} を入手した！ (×${existing.quantity + 1})`);
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+        showNotif(`📦 ${item.name}【${q}】を入手した！ (×${existing.quantity + 1})`);
+        return prev.map(i => (i.id === item.id && (i.quality ?? "N") === q) ? { ...i, quantity: i.quantity + 1 } : i);
       }
       if (prev.length >= 100) { showNotif("所持品がいっぱいです！"); return prev; }
-      showNotif(`📦 ${item.name} を入手した！`);
-      return [...prev, { ...item, quantity: 1 }];
+      showNotif(`📦 ${item.name}【${q}】を入手した！`);
+      return [...prev, { ...item, quality: q, quantity: 1 }];
     });
   }, [showNotif]);
 
@@ -2564,8 +2579,13 @@ export default function ArcadiaCh2() {
     if (!enemies) return;
 
     const spdBuff = partySpdBuff > 0 ? 3 : 0;
-    const equipPatk = (equippedWeapon?.patk ?? 0) + (equippedArmor?.patk ?? 0) + (equippedAccessory?.patk ?? 0);
-    const equipPdef = (equippedWeapon?.pdef ?? 0) + (equippedArmor?.pdef ?? 0) + (equippedAccessory?.pdef ?? 0);
+  // 修正後（2567行目・3171行目 共通）
+  const equipPatk = (equippedWeapon    ? effectiveStats(equippedWeapon).patk    : 0)
+                  + (equippedArmor     ? effectiveStats(equippedArmor).patk     : 0)
+                  + (equippedAccessory ? effectiveStats(equippedAccessory).patk : 0);
+  const equipPdef = (equippedWeapon    ? effectiveStats(equippedWeapon).pdef    : 0)
+                  + (equippedArmor     ? effectiveStats(equippedArmor).pdef     : 0)
+                  + (equippedAccessory ? effectiveStats(equippedAccessory).pdef : 0);
     const defBonus = Math.floor((statAlloc.pdef + equipPdef - 10) * 1.2);
     const atkBonus = weaponPatk + Math.floor((statAlloc.patk + equipPatk - 10) * 1.5) + bikerAtkBonus;
     // コンボ攻撃力ボーナス：10ヒットごとに×1.1（累積）
@@ -3168,8 +3188,13 @@ export default function ArcadiaCh2() {
     let curPartyHp = { ...partyHp };
     let curPartyMp = { ...partyMp }; // 仲間MP（ターン内で変動）
 
-    const equipPatk = (equippedWeapon?.patk ?? 0) + (equippedArmor?.patk ?? 0) + (equippedAccessory?.patk ?? 0);
-    const equipPdef = (equippedWeapon?.pdef ?? 0) + (equippedArmor?.pdef ?? 0) + (equippedAccessory?.pdef ?? 0);
+    // 修正後（2567行目・3171行目 共通）
+    const equipPatk = (equippedWeapon    ? effectiveStats(equippedWeapon).patk    : 0)
+                    + (equippedArmor     ? effectiveStats(equippedArmor).patk     : 0)
+                    + (equippedAccessory ? effectiveStats(equippedAccessory).patk : 0);
+    const equipPdef = (equippedWeapon    ? effectiveStats(equippedWeapon).pdef    : 0)
+                    + (equippedArmor     ? effectiveStats(equippedArmor).pdef     : 0)
+                    + (equippedAccessory ? effectiveStats(equippedAccessory).pdef : 0);
     const defBonus = Math.floor((statAlloc.pdef + equipPdef - 10) * 1.2);
     const atkBonus = weaponPatk + Math.floor((statAlloc.patk + equipPatk - 10) * 1.5) + bikerAtkBonus;
     // コンボ攻撃力ボーナス：10ヒットごとに×1.1（累積）
@@ -3841,13 +3866,13 @@ export default function ArcadiaCh2() {
       }, [defeat, mhp, mmp, battleNext, sceneIdx, showNotif, battleEnemy, battleResultBonus, multiEnemies,currentBattleTotalTurns,currentBattleComboTurns,currentBattleElemBreaks,currentEnemyType]);
   // ── MapScanドロップテーブル ─────────────────────────────────────────────
   const MAP_SCAN_DROPS = {
-    seagull:       { normal:{ type:"elk", amount:20 },  rare:{ type:"item", item:{ id:"copper_sword", name:"銅の剣", type:"weapon", desc:"物理ATK +6", patk:6, pdef:0, spd:0 } } },
+    seagull:       { normal:{ type:"elk", amount:20 },  rare:{ type:"item", item:{ id:"copper_sword", name:"銅の剣", type:"weapon", basePatk:6,  basePdef:0,  spd:0, quality:"N"  } } },
     shamerlot:     { normal:{ type:"elk", amount:30 },  rare:{ type:"elk", amount:90 } },
     shamerlot_lv3: { normal:{ type:"elk", amount:50 },  rare:{ type:"elk", amount:150 } },
     shamerlot_lv5: { normal:{ type:"elk", amount:80 },  rare:{ type:"elk", amount:240  } },
-    moocat:        { normal:{ type:"elk", amount:55 },  rare:{ type:"item", item:{ id:"baroque_sword", name:"バロックソード", type:"weapon", desc:"物理ATK +11", patk:11, pdef:0, spd:0 } } },
-    mandragora:    { normal:{ type:"elk", amount:65 },  rare:{ type:"item", item:{ id:"baroque_armor", name:"バロックアーマー", type:"armor", desc:"物理DEF +11", patk:0, pdef:11, spd:0 } } },
-    cocatris:      { normal:{ type:"elk", amount:88 },  rare:{ type:"item", item:{ id:"baroque_ring", name:"バロックリング", type:"accessory", desc:"物理ATK +2 / 物理DEF +2", patk:2, pdef:2, spd:0 } } },
+    moocat:        { normal:{ type:"elk", amount:55 },  rare:{ type:"item", item:{ id:"baroque_sword", name:"バロックソード", type:"weapon", basePatk:11,  basePdef:0,  spd:0, quality:"N"  } } },
+    mandragora:    { normal:{ type:"elk", amount:65 },  rare:{ type:"item", item:{ id:"baroque_armor", name:"バロックアーマー", type:"armor", basePatk:0,  basePdef:11,  spd:0, quality:"N"  } } },
+    cocatris:      { normal:{ type:"elk", amount:88 },  rare:{ type:"item", item:{ id:"baroque_ring", name:"バロックリング", type:"accessory", basePatk:2,  basePdef:2,  spd:0, quality:"N"  } } },
   };
   // ──────────── RENDER ────────────
   const sc = SCENES[sceneIdx] || SCENES[0];
@@ -5948,13 +5973,13 @@ export default function ArcadiaCh2() {
                   ["防具",     equippedArmor     ? equippedArmor.name     : "なし"],
                   ["装飾",     equippedAccessory ? equippedAccessory.name : "なし"],
                   ["物理ATK",  weaponPatk + statAlloc.patk
-                               + (equippedWeapon?.patk    ?? 0)
-                               + (equippedArmor?.patk     ?? 0)
-                               + (equippedAccessory?.patk ?? 0)],
-                  ["物理DEF",  statAlloc.pdef
-                               + (equippedWeapon?.pdef    ?? 0)
-                               + (equippedArmor?.pdef     ?? 0)
-                               + (equippedAccessory?.pdef ?? 0)],
+                  + (equippedWeapon    ? effectiveStats(equippedWeapon).patk    : 0)
+                  + (equippedArmor     ? effectiveStats(equippedArmor).patk     : 0)
+                  + (equippedAccessory ? effectiveStats(equippedAccessory).patk : 0)],
+                   ["物理DEF",  statAlloc.pdef
+                  + (equippedWeapon    ? effectiveStats(equippedWeapon).pdef    : 0)
+                  + (equippedArmor     ? effectiveStats(equippedArmor).pdef     : 0)
+                  + (equippedAccessory ? effectiveStats(equippedAccessory).pdef : 0)],
                   ...(statPoints>0?[["未振り", `${statPoints} pt`]]:[]),
                   ...(inCom?[["コミュニティ","White Garden"]]:[]),
                 ].map(([k,v]) => (
@@ -6191,112 +6216,189 @@ export default function ArcadiaCh2() {
         )}
         {pbTab === 4 && (() => {
   const SHOP_ITEMS = [
-    { id:"baroque_sword",  name:"バロックソード",  type:"weapon",    desc:"物理ATK +11", patk:11, pdef:0,  price:150 },
-    { id:"baroque_armor",  name:"バロックアーマー", type:"armor",     desc:"物理DEF +11", patk:0,  pdef:11, price:150 },
-    { id:"baroque_ring",   name:"バロックリング",   type:"accessory", desc:"物理ATK +2 / 物理DEF +2", patk:2, pdef:2, price:120 },
+    { id:"baroque_sword",  name:"バロックソード",  type:"weapon",    basePatk:11, basePdef:0,  price:200 },
+    { id:"baroque_armor",  name:"バロックアーマー", type:"armor",     basePatk:0, basePdef:11, price:280 },
+    { id:"baroque_ring",   name:"バロックリング",   type:"accessory", basePatk:2, basePdef:2, price:150 },
   ];
   return (
     <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
       <div style={{color:C.accent,marginBottom:8,letterSpacing:2,fontSize:11}}>── SHOP ──</div>
       <div style={{fontSize:10,color:C.muted,marginBottom:12}}>所持ELK: <span style={{color:C.gold}}>{elk}</span></div>
       {SHOP_ITEMS.map(item => {
-        const owned = inventory.some(i => i.id === item.id);
         const canAfford = elk >= item.price;
+        const ownedQty = inventory.filter(i => i.id === item.id).reduce((s, i) => s + (i.quantity ?? 1), 0);
         return (
-          <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,background:C.panel,border:`1px solid ${owned ? C.border : C.border}`,borderRadius:4,padding:"10px 12px",marginBottom:8}}>
+          <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 12px",marginBottom:8}}>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:12,color:owned ? C.muted : C.white,marginBottom:2}}>{item.name}</div>
+              <div style={{fontSize:12,color:C.white,marginBottom:2}}>
+                {item.name}
+                {ownedQty > 0 && (
+                  <span style={{fontSize:10,color:C.gold,marginLeft:8,fontFamily:"'Share Tech Mono',monospace"}}>所持 ×{ownedQty}</span>
+                )}
+              </div>
               <div style={{fontSize:10,color:C.muted}}>{item.desc}</div>
             </div>
             <div style={{fontSize:12,color:C.gold,fontFamily:"'Share Tech Mono',monospace",flexShrink:0,marginRight:8}}>{item.price} ELK</div>
-            {owned ? (
-              <div style={{fontSize:10,color:C.muted,flexShrink:0,border:`1px solid ${C.border}`,borderRadius:3,padding:"4px 10px"}}>購入済</div>
-            ) : (
-              <button
-                disabled={!canAfford}
-                onClick={() => {
-                  if (!canAfford) return;
-                  setElk(e => e - item.price);
-                  gainItem({ id:item.id, name:item.name, type:item.type, desc:item.desc, patk:item.patk, pdef:item.pdef });
-                }}
-                style={{flexShrink:0,padding:"5px 12px",background:canAfford?`${C.accent2}1a`:"transparent",border:`1px solid ${canAfford?C.accent2:C.border}`,color:canAfford?C.accent2:C.muted,fontSize:11,cursor:canAfford?"pointer":"not-allowed",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",transition:"all 0.2s"}}
-                onMouseEnter={e=>{ if(canAfford) e.currentTarget.style.background=`${C.accent2}33`; }}
-                onMouseLeave={e=>{ if(canAfford) e.currentTarget.style.background=`${C.accent2}1a`; }}
-              >購入</button>
-            )}
+            <button
+              disabled={!canAfford}
+              onClick={() => {
+                if (!canAfford) return;
+                setElk(e => e - item.price);
+                gainItem({ id:item.id, name:item.name, type:item.type, basePatk:item.basePatk, basePdef:item.basePdef, quality:"N" });
+              }}
+              style={{flexShrink:0,padding:"5px 12px",background:canAfford?`${C.accent2}1a`:"transparent",border:`1px solid ${canAfford?C.accent2:C.border}`,color:canAfford?C.accent2:C.muted,fontSize:11,cursor:canAfford?"pointer":"not-allowed",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",transition:"all 0.2s"}}
+              onMouseEnter={e=>{ if(canAfford) e.currentTarget.style.background=`${C.accent2}33`; }}
+              onMouseLeave={e=>{ if(canAfford) e.currentTarget.style.background=`${C.accent2}1a`; }}
+            >購入</button>
           </div>
         );
       })}
     </div>
   );
 })()}
-               {pbTab === 5 && (
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
-                <div style={{color:C.accent,marginBottom:8,letterSpacing:2,fontSize:11}}>── INVENTORY ──</div>
-                <div style={{fontSize:10,color:C.muted,marginBottom:12}}>
-                  {inventory.length} / 100 個
-                </div>
-                {inventory.length === 0 ? (
-                  <div style={{color:C.muted,fontSize:10,padding:"8px 0"}}>── 所持品なし ──</div>
-                ) : (
-                  inventory.map((item, idx) => {
-                    const typeColor = item.type === "weapon" ? C.accent2 : item.type === "armor" ? "#a78bfa" : C.gold;
-                    const typeLabel = item.type === "weapon" ? "武器" : item.type === "armor" ? "防具" : "装飾";
-                    return (
-                      <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 10px",marginBottom:5}}>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-                            <span style={{fontSize:9,color:typeColor,border:`1px solid ${typeColor}55`,borderRadius:2,padding:"1px 5px",flexShrink:0}}>{typeLabel}</span>
-                            <span style={{fontSize:12,color:C.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</span>
-                            {(item.quantity ?? 1) > 1 && (
-                              <span style={{fontSize:10,color:C.gold,fontFamily:"'Share Tech Mono',monospace",flexShrink:0,marginLeft:4}}>×{item.quantity}</span>
+              {pbTab === 5 && (() => {
+                const QUALITIES = ["N","R","SR","SSR"];
+                const Q_COLOR = { N:C.muted, R:"#4fc3f7", SR:"#ce93d8", SSR:C.gold };
+                const Q_NEXT  = { N:"R", R:"SR", SR:"SSR" };
+
+                // 品質ごとの個数集計（全アイテム合算）
+                const qCount = { N:0, R:0, SR:0, SSR:0 };
+                inventory.forEach(item => { qCount[item.quality ?? "N"] += (item.quantity ?? 1); });
+
+                // 精錬処理
+                const refine = (item, idx) => {
+                  const q = item.quality ?? "N";
+                  if (!Q_NEXT[q]) return; // SSRは精錬不可
+                  const nextQ = Q_NEXT[q];
+                  setInventory(prev => {
+                    const cur = prev[idx];
+                    if (!cur || (cur.quantity ?? 1) < 2) {
+                      showNotif(`精錬には同品質の${item.name}が2個必要です`);
+                      return prev;
+                    }
+                    const newQty = (cur.quantity ?? 1) - 2;
+                    // 同名・次品質スロットを探す
+                    const nextIdx = prev.findIndex((i, ii) => ii !== idx && i.id === item.id && (i.quality ?? "N") === nextQ);
+                    let next = newQty === 0
+                      ? prev.filter((_, ii) => ii !== idx)
+                      : prev.map((i, ii) => ii === idx ? { ...i, quantity: newQty } : i);
+                    if (nextIdx !== -1) {
+                      const adjustedIdx = newQty === 0 ? (nextIdx > idx ? nextIdx - 1 : nextIdx) : nextIdx;
+                      next = next.map((i, ii) => ii === adjustedIdx ? { ...i, quantity: (i.quantity ?? 1) + 1 } : i);
+                    } else {
+                      const newItem = { ...item, quality: nextQ, quantity: 1 };
+                      next = newQty === 0
+                        ? [...next, newItem]
+                        : [...next, newItem];
+                    }
+                    showNotif(`✨ ${item.name}【${q}×2】→【${nextQ}】に精錬！`);
+                    return next;
+                  });
+                };
+
+                const descOf = (item) => {
+                  const s = effectiveStats(item);
+                  const parts = [];
+                  if (s.patk > 0) parts.push(`物理ATK +${s.patk}`);
+                  if (s.pdef > 0) parts.push(`物理DEF +${s.pdef}`);
+                  return parts.join(" / ") || "―";
+                };
+
+                return (
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
+                    <div style={{color:C.accent,marginBottom:8,letterSpacing:2,fontSize:11}}>── INVENTORY ──</div>
+
+                    {/* 品質個数サマリー */}
+                    <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+                      {QUALITIES.map(q => (
+                        <div key={q} style={{padding:"3px 8px",border:`1px solid ${Q_COLOR[q]}55`,borderRadius:3,fontSize:10,color:Q_COLOR[q],background:`${Q_COLOR[q]}11`}}>
+                          【{q}】{qCount[q]}個
+                        </div>
+                      ))}
+                      <div style={{fontSize:10,color:C.muted,alignSelf:"center",marginLeft:"auto"}}>
+                        {inventory.length} / 100スロット
+                      </div>
+                    </div>
+
+                    {inventory.length === 0 ? (
+                      <div style={{color:C.muted,fontSize:10,padding:"8px 0"}}>── 所持品なし ──</div>
+                    ) : (
+                      inventory.map((item, idx) => {
+                        const q = item.quality ?? "N";
+                        const typeColor = item.type === "weapon" ? C.accent2 : item.type === "armor" ? "#a78bfa" : C.gold;
+                        const typeLabel = item.type === "weapon" ? "武器" : item.type === "armor" ? "防具" : "装飾";
+                        const isEquipped =
+                          (item.type === "weapon"    && equippedWeapon?.id    === item.id && (equippedWeapon?.quality ?? "N")    === q) ||
+                          (item.type === "armor"     && equippedArmor?.id     === item.id && (equippedArmor?.quality ?? "N")     === q) ||
+                          (item.type === "accessory" && equippedAccessory?.id === item.id && (equippedAccessory?.quality ?? "N") === q);
+                        const setFn =
+                          item.type === "weapon"    ? setEquippedWeapon    :
+                          item.type === "armor"     ? setEquippedArmor     :
+                                                      setEquippedAccessory;
+                        const canRefine = !!Q_NEXT[q] && (item.quantity ?? 1) >= 2;
+                        return (                       
+                        <div key={`${item.id}_${q}_${idx}`} style={{display:"flex",alignItems:"center",gap:6,
+                          background:`${Q_COLOR[q]}0d`,                                           // ① 背景色：品質カラー薄塗り
+                          border:`1px solid ${isEquipped ? C.accent2 : Q_COLOR[q]}88`,            // ② 枠線：品質カラー
+                          borderRadius:4,padding:"8px 10px",marginBottom:5}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2,flexWrap:"wrap"}}>
+                              <span style={{fontSize:9,color:typeColor,border:`1px solid ${typeColor}55`,borderRadius:2,padding:"1px 5px",flexShrink:0}}>{typeLabel}</span>
+                              {/* ③ 品質バッジ：背景塗りつぶし・文字黒 */}
+                              <span style={{fontSize:9,color:"#000",background:Q_COLOR[q],border:`1px solid ${Q_COLOR[q]}`,borderRadius:2,padding:"1px 6px",flexShrink:0,fontWeight:"bold"}}>【{q}】</span>
+                                <span style={{fontSize:12,color:C.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</span>
+                                {/* 個数 */}
+                                <span style={{fontSize:10,color:C.gold,fontFamily:"'Share Tech Mono',monospace",flexShrink:0,marginLeft:2}}>×{item.quantity ?? 1}</span>
+                              </div>
+                              <div style={{fontSize:9,color:C.muted,lineHeight:1.5}}>{descOf(item)}</div>
+                            </div>
+
+                            {/* 精錬ボタン */}
+                            {Q_NEXT[q] && (
+                              <button
+                                onClick={() => refine(item, idx)}
+                                disabled={!canRefine}
+                                style={{flexShrink:0,padding:"4px 8px",background:canRefine?`${C.gold}22`:"transparent",border:`1px solid ${canRefine?C.gold:C.border}55`,color:canRefine?C.gold:C.muted,fontSize:9,cursor:canRefine?"pointer":"default",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}
+                                onMouseEnter={e=>{ if(canRefine) e.currentTarget.style.background=`${C.gold}44`; }}
+                                onMouseLeave={e=>{ if(canRefine) e.currentTarget.style.background=`${C.gold}22`; }}
+                                title={canRefine?`2個→【${Q_NEXT[q]}】に精錬`:`精錬には×2必要`}
+                              >⚗ {Q_NEXT[q]}へ</button>
                             )}
 
-                          </div>
-                          {item.desc && (
-                            <div style={{fontSize:9,color:C.muted,lineHeight:1.5}}>{item.desc}</div>
-                          )}
-                        </div>
-                         {(() => {
-                          const isEquipped =
-                            (item.type === "weapon"    && equippedWeapon?.id    === item.id) ||
-                            (item.type === "armor"     && equippedArmor?.id     === item.id) ||
-                            (item.type === "accessory" && equippedAccessory?.id === item.id);
-                          const setFn =
-                            item.type === "weapon"    ? setEquippedWeapon    :
-                            item.type === "armor"     ? setEquippedArmor     :
-                                                        setEquippedAccessory;
-                          return (
+                            {/* 装備ボタン */}
                             <button
                               onClick={() => {
                                 setFn(isEquipped ? null : item);
-                                showNotif(isEquipped ? `${item.name} を外した` : `${item.name} を装備した！`);
+                                showNotif(isEquipped ? `${item.name}【${q}】を外した` : `${item.name}【${q}】を装備した！`);
                               }}
-                              style={{flexShrink:0,padding:"4px 10px",background:isEquipped?`${C.accent2}22`:"transparent",border:`1px solid ${isEquipped?C.accent2:C.border}`,color:isEquipped?C.accent2:C.muted,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",marginRight:4}}
-                              onMouseEnter={e => { e.currentTarget.style.background = `${C.accent2}22`; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = isEquipped ? `${C.accent2}22` : "transparent"; }}
+                              style={{flexShrink:0,padding:"4px 10px",background:isEquipped?`${C.accent2}22`:"transparent",border:`1px solid ${isEquipped?C.accent2:C.border}`,color:isEquipped?C.accent2:C.muted,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:"'Share Tech Mono',monospace"}}
+                              onMouseEnter={e=>{ e.currentTarget.style.background=`${C.accent2}22`; }}
+                              onMouseLeave={e=>{ e.currentTarget.style.background=isEquipped?`${C.accent2}22`:"transparent"; }}
                             >{isEquipped ? "装備中" : "装備"}</button>
-                          );
-                        })()}
-                        <button
-                          onClick={() => {
-                            if (!window.confirm(`「${item.name}」を捨てますか？`)) return;
-                            // 装備中なら外す
-                            if (equippedWeapon?.id    === item.id) setEquippedWeapon(null);
-                            if (equippedArmor?.id     === item.id) setEquippedArmor(null);
-                            if (equippedAccessory?.id === item.id) setEquippedAccessory(null);
-                            setInventory(prev => prev.filter((_, i) => i !== idx));
-                          }}
-                          style={{flexShrink:0,padding:"4px 10px",background:"transparent",border:`1px solid ${C.red}55`,color:C.red,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:"'Share Tech Mono',monospace"}}
-                          onMouseEnter={e => { e.currentTarget.style.background = `${C.red}22`; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                        >捨てる</button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
+
+                            {/* 捨てるボタン */}
+                            <button
+                              onClick={() => {
+                                if (!window.confirm(`「${item.name}【${q}】」を1個捨てますか？`)) return;
+                                if (isEquipped) setFn(null);
+                                setInventory(prev => {
+                                  const cur = prev[idx];
+                                  if (!cur) return prev;
+                                  if ((cur.quantity ?? 1) <= 1) return prev.filter((_, i) => i !== idx);
+                                  return prev.map((i, ii) => ii === idx ? { ...i, quantity: (i.quantity ?? 1) - 1 } : i);
+                                });
+                              }}
+                              style={{flexShrink:0,padding:"4px 10px",background:"transparent",border:`1px solid ${C.red}55`,color:C.red,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:"'Share Tech Mono',monospace"}}
+                              onMouseEnter={e=>{ e.currentTarget.style.background=`${C.red}22`; }}
+                              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; }}
+                            >捨てる</button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                );
+              })()}
           </div>
         </div>
       )}
