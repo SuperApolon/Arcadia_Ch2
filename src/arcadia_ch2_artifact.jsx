@@ -1438,6 +1438,10 @@ export default function ArcadiaCh2() {
   const [hasPb, setHasPb] = useState(true);
   const [hasMapScan, setHasMapScan] = useState(true);
   const [inCom, setInCom] = useState(true);
+  const [showWGInvite, setShowWGInvite] = useState(false);
+  const [wgInviteData, setWgInviteData] = useState(null);
+  const [wgInviteLoading, setWgInviteLoading] = useState(false);
+  const [wgInviteError, setWgInviteError] = useState(null);
   // ── MapScanバトルドロップカウンター ──────────────────────────────────────
   // { [enemyKey]: number } 戦闘勝利回数
   const [mapScanWinCount, setMapScanWinCount] = useState({});
@@ -5995,21 +5999,118 @@ export default function ArcadiaCh2() {
                 )}
               </div>
             )}
-            {pbTab === 1 && (
+             {pbTab === 1 && (
               <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.muted}}>
                 <div style={{color:C.accent,marginBottom:12,letterSpacing:2,fontSize:11}}>── MAIL ──</div>
                 {hasPb ? (
                   <div style={{color:C.text,lineHeight:2}}>
-                    <div style={{color:C.accent2,marginBottom:8}}>クリケットより</div>
-                    <div style={{color:C.muted,fontSize:11,lineHeight:1.8}}>P.BOOKの初期設定を\n完了してください。\n\n冒険者よ、健闘を祈る！</div>
+                    {/* ─ クリケットより ─ */}
+                    <div style={{background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px",marginBottom:12}}>
+                      <div style={{color:C.accent2,marginBottom:6,fontSize:11,borderBottom:`1px solid ${C.border}44`,paddingBottom:6}}>クリケットより</div>
+                      <div style={{color:C.muted,fontSize:11,lineHeight:1.8}}>{"P.BOOKの初期設定を\n完了してください。\n\n冒険者よ、健闘を祈る！"}</div>
+                    </div>
+                    {/* ─ ユミルより（White Garden招待状） ─ */}
                     {inCom && (
-                      <>
-                        <div style={{color:C.accent2,marginBottom:8,marginTop:16}}>ユミルより</div>
-                        <div style={{color:C.muted,fontSize:11,lineHeight:1.8}}>White Garden へようこそ！\n一緒に頑張ろうね。🌸</div>
-                      </>
+                      <div style={{background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px"}}>
+                        <div style={{color:C.accent2,marginBottom:6,fontSize:11,borderBottom:`1px solid ${C.border}44`,paddingBottom:6}}>ユミルより</div>
+                        <div style={{color:C.muted,fontSize:11,lineHeight:1.8,marginBottom:12}}>{"White Garden へようこそ！\n一緒に頑張ろうね。🌸\n\nSinさんからの入団状が届いているよ。\n必ず読んでね！"}</div>
+                        <button
+                          onClick={() => {
+                            setShowWGInvite(true);
+                            if (!wgInviteData && !wgInviteLoading) {
+                              setWgInviteLoading(true);
+                              setWgInviteError(null);
+                              fetch("https://superapolon.github.io/Arcadia_Assets/mail/whitegarden_invite.json")
+                                .then(r => r.ok ? r.json() : Promise.reject(r.status))
+                                .then(json => { setWgInviteData(json); setWgInviteLoading(false); })
+                                .catch(err => { setWgInviteError(`読み込み失敗 (${err})`); setWgInviteLoading(false); });
+                            }
+                          }}
+                          style={{width:"100%",padding:"9px 0",background:`${C.accent2}11`,border:`1px solid ${C.accent2}55`,color:C.accent2,fontSize:11,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,transition:"all 0.2s"}}
+                          onMouseEnter={e=>{e.currentTarget.style.background=`${C.accent2}22`;e.currentTarget.style.borderColor=C.accent2;}}
+                          onMouseLeave={e=>{e.currentTarget.style.background=`${C.accent2}11`;e.currentTarget.style.borderColor=`${C.accent2}55`;}}
+                        >🌸 WHITE GARDEN 入団状を開く</button>
+                      </div>
                     )}
                   </div>
                 ) : <div>メールなし</div>}
+                {/* ─ フルスクリーン入団状オーバーレイ ─ */}
+                {showWGInvite && (
+                  <div style={{position:"fixed",inset:0,background:"rgba(5,13,20,0.98)",zIndex:200,display:"flex",flexDirection:"column",animation:"fadeIn 0.25s",fontFamily:"'Noto Serif JP',serif"}}>
+                    <style>{`.wg-scroll::-webkit-scrollbar{width:4px}.wg-scroll::-webkit-scrollbar-track{background:transparent}.wg-scroll::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}.wg-scroll{scrollbar-width:thin;scrollbar-color:${C.border} transparent}`}</style>
+                    {/* ヘッダー */}
+                    <div style={{padding:"12px 18px",borderBottom:`1px solid ${C.border}`,background:"rgba(5,13,20,0.97)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:9,letterSpacing:5,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:2}}>WHITE GARDEN</div>
+                        <div style={{fontSize:13,color:C.accent2,fontWeight:"bold",letterSpacing:2}}>🌸 入団状</div>
+                      </div>
+                      <button
+                        onClick={() => setShowWGInvite(false)}
+                        style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",borderRadius:2,transition:"all 0.2s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=C.accent2;}}
+                        onMouseLeave={e=>{e.currentTarget.style.color=C.muted;e.currentTarget.style.borderColor=C.border;}}
+                      >✕ 閉じる</button>
+                    </div>
+                    {/* 本文スクロールエリア */}
+                    <div className="wg-scroll" style={{flex:1,overflowY:"auto",padding:"28px 24px 40px",maxWidth:640,margin:"0 auto",width:"100%",boxSizing:"border-box"}}>
+                      {wgInviteLoading && (
+                        <div style={{textAlign:"center",marginTop:80,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,animation:"arcadiaBlnk 1s step-end infinite"}}>
+                          <div style={{fontSize:20,marginBottom:12}}>🌸</div>読み込み中...
+                        </div>
+                      )}
+                      {wgInviteError && (
+                        <div style={{textAlign:"center",marginTop:80,color:C.red,fontFamily:"'Share Tech Mono',monospace",fontSize:12,letterSpacing:1}}>
+                          <div style={{fontSize:20,marginBottom:12}}>⚠</div>{wgInviteError}
+                        </div>
+                      )}
+                      {wgInviteData && !wgInviteLoading && (() => {
+                        const d = wgInviteData;
+                        return (
+                          <>
+                            {d.title && <div style={{fontSize:18,fontWeight:"bold",color:C.white,letterSpacing:2,marginBottom:6,textAlign:"center"}}>{d.title}</div>}
+                            {d.subtitle && <div style={{fontSize:11,color:C.accent2,letterSpacing:4,marginBottom:24,textAlign:"center",fontFamily:"'Share Tech Mono',monospace"}}>{d.subtitle}</div>}
+                            <div style={{width:200,height:1,background:`linear-gradient(90deg,transparent,${C.accent2},transparent)`,margin:"0 auto 28px"}}/>
+                            {Array.isArray(d.sections) && d.sections.map((sec, i) => (
+                              <div key={i} style={{marginBottom:24}}>
+                                {sec.heading && (
+                                  <div style={{fontSize:11,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginBottom:10,borderLeft:`2px solid ${C.accent2}`,paddingLeft:8}}>{sec.heading}</div>
+                                )}
+                                {sec.body && (
+                                  <p style={{color:C.text,fontSize:13,lineHeight:2.15,margin:"0 0 10px 0",whiteSpace:"pre-wrap",letterSpacing:0.4,fontFamily:"'Noto Serif JP',serif"}}>{sec.body}</p>
+                                )}
+                                {Array.isArray(sec.items) && (
+                                  <div style={{paddingLeft:8}}>
+                                    {sec.items.map((item,j) => (
+                                      <div key={j} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:`1px solid ${C.border}22`,color:C.text,fontSize:12,lineHeight:1.7,fontFamily:"'Noto Serif JP',serif"}}>
+                                        <span style={{color:C.accent2,flexShrink:0}}>●</span>
+                                        <span>{item}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {d.from && (
+                              <>
+                                <div style={{width:200,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"28px auto 20px"}}/>
+                                <div style={{textAlign:"right",color:C.muted,fontSize:11,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>{d.from}</div>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                    {/* フッター */}
+                    <div style={{padding:"10px 18px 14px",borderTop:`1px solid ${C.border}`,background:"rgba(5,13,20,0.97)",flexShrink:0,display:"flex",justifyContent:"flex-end"}}>
+                      <button
+                        onClick={() => setShowWGInvite(false)}
+                        style={{padding:"8px 28px",background:`${C.accent2}1a`,border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,borderRadius:2,transition:"all 0.2s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.background=`${C.accent2}33`;}}
+                        onMouseLeave={e=>{e.currentTarget.style.background=`${C.accent2}1a`;}}
+                      >← メールに戻る</button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {pbTab === 2 && (
