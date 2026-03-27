@@ -130,15 +130,6 @@ const INITIAL_BATTLE_DEFS = {
     elementCycle:["ice"],
   },
 
-  simuluu: {
-    name:"Simuluu ─ 試練の主", em:"🦌",
-    maxHp:400, atk:[15,25], elk:200, exp:200, lv:6, spd:12,
-    bg:["#010610","#050e28","#0a1840"], isBoss:true, isFloating:false, isGround:true,
-    pattern:["atk","counter","unavoidable","atk","dodge","unavoidable","counter","unavoidable"],
-    unavoidableAtk:[30,45],
-    elementCycle:["ice","thunder","fire","earth","none"],
-  },
-
   // ── 第二章 通常エネミー ────────────────────────────────────────────────────
   woopy: {
     name:"ウーピィ", em:"🐇",
@@ -170,16 +161,6 @@ const INITIAL_BATTLE_DEFS = {
     pattern:["atk","counter","atk","dodge","atk","counter","atk"],
     unavoidableAtk:[18,26],
     elementCycle:["earth"],
-  },
-
-  // ── 第二章専用ボス ─────────────────────────────────────────────────────────
-  simuluu_ch2: {
-    name:"Simuluu ─ 覚醒体", em:"🦌",
-    maxHp:2000, atk:[18,30], elk:500, exp:500, lv:10, spd:12,
-    bg:["#050210","#0f0528","#1a0a50"], isBoss:true, isFloating:false, isGround:true,
-    pattern:["atk","counter","unavoidable","atk_all","enrage","dodge","unavoidable","counter","atk_all","unavoidable"],
-    unavoidableAtk:[35,50],
-    elementCycle:["fire","ice","thunder","earth","none"],
   },
 
   // ── 月夜の舞闘祭：Strikerチーム 3体個別 ──────────────────────────────────
@@ -343,7 +324,6 @@ const BATTLE_PARTY_MAP = {
   pvp_kevin:        ["eltz","frank","will"],
   pvp_chopper:      ["eltz","frank","will"],
   olga:             ["eltz","swift","linz"],
-  simuluu_ch2:      ["eltz","swift","linz","chopper"],
 };
 
 
@@ -435,9 +415,7 @@ const ASSET_STATUS = {
   "battle/bg_rocks":         true,
   "battle/bg_cave":          true,
   "enemies/seagull":         true,
-  "enemies/koza":            true,
   "enemies/shamelot":        true,
-  "enemies/simuluu":         true,
   "sprites/eltz":            true,   // ✅ 確認済み 2026-03-02
   "sprites/swift":           true,   // ✅ 確認済み 2026-03-02
   "sprites/linz":            true,   // ✅ 確認済み 2026-03-02
@@ -479,7 +457,6 @@ const ASSET_STATUS = {
   "enemies/donatello":       true,
   "enemies/kevin":           true,
   "enemies/chopper":         true,
-  "scenes/ch2_plaza_night":   false,
   // ── 第二章 新スプライト ────────────────────────────────────────────────────
   "sprites/kevin":           true,
   "sprites/donatello":       true,
@@ -487,7 +464,6 @@ const ASSET_STATUS = {
   "sprites/frank":           true,
   "sprites/liebert":         true,
   "sprites/olga":            true,
-  "sprites/sin":             false,
   "sprites/aries":           true,
   "sprites/persia":          true,
   "sprites/ponkiti":         true,
@@ -495,7 +471,6 @@ const ASSET_STATUS = {
   "sprites/shuraku":         true,
   "sprites/karma":           true,
   "sprites/toma":            true,
-  "sprites/mikhail":         false,
   // ── 第二章 新BGM ───────────────────────────────────────────────────────────
   "bgm/stiaroof":            true,   // 都市・街BGM
   "bgm/guild":               true,   // ギルド
@@ -583,7 +558,6 @@ const BATTLE_BGM = {
   moocat:        "bgm/battle_normal",
   mandragora:    "bgm/battle_normal",
   cocatris:      "bgm/battle_normal",
-  simuluu_ch2:        "bgm/battle_boss",
   cocatris_karma_a:    "bgm/battle_normal2",
   cocatris_karma_b:    "bgm/battle_normal2",
   cocatris_karma_c:    "bgm/battle_normal2",
@@ -614,7 +588,6 @@ const ENEMY_IMG_MAP = {
   shamerlot_lv3: "enemies/shamelot",
   shamerlot_lv5: "enemies/shamelot",
   simuluu:       null, // 直URL使用
-  simuluu_ch2:   null, // 直URL使用
   // ── 第二章 ────────────────────────────────────────────────────────────────
   woopy:         "enemies/woopy",
   moocat:        "enemies/moocat",
@@ -653,14 +626,12 @@ const SPRITE_MAP = {
   "🤗":     "sprites/frank",       // フランク
   "🏹":     "sprites/liebert",     // リーベルト
   "⚔️":     "sprites/olga",        // オルガ
-  "👑":     "sprites/sin",         // シン
   "🌊":     "sprites/aries",       // アリエス
   "🌸":     "sprites/persia",      // ペルシア
   "🤩":     "sprites/ponkiti",     // ポンキチ
   "🤫":     "sprites/toma",        // トマ
   "😤":     "sprites/will",        // ウィル
   "😄":     "sprites/shuraku",     // シュラク
-  "🏨":     "sprites/mikhail",     // ミカエル
   "😜":     "sprites/karma",       // カルマ
 };
 
@@ -695,7 +666,6 @@ const SPRITE_SIZE = {
   "🤗":           { scale: 1.08, heroScale: 1.08, offsetY:  0, fallbackSize: 50 }, // frank
   "🏹":           { scale: 1.08, heroScale: 1.08, offsetY:  0, fallbackSize: 50 }, // liebert
   "⚔️":           { scale: 1.13, heroScale: 1.13, offsetY:  0, fallbackSize: 52 }, // olga
-  "👑":           { scale: 1.00, heroScale: 1.00, offsetY:  0, fallbackSize: 50 }, // sin
   "🌊":           { scale: 1.01, heroScale: 1.01, offsetY:  0, fallbackSize: 50 }, // aries
   "😜":           { scale: 0.99, heroScale: 0.99, offsetY:  0, fallbackSize: 50 }, // karma
   "🌸":           { scale: 0.94, heroScale: 0.94, offsetY:  0, fallbackSize: 50 }, // persia
@@ -703,7 +673,6 @@ const SPRITE_SIZE = {
   "🤩":           { scale: 0.95, heroScale: 0.95, offsetY:  0, fallbackSize: 50 }, // ponkiti
   "😤":           { scale: 0.75, heroScale: 0.75, offsetY:  0, fallbackSize: 42 }, // will
   "😄":           { scale: 0.75, heroScale: 0.75, offsetY:  0, fallbackSize: 42 }, // shuraku
-  "🏨":           { scale: 0.92, heroScale: 1.00, offsetY:  0, fallbackSize: 50 }, // mikhail
 };
 
 // @@SECTION:ENEMY_SIZE ─────────────────────────────────────────────────────
@@ -735,7 +704,6 @@ const ENEMY_IMG_SIZE = {
   moocat:        { mode:"fixed", size: 220 },
   mandragora:    { mode:"fixed", size: 220 },
   cocatris:      { mode:"fixed", size: 360 },
-  simuluu_ch2:        { mode:"auto",  pct: 85  },
   cocatris_karma_a:    { mode:"fixed", size: 330 },
   cocatris_karma_b:    { mode:"fixed", size: 360 },
   cocatris_karma_c:    { mode:"fixed", size: 345 },
@@ -755,7 +723,6 @@ const BATTLE_BG_MAP = {
   shamerlot_lv3: "battle/bg_rocks",
   shamerlot_lv5: "battle/bg_rocks",
   simuluu:       "scenes/s26_cave_blue",
-  simuluu_ch2:   "scenes/s27_cave_deep",
   // ── 第二章 ────────────────────────────────────────────────────────────────
   woopy:         "scenes/ch2_s11_eivis_plains",
   moocat:        "scenes/ch2_s11_eivis_plains",
@@ -784,7 +751,6 @@ const BATTLE_BG_STYLE = {
   shamerlot_lv3: { size: "cover", position: "enter 40%" },
   shamerlot_lv5: { size: "cover", position: "enter 40%" },
   simuluu:       { size: "cover",   position: "center" },
-  simuluu_ch2:   { size: "cover",   position: "center" },
   // ── 第二章 ────────────────────────────────────────────────────────────────
   woopy:         { size: "cover",   position: "center 40%" },
   moocat:        { size: "cover",   position: "center 40%" },
@@ -1471,10 +1437,10 @@ export default function ArcadiaCh2() {
   const [elk, setElk] = useState(500);
   const [lv, setLv] = useState(3);
   const [exp, setExp] = useState(0);
-  const [weapon, setWeapon] = useState("銅の剣");
-  const [weaponPatk, setWeaponPatk] = useState(6);   // 武器による物理ATK補正（銅の剣+6）
+  const [weapon, setWeapon] = useState("なし");
+  const [weaponPatk, setWeaponPatk] = useState(0);   // 武器による物理ATK補正（銅の剣+6）削除
   const [statPoints, setStatPoints] = useState(6);
-  const [statAlloc, setStatAlloc] = useState({patk:11,pdef:11,matk:10,spd:10});
+  const [statAlloc, setStatAlloc] = useState({patk:10,pdef:10,matk:10,spd:10});
   const [hasPb, setHasPb] = useState(true);
   const [hasMapScan, setHasMapScan] = useState(true);
   const [inCom, setInCom] = useState(true);
@@ -1608,6 +1574,17 @@ export default function ArcadiaCh2() {
    const [speedCandyUsed, setSpeedCandyUsed] = useState({});
    const [eltzSpdBonus, setEltzSpdBonus] = useState(0);
    const currentBattleCmdCountsRef = useRef({});
+   // ── 所持品ステート ──────────────────────────────────────────────────────
+   const [inventory, setInventory] = useState([
+    { id:"copper_sword",   name:"銅の剣",        type:"weapon",    desc:"物理ATK +6",  patk:6,  pdef:0, spd:0 },
+    { id:"travelers_coat", name:"旅人の服",       type:"armor",     desc:"物理DEF +3",  patk:0,  pdef:3, spd:0 },
+    { id:"beginner_cert",  name:"初心者講習の証", type:"accessory", desc:"物理ATK・物理DEF +1", patk:1, pdef:1, spd:0 },
+  ]);
+  // { id:string, name:string, type:"weapon"|"armor"|"accessory", desc:string }
+  // ── 装備ステート ────────────────────────────────────────────────────────
+  const [equippedWeapon,    setEquippedWeapon   ] = useState(null);
+  const [equippedArmor,     setEquippedArmor    ] = useState(null);
+  const [equippedAccessory, setEquippedAccessory] = useState(null);
 
   // ── 全体攻撃アニメーション（dragon_rush.webp） ──────────────────────────────
   // CSSアニメーションはiPad/Safariで状態が引き継がれるバグがあるため
@@ -2040,6 +2017,15 @@ export default function ArcadiaCh2() {
     if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
     notifTimerRef.current = setTimeout(() => setNotif(null), 2800);
   }, []);
+
+  const gainItem = useCallback((item) => {
+    setInventory(prev => {
+      if (prev.length >= 100) { showNotif("所持品がいっぱいです！"); return prev; }
+      if (prev.find(i => i.id === item.id)) { showNotif(`${item.name} はすでに持っています`); return prev; }
+      showNotif(`📦 ${item.name} を入手した！`);
+      return [...prev, item];
+    });
+  }, [showNotif]);
 
   const showDl = useCallback((sIdx, dIdx) => {
     const sc = SCENES[sIdx];
@@ -2576,8 +2562,10 @@ export default function ArcadiaCh2() {
     if (!enemies) return;
 
     const spdBuff = partySpdBuff > 0 ? 3 : 0;
-    const defBonus = Math.floor((statAlloc.pdef - 10) * 1.2);
-    const atkBonus = weaponPatk + Math.floor((statAlloc.patk - 10) * 1.5) + bikerAtkBonus;
+    const equipPatk = (equippedWeapon?.patk ?? 0) + (equippedArmor?.patk ?? 0) + (equippedAccessory?.patk ?? 0);
+    const equipPdef = (equippedWeapon?.pdef ?? 0) + (equippedArmor?.pdef ?? 0) + (equippedAccessory?.pdef ?? 0);
+    const defBonus = Math.floor((statAlloc.pdef + equipPdef - 10) * 1.2);
+    const atkBonus = weaponPatk + Math.floor((statAlloc.patk + equipPatk - 10) * 1.5) + bikerAtkBonus;
     // コンボ攻撃力ボーナス：10ヒットごとに×1.1（累積）
     const comboAtkTier = Math.floor(noDmgStreak / 10);
     const comboAtkMult = comboAtkTier > 0 ? Math.pow(1.1, comboAtkTier) : 1.0;
@@ -3178,8 +3166,10 @@ export default function ArcadiaCh2() {
     let curPartyHp = { ...partyHp };
     let curPartyMp = { ...partyMp }; // 仲間MP（ターン内で変動）
 
-    const defBonus = Math.floor((statAlloc.pdef - 10) * 1.2);
-    const atkBonus = weaponPatk + Math.floor((statAlloc.patk - 10) * 1.5) + bikerAtkBonus;
+    const equipPatk = (equippedWeapon?.patk ?? 0) + (equippedArmor?.patk ?? 0) + (equippedAccessory?.patk ?? 0);
+    const equipPdef = (equippedWeapon?.pdef ?? 0) + (equippedArmor?.pdef ?? 0) + (equippedAccessory?.pdef ?? 0);
+    const defBonus = Math.floor((statAlloc.pdef + equipPdef - 10) * 1.2);
+    const atkBonus = weaponPatk + Math.floor((statAlloc.patk + equipPatk - 10) * 1.5) + bikerAtkBonus;
     // コンボ攻撃力ボーナス：10ヒットごとに×1.1（累積）
     const comboAtkTier = Math.floor(noDmgStreak / 10);
     const comboAtkMult = comboAtkTier > 0 ? Math.pow(1.1, comboAtkTier) : 1.0;
@@ -4242,29 +4232,6 @@ export default function ArcadiaCh2() {
       setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeCooldown(0); setProvokeActive(0); setTakedownCooldown(0); setTakedownActive(0); setSleepCooldown(0); setSleepActive(0); setOverhealCooldown(0); setElemCooldowns({ elem_fire:0, elem_ice:0, elem_thunder:0, elem_earth:0 });; setBikerSlashCooldown(0); setBikerAtkBonus(0); setSansankaCooldown(0); setStingerCooldown(0); setStraightShotCooldown(0); setStraightShotActive(0); setArrowRainCooldown(0); setWaterSphereCooldown(0); setWaterSphereActive(0);
       setPhase("battle");
     };
-
-    const OPTIONS = [
-      {
-        key: "single",
-        label: "Simuluu 単体戦",
-        sub: "─── 試練の主 ───",
-        em: "🦌",
-        color: C.red,
-        types: "simuluu_ch2",
-        desc: "ボス単体。属性システムを使ってブレイクを狙え",
-        lv: "Lv10 / HP2000",
-      },
-      {
-        key: "multi",
-        label: "3体同時戦",
-        sub: "シャメロット Lv5 × 2 ＋ Simuluu",
-        em: "🦀🦌🦀",
-        color: C.accent,
-        types: ["shamerlot_lv5", "simuluu_ch2", "shamerlot_lv5"],
-        desc: "取り巻き2体を先に倒すか、ボスを集中攻撃するか",
-        lv: "Lv5 × 2 ＋ Lv10",
-      },
-    ];
 
     const startStory = () => {
       unlockAudio(null);
@@ -5847,7 +5814,7 @@ export default function ArcadiaCh2() {
           </div>
           {/* Tabs */}
           <div style={{display:"flex",borderBottom:`1px solid ${C.border}`}}>
-            {["STATUS","MAIL","MAP","ANALYSIS"].map((tab,i) => (
+            {["STATUS","MAIL","MAP","ANALYSIS","Shop","Inventory"].map((tab,i) => (
               <button key={i} onClick={() => setPbTab(i)} style={{flex:1,padding:"8px 4px",background:"transparent",border:"none",borderBottom:pbTab===i?`2px solid ${C.accent}`:"2px solid transparent",color:pbTab===i?C.accent:C.muted,fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
                 {tab}
               </button>
@@ -5863,9 +5830,17 @@ export default function ArcadiaCh2() {
                   ["HP", `${Math.round(hp)} / ${mhp}`],
                   ["MP", `${Math.round(mp)} / ${mmp}`],
                   ["ELK", elk],
-                  ["武器", weapon],
-                  ["物理ATK", weaponPatk + statAlloc.patk],
-                  ["物理DEF", statAlloc.pdef],
+                  ["武器",     equippedWeapon    ? equippedWeapon.name    : weapon],
+                  ["防具",     equippedArmor     ? equippedArmor.name     : "なし"],
+                  ["装飾",     equippedAccessory ? equippedAccessory.name : "なし"],
+                  ["物理ATK",  weaponPatk + statAlloc.patk
+                               + (equippedWeapon?.patk    ?? 0)
+                               + (equippedArmor?.patk     ?? 0)
+                               + (equippedAccessory?.patk ?? 0)],
+                  ["物理DEF",  statAlloc.pdef
+                               + (equippedWeapon?.pdef    ?? 0)
+                               + (equippedArmor?.pdef     ?? 0)
+                               + (equippedAccessory?.pdef ?? 0)],
                   ...(statPoints>0?[["未振り", `${statPoints} pt`]]:[]),
                   ...(inCom?[["コミュニティ","White Garden"]]:[]),
                 ].map(([k,v]) => (
@@ -5953,83 +5928,80 @@ export default function ArcadiaCh2() {
                         </div>
                       );
                     })}
-                    <div style={{color:C.muted,fontSize:9,marginTop:6,lineHeight:1.6}}>
-                      ※ コーザ・Simuluuはここから戦えません
-                    </div>
                   </div>
                 ) : <div style={{color:C.muted,padding:8}}>MapScan 未解放<br/><span style={{fontSize:10}}>交易所のローズと話すと解放されます</span></div>}
               </div>
             )}
             {pbTab === 3 && (
-          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
-            <div style={{color:C.accent,marginBottom:12,letterSpacing:2,fontSize:11}}>── PLAYING ANALYSIS ──</div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
+               <div style={{color:C.accent,marginBottom:12,letterSpacing:2,fontSize:11}}>── PLAYING ANALYSIS ──</div>
 
-            {/* ── パワーキャンディ：コンボ100%達成戦闘 ── */}
-            <div style={{marginBottom:24}}>
-              <div style={{color:C.gold,fontSize:11,letterSpacing:2,marginBottom:6}}>⚔ POWER CANDY</div>
-              <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.7}}>
-                各バトルで全コマンドをコンボ達成（全員無被弾）すると、<br/>
-                エルツの物理攻撃力 <span style={{color:C.accent2}}>+1</span> を贈呈します。
-              </div>
-              {battleAnalytics.length === 0 ? (
-                <div style={{color:C.muted,fontSize:10,padding:"8px 0"}}>── 記録なし（シナリオバトルを戦うと記録されます）──</div>
-              ) : (
-                battleAnalytics.map((b, idx) => {
+               {/* ── パワーキャンディ：コンボ100%達成戦闘 ── */}
+               <div style={{marginBottom:24}}>
+                 <div style={{color:C.gold,fontSize:11,letterSpacing:2,marginBottom:6}}>⚔ POWER CANDY</div>
+                 <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.7}}>
+                    各バトルで全コマンドをコンボ達成（全員無被弾）すると、<br/>
+                    エルツの物理攻撃力 <span style={{color:C.accent2}}>+1</span> を贈呈します。
+                 </div>
+                 {battleAnalytics.length === 0 ? (
+                 <div style={{color:C.muted,fontSize:10,padding:"8px 0"}}>── 記録なし（シナリオバトルを戦うと記録されます）──</div>
+                  ) : (
+                  battleAnalytics.map((b, idx) => {
                   const pct = b.totalTurns > 0 ? Math.round(b.comboTurns / b.totalTurns * 100) : 0;
                   const isPerfect = pct === 100 && b.totalTurns > 0;
                   const used = powerCandyUsed[idx];
                   return (
                     <div key={idx} style={{background:C.panel,border:`1px solid ${isPerfect ? C.gold : C.border}`,borderRadius:4,padding:"8px 10px",marginBottom:6}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                         <span style={{fontSize:11,color:C.white}}>Battle {idx + 1}｜{b.battleType}</span>
                         <span style={{fontSize:13,color:isPerfect ? C.gold : C.muted,fontWeight:700,fontFamily:"'Share Tech Mono',monospace"}}>{pct}%</span>
-                      </div>
-                          {/* コンボ率バー */}
+                        </div>
+                       {/* コンボ率バー */}
                           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                             <span style={{fontSize:9,color:C.muted,flexShrink:0}}>コンボ率</span>
                             <div style={{flex:1,height:6,background:C.panel2,borderRadius:3,overflow:"hidden"}}>
-                              <div style={{height:"100%",width:`${pct}%`,background:isPerfect?`linear-gradient(90deg,${C.gold},${C.accent2})`:`linear-gradient(90deg,${C.accent},${C.accent2})`,borderRadius:3,transition:"width 0.4s"}}/>
-                            </div>
-                            <span style={{fontSize:10,color:isPerfect?C.gold:C.muted,minWidth:52,textAlign:"right",fontFamily:"'Share Tech Mono',monospace"}}>
-                              {b.comboTurns}/{b.totalTurns}T
-                            </span>
-                          </div>
-                      {isPerfect && !used && (
-                        <button
-                          onClick={() => {
+                              <div style={{height:"100%",width:`${pct}%`,background:isPerfect?`linear-gradient(90deg,${C.gold},${C.accent2})`:`linear-gradient(90deg,${C.accent},${C.accent2})`,    borderRadius:3,transition:"width 0.4s"}}/>
+                              </div>
+                              <span style={{fontSize:10,color:isPerfect?C.gold:C.muted,minWidth:52,textAlign:"right",fontFamily:"'Share Tech Mono',monospace"}}>
+                               {b.comboTurns}/{b.totalTurns}T
+                             </span>
+                           </div>
+                           {isPerfect && !used && (
+                            <button
+                            onClick={() => {
                             setStatAlloc(sa => ({ ...sa, patk: sa.patk + 1 }));
                             setPowerCandyUsed(prev => ({ ...prev, [idx]: true }));
                             showNotif("🍬 パワーキャンディ！ 物理ATK +1！");
-                          }}
-                          style={{width:"100%",padding:"7px",background:`${C.gold}1a`,border:`1px solid ${C.gold}`,color:C.gold,fontSize:11,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,transition:"all 0.2s"}}
-                          onMouseEnter={e => { e.currentTarget.style.background = `${C.gold}33`; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = `${C.gold}1a`; }}
-                        >🍬 パワーキャンディを受け取る（物理ATK +1）</button>
-                      )}
-                      {used && (
-                        <div style={{textAlign:"center",fontSize:10,color:C.muted,padding:"4px 0"}}>✅ 受け取り済み</div>
-                      )}
-                      {!isPerfect && (
-                        <div style={{fontSize:9,color:C.muted,textAlign:"center",padding:"2px 0"}}>コンボ率100%を達成するとキャンディを受け取れます</div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                           }}
+                            style={{width:"100%",padding:"7px",background:`${C.gold}1a`,border:`1px solid ${C.gold}`,color:C.gold,fontSize:11,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,transition:"all 0.2s"}}
+                            onMouseEnter={e => { e.currentTarget.style.background = `${C.gold}33`; }}
+                           onMouseLeave={e => { e.currentTarget.style.background = `${C.gold}1a`; }}
+                           >🍬 パワーキャンディを受け取る（物理ATK +1）</button>
+                           )}
+                            {used && (
+                            <div style={{textAlign:"center",fontSize:10,color:C.muted,padding:"4px 0"}}>✅ 受け取り済み</div>
+                            )}
+                           {!isPerfect && (
+                           <div style={{fontSize:9,color:C.muted,textAlign:"center",padding:"2px 0"}}>コンボ率100%を達成するとキャンディを受け取れます</div>
+                            )}
+                         </div>
+                           );
+                         })
+                       )}
+                     </div>
 
-            {/* ── スピードキャンディ：属性ブレイク累計 ── */}
-            <div>
-              <div style={{color:C.accent2,fontSize:11,letterSpacing:2,marginBottom:6}}>💨 SPEED CANDY</div>
-              <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.7}}>
-                属性ブレイク累計達成でエルツのSPD <span style={{color:C.accent2}}>+1</span>（最大3回）<br/>
-                <span style={{fontSize:9}}>属性スキルで弱点に蓄積50ダメ以上与えるとブレイク発生</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 12px"}}>
-                <span style={{fontSize:10,color:C.muted,flex:1}}>累計属性ブレイク数</span>
-                <span style={{fontSize:18,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>{totalElemBreaks}</span>
-                <span style={{fontSize:10,color:C.muted}}>回</span>
-              </div>
+               {/* ── スピードキャンディ：属性ブレイク累計 ── */}
+               <div>
+                 <div style={{color:C.accent2,fontSize:11,letterSpacing:2,marginBottom:6}}>💨 SPEED CANDY</div>
+                 <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.7}}>
+                   属性ブレイク累計達成でエルツのSPD <span style={{color:C.accent2}}>+1</span>（最大3回）<br/>
+                    <span style={{fontSize:9}}>属性スキルで弱点に蓄積50ダメ以上与えるとブレイク発生</span>
+                </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 12px"}}>
+                   <span style={{fontSize:10,color:C.muted,flex:1}}>累計属性ブレイク数</span>
+                    <span style={{fontSize:18,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>{totalElemBreaks}</span>
+                    <span style={{fontSize:10,color:C.muted}}>回</span>
+                 </div>
               {[1,2,3].map(threshold => {
                 const achieved = totalElemBreaks >= threshold;
                 const used2 = speedCandyUsed[threshold];
@@ -6068,6 +6040,110 @@ export default function ArcadiaCh2() {
             </div>
           </div>
         )}
+        {pbTab === 4 && (() => {
+  const SHOP_ITEMS = [
+    { id:"baroque_sword",  name:"バロックソード",  type:"weapon",    desc:"物理ATK +11", patk:11, pdef:0,  price:200 },
+    { id:"baroque_armor",  name:"バロックアーマー", type:"armor",     desc:"物理DEF +11", patk:0,  pdef:11, price:280 },
+    { id:"baroque_ring",   name:"バロックリング",   type:"accessory", desc:"物理ATK +2 / 物理DEF +2", patk:2, pdef:2, price:160 },
+  ];
+  return (
+    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
+      <div style={{color:C.accent,marginBottom:8,letterSpacing:2,fontSize:11}}>── SHOP ──</div>
+      <div style={{fontSize:10,color:C.muted,marginBottom:12}}>所持ELK: <span style={{color:C.gold}}>{elk}</span></div>
+      {SHOP_ITEMS.map(item => {
+        const owned = inventory.some(i => i.id === item.id);
+        const canAfford = elk >= item.price;
+        return (
+          <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,background:C.panel,border:`1px solid ${owned ? C.border : C.border}`,borderRadius:4,padding:"10px 12px",marginBottom:8}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12,color:owned ? C.muted : C.white,marginBottom:2}}>{item.name}</div>
+              <div style={{fontSize:10,color:C.muted}}>{item.desc}</div>
+            </div>
+            <div style={{fontSize:12,color:C.gold,fontFamily:"'Share Tech Mono',monospace",flexShrink:0,marginRight:8}}>{item.price} ELK</div>
+            {owned ? (
+              <div style={{fontSize:10,color:C.muted,flexShrink:0,border:`1px solid ${C.border}`,borderRadius:3,padding:"4px 10px"}}>購入済</div>
+            ) : (
+              <button
+                disabled={!canAfford}
+                onClick={() => {
+                  if (!canAfford) return;
+                  setElk(e => e - item.price);
+                  gainItem({ id:item.id, name:item.name, type:item.type, desc:item.desc, patk:item.patk, pdef:item.pdef });
+                }}
+                style={{flexShrink:0,padding:"5px 12px",background:canAfford?`${C.accent2}1a`:"transparent",border:`1px solid ${canAfford?C.accent2:C.border}`,color:canAfford?C.accent2:C.muted,fontSize:11,cursor:canAfford?"pointer":"not-allowed",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",transition:"all 0.2s"}}
+                onMouseEnter={e=>{ if(canAfford) e.currentTarget.style.background=`${C.accent2}33`; }}
+                onMouseLeave={e=>{ if(canAfford) e.currentTarget.style.background=`${C.accent2}1a`; }}
+              >購入</button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+})()}
+               {pbTab === 5 && (
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
+                <div style={{color:C.accent,marginBottom:8,letterSpacing:2,fontSize:11}}>── INVENTORY ──</div>
+                <div style={{fontSize:10,color:C.muted,marginBottom:12}}>
+                  {inventory.length} / 100 個
+                </div>
+                {inventory.length === 0 ? (
+                  <div style={{color:C.muted,fontSize:10,padding:"8px 0"}}>── 所持品なし ──</div>
+                ) : (
+                  inventory.map((item, idx) => {
+                    const typeColor = item.type === "weapon" ? C.accent2 : item.type === "armor" ? "#a78bfa" : C.gold;
+                    const typeLabel = item.type === "weapon" ? "武器" : item.type === "armor" ? "防具" : "装飾";
+                    return (
+                      <div key={item.id} style={{display:"flex",alignItems:"center",gap:8,background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 10px",marginBottom:5}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                            <span style={{fontSize:9,color:typeColor,border:`1px solid ${typeColor}55`,borderRadius:2,padding:"1px 5px",flexShrink:0}}>{typeLabel}</span>
+                            <span style={{fontSize:12,color:C.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</span>
+                          </div>
+                          {item.desc && (
+                            <div style={{fontSize:9,color:C.muted,lineHeight:1.5}}>{item.desc}</div>
+                          )}
+                        </div>
+                         {(() => {
+                          const isEquipped =
+                            (item.type === "weapon"    && equippedWeapon?.id    === item.id) ||
+                            (item.type === "armor"     && equippedArmor?.id     === item.id) ||
+                            (item.type === "accessory" && equippedAccessory?.id === item.id);
+                          const setFn =
+                            item.type === "weapon"    ? setEquippedWeapon    :
+                            item.type === "armor"     ? setEquippedArmor     :
+                                                        setEquippedAccessory;
+                          return (
+                            <button
+                              onClick={() => {
+                                setFn(isEquipped ? null : item);
+                                showNotif(isEquipped ? `${item.name} を外した` : `${item.name} を装備した！`);
+                              }}
+                              style={{flexShrink:0,padding:"4px 10px",background:isEquipped?`${C.accent2}22`:"transparent",border:`1px solid ${isEquipped?C.accent2:C.border}`,color:isEquipped?C.accent2:C.muted,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",marginRight:4}}
+                              onMouseEnter={e => { e.currentTarget.style.background = `${C.accent2}22`; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = isEquipped ? `${C.accent2}22` : "transparent"; }}
+                            >{isEquipped ? "装備中" : "装備"}</button>
+                          );
+                        })()}
+                        <button
+                          onClick={() => {
+                            if (!window.confirm(`「${item.name}」を捨てますか？`)) return;
+                            // 装備中なら外す
+                            if (equippedWeapon?.id    === item.id) setEquippedWeapon(null);
+                            if (equippedArmor?.id     === item.id) setEquippedArmor(null);
+                            if (equippedAccessory?.id === item.id) setEquippedAccessory(null);
+                            setInventory(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                          style={{flexShrink:0,padding:"4px 10px",background:"transparent",border:`1px solid ${C.red}55`,color:C.red,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:"'Share Tech Mono',monospace"}}
+                          onMouseEnter={e => { e.currentTarget.style.background = `${C.red}22`; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                        >捨てる</button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
