@@ -362,7 +362,7 @@ const SKILL_DEFS = {
     label:"カウンター", icon:"🔄", color:"#f97316", cost:10, cooldown:0,
     isPrephase:true, isEndphase:false,   // プリフェイズ宣言
     dmgType:"physical", baseDmg:[18,28], weaponMult:true, atkMult:true, dmgMult:1.5,
-    hits:1, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
+    hits:1, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null,
@@ -373,7 +373,7 @@ const SKILL_DEFS = {
     label:"回避", icon:"💨", color:"#a78bfa", cost:8, cooldown:0,
     isPrephase:true, isEndphase:false,   // プリフェイズ宣言
     dmgType:"physical", baseDmg:[12,20], weaponMult:true, atkMult:true, dmgMult:1.0,
-    hits:1, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
+    hits:1, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null,
