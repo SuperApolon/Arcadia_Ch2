@@ -497,7 +497,7 @@ const SKILL_DEFS = {
 
    trick_attack: {
     label:"トリックアタック", icon:"⚔", color:"#c084fc", cost:12, cooldown:2,
-    isPrephase:false, isEndphase:false,
+    isPrephase:true, isEndphase:false,
     dmgType:"physical", baseDmg:[15,20], weaponMult:true, atkMult:true, dmgMult:1.2,
     hits:1, target:"single", element:null, pierceCounter:true, comboBonus:1.0,
     healFlat:0, healTarget:"self",
@@ -507,7 +507,7 @@ const SKILL_DEFS = {
   
   double_bite: {
     label:"ダブルバイト", icon:"⚔", color:"#c084fc", cost:12, cooldown:2,
-    isPrephase:false, isEndphase:false,
+    isPrephase:true, isEndphase:false,
     dmgType:"physical", baseDmg:[20,23], weaponMult:true, atkMult:true, dmgMult:1.2,
     hits:2, target:"single", element:null, pierceCounter:true, comboBonus:1.0,
     healFlat:0, healTarget:"self",
@@ -516,7 +516,7 @@ const SKILL_DEFS = {
   },
   stinger_bite: {
     label:"スティンガーバイト", icon:"⚔", color:"#f43f5e", cost:0, cooldown:3,
-    isPrephase:false, isEndphase:false,
+    isPrephase:true, isEndphase:false,
     dmgType:"physical", baseDmg:[45,50], weaponMult:true, atkMult:false, dmgMult:1.0,
     hits:1, target:"single", element:null, pierceCounter:false,
     comboBonus:2.0,   // 行動不能の敵に×2
@@ -605,8 +605,8 @@ const SKILL_DEFS = {
   windmill: {
     label:"風車", icon:"⚔", color:"#d4d4d8", cost:0, cooldown:4,
     isPrephase:false, isEndphase:false,
-    dmgType:"physical", baseDmg:[37,40], weaponMult:true, atkMult:true, dmgMult:1.0,
-    hits:1, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
+    dmgType:"physical", baseDmg:[18,23], weaponMult:true, atkMult:true, dmgMult:1.0,
+    hits:3, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null, selfBuff:null, enrageBreak:false,
@@ -623,10 +623,10 @@ const SKILL_DEFS = {
   },
 
   onslaught: {
-    label:"オンスロース", icon:"⚔", color:"#f87171", cost:0, cooldown:4,
-    isPrephase:false, isEndphase:false,
-    dmgType:"physical", baseDmg:[30,40], weaponMult:true, atkMult:true, dmgMult:1.0,
-    hits:1, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
+    label:"オンスロート", icon:"⚔", color:"#f87171", cost:0, cooldown:4,
+    isPrephase:false, isEndphase:true,
+    dmgType:"physical", baseDmg:[30,36], weaponMult:true, atkMult:true, dmgMult:1.0,
+    hits:2, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null, selfBuff:null, enrageBreak:false,
@@ -656,9 +656,9 @@ const SKILL_DEFS = {
 
   arrow_rain: {
     label:"アローレイン", icon:"⚔", color:"#a3e635", cost:0, cooldown:4,
-    isPrephase:false, isEndphase:false,
-    dmgType:"physical", baseDmg:[36,45], weaponMult:true, atkMult:false, dmgMult:1.0,
-    hits:1, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
+    isPrephase:true, isEndphase:false,
+    dmgType:"physical", baseDmg:[15,20], weaponMult:true, atkMult:false, dmgMult:1.0,
+    hits:3, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null,
@@ -3323,7 +3323,65 @@ export default function ArcadiaCh2() {
       if (eAction === "counter") logs.push(`${e.def.em}${e.def.name} 🔄 カウンター構え！`);
       if (eAction === "dodge")   logs.push(`${e.def.em}${e.def.name} 💨 回避態勢！`);
     });
-    logs.push(`── メインフェイズ ──`);
+
+    // ══════════════════════════════════════════════════════════════════
+    // プリフェイズ：攻撃スキル（isPrephase:true かつ hits>0）
+    //   counter/dodge はログ宣言のみ。攻撃系プリフェイズはここでダメージ処理。
+    // ══════════════════════════════════════════════════════════════════
+    logs.push(`── プリフェイズ ──`);
+    for (const actor of actors.filter(a => a.type === "player")) {
+      const skillId = cmds[actor.id] ?? "atk";
+      const sk_def  = SKILL_DEFS[skillId];
+      if (!sk_def || !sk_def.isPrephase) continue;
+      if (sk_def.hits === 0 || skillId === "counter" || skillId === "dodge") continue; // counter/dodge はメインフェイズで解決
+
+      const memberAtkBonus = actor.id === "eltz" ? atkBonus : (ALL_CHAR_DEFS[actor.id]?.atk ?? 0);
+      const weaponType = actor.id === "eltz" ? (equippedWeapon?.weaponType ?? "none") : "none";
+
+      const { perHit, totalDmg } = resolveSkillDamage({
+        skillId, atkBonus: memberAtkBonus, weaponType,
+        comboMult: 1.0, targetDef: 0, targetMagDef: 0,
+        isStunned: false,
+      });
+
+      const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+
+      // ── 全体攻撃 ──────────────────────────────────────────────────────
+      if (sk_def.target === "all") {
+        const hitDmg = Math.max(1, totalDmg);
+        if (typeof curEnemies !== "undefined" && curEnemies) {
+          curEnemies.forEach((e, i) => {
+            if (e.defeated) return;
+            curEnemies[i].hp = Math.max(0, e.hp - hitDmg);
+            if (curEnemies[i].hp <= 0) curEnemies[i].defeated = true;
+            pendingHitFx.push({ slotIdx: i, dmg: hitDmg, type: "normal" });
+            if (curEnemies[i].defeated) pendingDefeatFx.push({ slotIdx: i });
+          });
+        } else {
+          curEnemyHp = Math.max(0, curEnemyHp - hitDmg);
+          pendingHitFx.push({ slotIdx: 0, dmg: hitDmg, type: "normal" });
+        }
+        logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵に${hitDmg}ダメージ！`);
+
+      // ── 単体攻撃 ──────────────────────────────────────────────────────
+      } else {
+        const aliveIdx = curEnemies.findIndex(e => !e.defeated);
+        if (aliveIdx < 0) continue; // 全滅済みならスキップ
+        const tIdx = (actor.targetIdx != null && !curEnemies[actor.targetIdx]?.defeated)
+          ? actor.targetIdx : aliveIdx;
+        const finalDmg = Math.max(1, totalDmg);
+        curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - finalDmg);
+        if (curEnemies[tIdx].hp <= 0) {
+          curEnemies[tIdx].defeated = true;
+          pendingDefeatFx.push({ slotIdx: tIdx });
+        }
+        pendingHitFx.push({ slotIdx: tIdx, dmg: finalDmg, type: "normal" });
+        logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel} → ${curEnemies[tIdx].def.em}${curEnemies[tIdx].def.name} ${finalDmg}ダメージ！`);
+      }
+
+      skillsUsedThisTurn.set(skillId, actor.id);
+    }
+    logs.push(`── メインフェイズ ──`);  // ← 元からある行（削除しない）
 
     for (const actor of actors) {
       if (actor.type === "player") {
@@ -3401,25 +3459,27 @@ export default function ArcadiaCh2() {
       
         // ── 全体攻撃 ──────────────────────────────────────────────────────────
         if (sk_def.target === "all") {
-          const { perHit } = resolveSkillDamage({
+          // ↓ perHit → totalDmg に変更
+          const { perHit, totalDmg } = resolveSkillDamage({
             skillId, atkBonus:memberAtkBonus, weaponType,
             comboMult:comboAtkMult, targetDef:0, targetMagDef:0,
             isStunned:isTargetStunned,
           });
-          // マルチ敵は curEnemies を、単体バトルは curEnemyHp を更新
+          const hitDmg = Math.max(1, totalDmg); // ← totalDmg を使う
           if (typeof curEnemies !== "undefined" && curEnemies) {
             curEnemies.forEach((e, i) => {
               if (e.defeated) return;
-              curEnemies[i].hp = Math.max(0, e.hp - perHit);
+              curEnemies[i].hp = Math.max(0, e.hp - hitDmg); // ← hitDmg に変更
               if (curEnemies[i].hp <= 0) curEnemies[i].defeated = true;
-              pendingHitFx.push({ slotIdx:i, dmg:perHit, type:"normal" });
+              pendingHitFx.push({ slotIdx:i, dmg:hitDmg, type:"normal" }); // ← hitDmg に変更
               if (curEnemies[i].defeated) pendingDefeatFx.push({ slotIdx:i });
             });
           } else {
-            curEnemyHp = Math.max(0, curEnemyHp - perHit);
-            pendingHitFx.push({ slotIdx:0, dmg:perHit, type:"normal" });
+            curEnemyHp = Math.max(0, curEnemyHp - hitDmg); // ← hitDmg に変更
+            pendingHitFx.push({ slotIdx:0, dmg:hitDmg, type:"normal" }); // ← hitDmg に変更
           }
-          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}！ 全敵に${perHit}ダメージ！`);
+          const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : ""; // ← ログにhit数追加
+          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵に${hitDmg}ダメージ！`);
           skillsUsedThisTurn.set(skillId, actor.id);
           continue;
         }
@@ -3653,23 +3713,43 @@ export default function ArcadiaCh2() {
 
       // ── ダメージスキル（hits > 0 かつ healFlat === 0）────────────────────
       if (sk_def.hits > 0 && sk_def.healFlat === 0) {
-        if (curEnemyHp <= 0) continue;
+        const memberAtkBonus = actor.id === "eltz" ? atkBonus : (ALL_CHAR_DEFS[actor.id]?.atk ?? 0);
+        const weaponType = actor.id === "eltz" ? (equippedWeapon?.weaponType ?? "none") : "none";
 
-        const memberAtkBonus = actor.id === "eltz" ? atkBonus : (partyAtk[actor.id] ?? 0);
-        const weaponType     = actor.id === "eltz" ? equippedWeapon : (partyWeapon?.[actor.id] ?? "none");
-
-        const { totalDmg } = resolveSkillDamage({
+        const { perHit, totalDmg } = resolveSkillDamage({
           skillId, atkBonus: memberAtkBonus, weaponType,
           comboMult: 1.0, targetDef: 0, targetMagDef: 0,
           isStunned: false,
         });
-        const finalDmg = Math.max(1, totalDmg);
-
-        curEnemyHp = Math.max(0, curEnemyHp - finalDmg);
-        pendingHitFx.push({ slotIdx: 0, dmg: finalDmg, type: "normal" });
 
         const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-        logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel} → ${ed.em}${ed.name} ${finalDmg}ダメージ！`);
+
+        // ── 全体攻撃 ──────────────────────────────────────────────────────
+        if (sk_def.target === "all") {
+          const hitDmg = Math.max(1, totalDmg);
+          if (typeof curEnemies !== "undefined" && curEnemies) {
+            curEnemies.forEach((e, i) => {
+              if (e.defeated) return;
+              curEnemies[i].hp = Math.max(0, e.hp - hitDmg);
+              if (curEnemies[i].hp <= 0) curEnemies[i].defeated = true;
+              pendingHitFx.push({ slotIdx: i, dmg: hitDmg, type: "normal" });
+              if (curEnemies[i].defeated) pendingDefeatFx.push({ slotIdx: i });
+            });
+          } else {
+            curEnemyHp = Math.max(0, curEnemyHp - hitDmg);
+            pendingHitFx.push({ slotIdx: 0, dmg: hitDmg, type: "normal" });
+          }
+          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵に${hitDmg}ダメージ！`);
+
+        // ── 単体攻撃 ──────────────────────────────────────────────────────
+        } else {
+          if (curEnemyHp <= 0) continue;
+          const finalDmg = Math.max(1, totalDmg);
+          curEnemyHp = Math.max(0, curEnemyHp - finalDmg);
+          pendingHitFx.push({ slotIdx: 0, dmg: finalDmg, type: "normal" });
+          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel} → ${ed.em}${ed.name} ${finalDmg}ダメージ！`);
+        }
+
         skillsUsedThisTurn.set(skillId, actor.id);
       }
 
@@ -3978,7 +4058,49 @@ export default function ArcadiaCh2() {
     });
     if (eAction === "counter") logs.push(`${ed.em} ${ed.name} 🔄 カウンター構え！`);
     if (eAction === "dodge")   logs.push(`${ed.em} ${ed.name} 💨 回避態勢！`);
-    logs.push(`── メインフェイズ ──`);
+
+    // ══════════════════════════════════════════════════════════════════
+    // プリフェイズ：攻撃スキル（isPrephase:true かつ hits>0）
+    //   counter/dodge はログ宣言のみ。攻撃系プリフェイズはここでダメージ処理。
+    // ══════════════════════════════════════════════════════════════════
+    logs.push(`── プリフェイズ ──`);
+    for (const actor of actors.filter(a => a.type === "player")) {
+      const skillId = cmds[actor.id] ?? "atk";
+      const sk_def  = SKILL_DEFS[skillId];
+      if (!sk_def || !sk_def.isPrephase) continue;
+      if (sk_def.hits === 0 || skillId === "counter" || skillId === "dodge") continue; // counter/dodge はメインフェイズで解決
+
+      const memberAtkBonus = actor.id === "eltz" ? atkBonus : (ALL_CHAR_DEFS[actor.id]?.atk ?? 0);
+      const weaponType = actor.id === "eltz" ? (equippedWeapon?.weaponType ?? "none") : "none";
+
+      const { perHit, totalDmg } = resolveSkillDamage({
+        skillId, atkBonus: memberAtkBonus, weaponType,
+        comboMult: 1.0, targetDef: 0, targetMagDef: 0,
+        isStunned: false,
+      });
+
+      const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+
+      // ── 全体攻撃 ──────────────────────────────────────────────────────
+      if (sk_def.target === "all") {
+        if (curEnemyHp <= 0) continue;
+        const hitDmg = Math.max(1, totalDmg);
+        curEnemyHp = Math.max(0, curEnemyHp - hitDmg);
+        pendingHitFx.push({ slotIdx: 0, dmg: hitDmg, type: "normal" });
+        logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵に${hitDmg}ダメージ！`);
+
+      // ── 単体攻撃 ──────────────────────────────────────────────────────
+      } else {
+        if (curEnemyHp <= 0) continue;
+        const finalDmg = Math.max(1, totalDmg);
+        curEnemyHp = Math.max(0, curEnemyHp - finalDmg);
+        pendingHitFx.push({ slotIdx: 0, dmg: finalDmg, type: "normal" });
+        logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel} → ${ed.em}${ed.name} ${finalDmg}ダメージ！`);
+      }
+
+      skillsUsedThisTurn.set(skillId, actor.id);
+    }
+    logs.push(`── メインフェイズ ──`);  // ← 元からある行（削除しない）
 
     // ══════════════════════════════════════════════════════════════════
     // メインフェイズ：SPD順で行動実行
@@ -4320,23 +4442,43 @@ export default function ArcadiaCh2() {
 
       // ── ダメージスキル（hits > 0 かつ healFlat === 0）────────────────────
       if (sk_def.hits > 0 && sk_def.healFlat === 0) {
-        if (curEnemyHp <= 0) continue;
+        const memberAtkBonus = actor.id === "eltz" ? atkBonus : (ALL_CHAR_DEFS[actor.id]?.atk ?? 0);
+        const weaponType = actor.id === "eltz" ? (equippedWeapon?.weaponType ?? "none") : "none";
 
-        const memberAtkBonus = actor.id === "eltz" ? atkBonus : (partyAtk[actor.id] ?? 0);
-        const weaponType     = actor.id === "eltz" ? equippedWeapon : (partyWeapon?.[actor.id] ?? "none");
-
-        const { totalDmg } = resolveSkillDamage({
+        const { perHit, totalDmg } = resolveSkillDamage({
           skillId, atkBonus: memberAtkBonus, weaponType,
           comboMult: 1.0, targetDef: 0, targetMagDef: 0,
           isStunned: false,
         });
-        const finalDmg = Math.max(1, totalDmg);
-
-        curEnemyHp = Math.max(0, curEnemyHp - finalDmg);
-        pendingHitFx.push({ slotIdx: 0, dmg: finalDmg, type: "normal" });
 
         const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-        logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel} → ${ed.em}${ed.name} ${finalDmg}ダメージ！`);
+
+        // ── 全体攻撃 ──────────────────────────────────────────────────────
+        if (sk_def.target === "all") {
+          const hitDmg = Math.max(1, totalDmg);
+          if (typeof curEnemies !== "undefined" && curEnemies) {
+            curEnemies.forEach((e, i) => {
+              if (e.defeated) return;
+              curEnemies[i].hp = Math.max(0, e.hp - hitDmg);
+              if (curEnemies[i].hp <= 0) curEnemies[i].defeated = true;
+              pendingHitFx.push({ slotIdx: i, dmg: hitDmg, type: "normal" });
+              if (curEnemies[i].defeated) pendingDefeatFx.push({ slotIdx: i });
+            });
+          } else {
+            curEnemyHp = Math.max(0, curEnemyHp - hitDmg);
+            pendingHitFx.push({ slotIdx: 0, dmg: hitDmg, type: "normal" });
+          }
+          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵に${hitDmg}ダメージ！`);
+
+        // ── 単体攻撃 ──────────────────────────────────────────────────────
+        } else {
+          if (curEnemyHp <= 0) continue;
+          const finalDmg = Math.max(1, totalDmg);
+          curEnemyHp = Math.max(0, curEnemyHp - finalDmg);
+          pendingHitFx.push({ slotIdx: 0, dmg: finalDmg, type: "normal" });
+          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel} → ${ed.em}${ed.name} ${finalDmg}ダメージ！`);
+        }
+
         skillsUsedThisTurn.set(skillId, actor.id);
       }
 
