@@ -556,14 +556,13 @@ const SKILL_DEFS = {
   },
 
   slow_blade: {
-    label:"スローブレード", icon:"⚔", color:"#67e8f9", cost:0, cooldown:3,
+    label:"スローブレード", icon:"⚔", color:"#67e8f9", cost:0, cooldown:1,
     isPrephase:false, isEndphase:true,
-    dmgType:"fixed", baseDmg:[30,36], weaponMult:true, atkMult:true, dmgMult:1.0,
-    hits:0, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
+    dmgType:"fixed", baseDmg:[0,0], weaponMult:false, atkMult:false, dmgMult:1.0,
+    hits:0, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
-    enemyStun:1, enemyForceAction:null, enemyForceActionTurns:0,
-    enemyDebuff:{ target:"single", turns:2, patk:1.0, pdef:1.0, matk:1.0, mdef:1.0, spd:-6 },
-    selfBuff:null, enrageBreak:false,
+    enemyStun:2, enemyForceAction:null, enemyForceActionTurns:0,
+    enemyDebuff:null,selfBuff:null, enrageBreak:false,
   },
 
   deep_edge: {
@@ -786,6 +785,7 @@ function applySkillSideEffects({
   takedownActive,
   sleepActive,
   straightShotActive = 0,   // ← 追加
+  slowbladeActive = 0,
   waterSphereActive = 0,
   reverseActive = 0,   // ← 追加
   bikerAtkBonus,
@@ -801,6 +801,7 @@ function applySkillSideEffects({
     takedownActive:   Math.max(0, takedownActive  - 1),
     sleepActive:      Math.max(0, sleepActive     - 1),
     straightShotActive:  Math.max(0, straightShotActive - 1),   // ← 追加
+    slowbladeActive:  Math.max(0, slowbladeActive - 1),   // ← 追加
     waterSphereActive: Math.max(0, (typeof waterSphereActive !== "undefined" ? waterSphereActive : 0) - 1),
     bikerAtkBonus,
     enrageCount:      Math.max(0, enrageCount     - 1),
@@ -862,6 +863,8 @@ function applySkillSideEffects({
           next.takedownActive = sk.enemyStun - 1;
         } else if (skillId === "straight_shot") {
           next.straightShotActive = sk.enemyStun - 1;
+        } else if (skillId === "straight_shot") {
+          next.slowbladeActive = sk.enemyStun - 1;
         } else {
           next.sleepActive = sk.enemyStun - 1;
         }
@@ -2207,6 +2210,7 @@ export default function ArcadiaCh2() {
   // ── 新スキルstate ──────────────────────────────────────────────────────────
   const [bikerAtkBonus,        setBikerAtkBonus       ] = useState(0);
   const [straightShotActive,   setStraightShotActive  ] = useState(0);
+  const [slowbladeActive,      setslowbladeActive        ] = useState(0);
   const [waterSphereActive,    setWaterSphereActive   ] = useState(0);
   const [memberCdMap,          setMemberCdMap         ] = useState({}); // ← 追加
    // ── プレイング分析ステート ──────────────────────────────────────────────
@@ -2947,7 +2951,7 @@ export default function ArcadiaCh2() {
           const pi = buildPartyInit(pKeys);
           setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
         setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);  setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0);  setWaterSphereActive(0);
+        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);  setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0);  setWaterSphereActive(0); setslowbladeActive(0);  
         setPhase("battle");
         return;
       }
@@ -2969,7 +2973,7 @@ export default function ArcadiaCh2() {
         const pi = buildPartyInit(pKeys);
         setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);setslowbladeActive(0)
       setMultiEnemies(null);
       setPhase("battle");
       return;
@@ -3046,7 +3050,7 @@ export default function ArcadiaCh2() {
           const pi = buildPartyInit(pKeys);
           setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
         setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);  setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); ssetStraightShotActive(0); etWaterSphereActive(0);
+        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);  setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); ssetStraightShotActive(0); etWaterSphereActive(0);setslowbladeActive(0)
         setMemberCdMap({});  // 1行でリセット完了
         setPhase("battle");
         return;
@@ -3069,7 +3073,7 @@ export default function ArcadiaCh2() {
         const pi = buildPartyInit(pKeys);
         setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);setslowbladeActive(0)
       setMemberCdMap({});  // 1行でリセット完了
       setMultiEnemies(null);
       setPhase("battle");
@@ -3335,6 +3339,7 @@ export default function ArcadiaCh2() {
     let sansankaUsed      = false;
     let stingerUsed       = false;
     let straightShotUsed  = false;
+    let slowbladeUsed     = false;
     let arrowRainUsed     = false;
     let waterSphereUsed   = false;
     let enemyReverseSet   = -1;
@@ -3507,6 +3512,7 @@ export default function ArcadiaCh2() {
             if (sk_def.enemyStun > 0) {
               if (skillId === "takedown") takedownUsed = true;
               else if (skillId === "straight_shot") straightShotUsed = true;
+              else if (skillId === "slow_blade") slowbladeUsed = true;
               else sleepUsed = true;
               logMsg += ` 全敵を${sk_def.enemyStun}T行動不能！`;
             }
@@ -3527,7 +3533,7 @@ export default function ArcadiaCh2() {
           // 行動不能状態判定（comboBonus用）
           // ※ 単体バトルは takedownActive/sleepActive/straightShotActive で判断
           // ※ マルチバトルは各敵のstunフラグ（将来拡張）。現状は単体と同じ値を参照
-          const isTargetStunned = (takedownActive > 0 || sleepActive > 0 || straightShotActive > 0);
+          const isTargetStunned = (takedownActive > 0 || sleepActive > 0 || straightShotActive > 0|| slowbladeActive > 0);
         
           // ── 全体攻撃 ──────────────────────────────────────────────────────
           if (sk_def.target === "all") {
@@ -3663,6 +3669,7 @@ export default function ArcadiaCh2() {
           if (sk_def.enemyStun > 0) {
             if (skillId === "takedown") takedownUsed = true;
             else if (skillId === "straight_shot") straightShotUsed = true;
+            else if (skillId === "slow_blade") slowbladeUsed = true;
             else sleepUsed = true;
           }
   
@@ -3678,15 +3685,16 @@ export default function ArcadiaCh2() {
             const sk = SKILL_DEFS[sid];
             return sk && sk.isPrephase && sk.enemyStun >= 1 && sk.hits > 0;
           });
-          if (elemBreakTriggered || prephaseStunUsed || takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0 || straightShotUsed || straightShotActive > 0) {
+          if (elemBreakTriggered || prephaseStunUsed || takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0 || straightShotUsed || straightShotActive > 0 || slowbladeUsed || slowbladeActive > 0) {
           
-            if (elemBreakTriggered && !takedownUsed && takedownActive === 0 && !sleepUsed && sleepActive === 0 && !straightShotUsed && straightShotActive === 0) {
+            if (elemBreakTriggered && !takedownUsed && takedownActive === 0 && !sleepUsed && sleepActive === 0 && !straightShotUsed && straightShotActive === 0 && !slowbladeUsed && slowbladeActive === 0) {
               logs.push(`${e.def.em}${e.def.name} 💥 ELEMENT BREAKで行動不能！`);
             } else {
               const stunLabel = prephaseStunUsed
                 ? "🗡 スタン"
                 : (takedownUsed || takedownActive > 0) ? "🦵 テイクダウン"
                 : (straightShotUsed || straightShotActive > 0) ? "😵 ストレートショット"
+                : (slowbladeUsed || slowbladeActive > 0) ? "😵 スローブレード" 
                 : "😴 スリープ";
               logs.push(`${e.def.em}${e.def.name} ${stunLabel}で行動不能！`);
             }
@@ -3907,7 +3915,25 @@ export default function ArcadiaCh2() {
 
         skillsUsedThisTurn.set(skillId, actor.id);
       }
-
+          // ── 補助スキル（hits=0 かつ healFlat=0）─────────────────────────────
+          // enemyStun / enemyForceAction / selfBuff のみ → ログ出してskillsUsedに積む
+          if (sk_def.hits === 0) {
+            let logMsg = `${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}！`;
+            
+            if (sk_def.enemyStun > 0) {
+              if (skillId === "takedown") takedownUsed = true;
+              else if (skillId === "straight_shot") straightShotUsed = true;
+              else if (skillId === "slow_blade") slowbladeUsed = true;
+              else sleepUsed = true;
+              logMsg += ` 全敵を${sk_def.enemyStun}T行動不能！`;
+            }
+            if (sk_def.selfBuff && sk_def.selfBuff.spd > 0) {
+              logMsg += ` 味方SPD+${sk_def.selfBuff.spd}（${sk_def.selfBuff.turns}T）！`;
+            }
+            if (!sk_def.reversePhase) logs.push(logMsg);  // ← リバースはログ非表示
+            skillsUsedThisTurn.set(skillId, actor.id);
+        
+          }
       // ── 回復スキル（healFlat > 0）────────────────────────────────────────
       if (sk_def.healFlat > 0) {
         const healAmt = sk_def.healFlat;
@@ -4010,6 +4036,7 @@ export default function ArcadiaCh2() {
       sleepActive,
       straightShotActive,  
       waterSphereActive,
+      slowbladeActive,
       bikerAtkBonus,
       enrageCount,
       reverseActive,   // ← 追加
@@ -4027,7 +4054,8 @@ export default function ArcadiaCh2() {
     setProvokeActive(sideEffects.provokeActive);
     setTakedownActive(sideEffects.takedownActive);
     setSleepActive(sideEffects.sleepActive);
-    setStraightShotActive(sideEffects.straightShotActive);   
+    setStraightShotActive(sideEffects.straightShotActive); 
+    setslowbladeActive(sideEffects.slowbladeActive);    
     setBikerAtkBonus(sideEffects.bikerAtkBonus);
     setEnrageCount(sideEffects.enrageCount);
     setWaterSphereActive(sideEffects.waterSphereActive);
@@ -4102,7 +4130,7 @@ export default function ArcadiaCh2() {
     multiEnemies, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, partySpdBuff, enemySpdDebuff, enrageCount, enemyAtkDebuff,
     provokeActive, takedownActive, sleepActive,
-    bikerAtkBonus, straightShotActive, waterSphereActive, memberCdMap,
+    bikerAtkBonus, straightShotActive, waterSphereActive, slowbladeActive,memberCdMap,
     reverseActive,
     noDmgStreak, turn, lv, showNotif, handleExpGain,
     fireHitEffect, fireDefeatEffect,
@@ -4188,6 +4216,7 @@ export default function ArcadiaCh2() {
     let sansankaUsed      = false;
     let stingerUsed       = false;
     let straightShotUsed  = false;
+    let slowbladeUsed     = false;
     let arrowRainUsed     = false;
     let waterSphereUsed   = false;
     // 属性スキル使用フラグ（CDセット用）
@@ -4210,6 +4239,7 @@ export default function ArcadiaCh2() {
     if (takedownActive > 0)     logs.push(`🦵 スタン中！ ${ed.name}が行動不能（残${takedownActive}T）`);
     if (sleepActive > 0)        logs.push(`😴 スタン中！ ${ed.name}が行動不能（残${sleepActive}T）`);
     if (straightShotActive > 0) logs.push(`😵 スタン中！ ${ed.name}が行動不能（残${straightShotActive}T）`);
+    if (slowbladeActive > 0)    logs.push(`😵 スタン中！ ${ed.name}が行動不能（残${slowbladeActive}T）`);
     if (waterSphereActive > 0)  logs.push(`💧 水濡れ中！ ${ed.name}のATK半減（残${waterSphereActive}T）`);
 
     // ══════════════════════════════════════════════════════════════════
@@ -4341,6 +4371,7 @@ export default function ArcadiaCh2() {
           if (sk_def.enemyStun > 0) {
             if (skillId === "takedown") takedownUsed = true;
             else if (skillId === "straight_shot") straightShotUsed = true;
+            else if (skillId === "slow_blade") slowbladeUsed = true;
             else sleepUsed = true;
             logMsg += ` 全敵を${sk_def.enemyStun}T行動不能！`;
           }
@@ -4361,7 +4392,7 @@ export default function ArcadiaCh2() {
         // 行動不能状態判定（comboBonus用）
         // ※ 単体バトルは takedownActive/sleepActive/straightShotActive で判断
         // ※ マルチバトルは各敵のstunフラグ（将来拡張）。現状は単体と同じ値を参照
-        const isTargetStunned = (takedownActive > 0 || sleepActive > 0 || straightShotActive > 0);
+        const isTargetStunned = (takedownActive > 0 || sleepActive > 0 || straightShotActive > 0|| slowbladeActive > 0);
       
         // ── 全体攻撃 ──────────────────────────────────────────────────────
         if (sk_def.target === "all") {
@@ -4475,6 +4506,7 @@ export default function ArcadiaCh2() {
         if (sk_def.enemyStun > 0) {
           if (skillId === "takedown") takedownUsed = true;
           else if (skillId === "straight_shot") straightShotUsed = true;
+          else if (skillId === "slow_blade") slowbladeUsed = true;
           else sleepUsed = true;
         }
 
@@ -4490,12 +4522,13 @@ export default function ArcadiaCh2() {
           const sk = SKILL_DEFS[sid];
           return sk && sk.isPrephase && sk.enemyStun >= 1 && sk.hits > 0;
         });
-        const isStunned = prephaseStunUsed || takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0 || straightShotUsed || straightShotActive > 0;
+        const isStunned = prephaseStunUsed || takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0 || straightShotUsed || straightShotActive > 0 || slowbladeUsed || slowbladeActive > 0 ;
         if (isStunned) {
           const stunLabel = prephaseStunUsed
             ? "🗡 スタン"
             : (takedownUsed || takedownActive > 0) ? "🦵 テイクダウン"
             : (straightShotUsed || straightShotActive > 0) ? "😵 ストレートショット"
+            : (slowbladeUsed || slowbladeActive > 0) ? "😵 スローブレード"
             : "😴 スリープ";
           logs.push(`${ed.em}${ed.name} ${stunLabel}で行動不能！`);
           continue;
@@ -4775,7 +4808,8 @@ export default function ArcadiaCh2() {
     setProvokeActive(sideEffects.provokeActive);
     setTakedownActive(sideEffects.takedownActive);
     setSleepActive(sideEffects.sleepActive);
-    setStraightShotActive(sideEffects.straightShotActive);   // ← 追加
+    setStraightShotActive(sideEffects.straightShotActive); 
+    setslowbladeActive(sideEffects.slowbladeActive); 
     setBikerAtkBonus(sideEffects.bikerAtkBonus);
     setEnrageCount(sideEffects.enrageCount);
     setWaterSphereActive(sideEffects.waterSphereActive);
@@ -4857,6 +4891,7 @@ export default function ArcadiaCh2() {
     takedownActive, sleepActive, 
     bikerAtkBonus, 
     straightShotActive, 
+    slowbladeActive,
     waterSphereActive,
     enemyHp, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, noDmgStreak, lv,
@@ -5234,6 +5269,7 @@ export default function ArcadiaCh2() {
                     setSleepActive(0); 
                     setBikerAtkBonus(0); 
                     setStraightShotActive(0); 
+                    setslowbladeActive(0); 
                     setWaterSphereActive(0);
                     setMultiEnemies(null);
                     setBattleNext("mapscan");
@@ -5480,6 +5516,7 @@ export default function ArcadiaCh2() {
       setPartyMp({ swift:60, linz:70, chopper:50 });
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
       setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setStraightShotActive(0); setWaterSphereActive(0);
+      setslowbladeActive(0);
       setPhase("battle");
     };
 
