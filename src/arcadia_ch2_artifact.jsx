@@ -133,10 +133,11 @@ const INITIAL_BATTLE_DEFS = {
 
   moocat: {
     name:"ムーキャット", em:"🐱",
-    maxHp:99, atk:[10,16], elk:35, exp:30, lv:4, spd:20,pdef:0, mdef:0,
+    maxHp:99, atk:[23,30], elk:35, exp:30, lv:4, spd:17,pdef:0, mdef:0,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["atk","dodge","counter","atk","dodge","atk","counter","dodge"],
+    pattern:["unavoidable"],
     elementCycle:["thunder"],
+    unavoidableAtk:[42,45],  // ← 追加
   },
 
   mandragora: {
@@ -380,7 +381,7 @@ const SKILL_DEFS = {
     isPrephase:false, isEndphase:false,
     dmgType:"fixed", baseDmg:[0,0], weaponMult:false, atkMult:false, dmgMult:0,
     hits:0, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
-    healFlat:120, healTarget:"self",
+    healFlat:75, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null,
     selfBuff:null,
@@ -648,9 +649,9 @@ const SKILL_DEFS = {
   },
 
   arrow_rain: {
-    label:"アローレイン", icon:"⚔", color:"#a3e635", cost:0, cooldown:4,
+    label:"アローレイン", icon:"⚔", color:"#a3e635", cost:0, cooldown:0,
     isPrephase:true, isEndphase:false,
-    dmgType:"physical", baseDmg:[15,20], weaponMult:true, atkMult:false, dmgMult:1.0,
+    dmgType:"physical", baseDmg:[18,24], weaponMult:true, atkMult:false, dmgMult:1.0,
     hits:3, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
@@ -909,8 +910,8 @@ const ALL_CHAR_DEFS = {
         "fireball","stone_blitz","air_cutter","thunderbolt"
       ]
      },
-  swift:   { id:"swift",   name:"スウィフト", icon:"\u{1F9D1}\u200D\u{1F9B1}",     spd:15, mhp:125, mmp:105,  atk:15,  def:10,  skills:["atk","counter","dodge","heal","deep_edge","elem_fire"] },
-  linz:    { id:"linz",    name:"リンス",    icon:"\u{1F469}",                     spd:11, mhp:122, mmp:100,  atk:10,  def:10,  skills:["atk","counter","dodge","heal","overheal","trick_attack"] },
+  swift:   { id:"swift",   name:"スウィフト", icon:"\u{1F9D1}\u200D\u{1F9B1}",     spd:18, mhp:125, mmp:105,  atk:15,  def:10,  skills:["atk","counter","dodge","heal","takedown","windmill","elem_fire"] },
+  linz:    { id:"linz",    name:"リンス",    icon:"\u{1F469}",                     spd:11, mhp:122, mmp:100,  atk:10,  def:10,  skills:["atk","counter","dodge","heal","overheal","trick_attack","arrow_rain"] },
   chopper: { id:"chopper", name:"チョッパー", icon:"\u{1F466}",                     spd:9,  mhp:110,  mmp:90,  atk:5,  def:8,  skills:["atk","counter","dodge","heal","elem_fire","elem_earth"] },
   aries:   { id:"aries",   name:"アリエス",  icon:"\u{1F30A}",                     spd:13, mhp:125, mmp:105,  atk:10,  def:10,  skills:["atk","counter","dodge","heal","water_sphere"] },
   karma:   { id:"karma",   name:"カルマ",    icon:"\u{1F61C}",                     spd:16, mhp:115, mmp:95,  atk:0,  def:0,  skills:["atk","counter","dodge","heal","provoke"] },
@@ -1699,7 +1700,7 @@ const SCENES = [
     { sp:"エルツ", t:"「参ったな。あれじゃ攻撃できないよな。\nもっとこう、攻撃しやすい\n不細工なモンスターがいりゃいいんだけど」" },
     { sp:"スウィフト", t:"「猫？」\n\n容姿は猫。体中をオレンジ色の斑点で覆われた\n茶毛の生物がピタリと足を止めた。\n\n「ＭｏｏＭｏｏ！」" },
     { sp:"エルツ", t:"「ＭｏｏＣａｔ──ムーキャット。\nしかもこいつＬｖ４だって。」" },
-    { sp:"ナレーション", t:"目の前の小さな影が跳躍する──\nアクティブモンスターだ！", battle:true, battleType:"moocat", battleNext:14 }
+    { sp:"ナレーション", t:"目の前の小さな影が跳躍する──\nアクティブモンスターだ！", battle:true, multiEnemyTypes:["moocat","moocat","moocat"], battleNext:14 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -3357,17 +3358,18 @@ export default function ArcadiaCh2() {
             comboMult: 1.0, isStunned: false,
             enemies: curEnemies,
           });
+          const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵にダメージ！`);
           curEnemies.forEach((e, i) => {
             if (e.defeated) return;
-            const { perHit, totalDmg: td } = aoeDmgs[i];
+            const { perHit } = aoeDmgs[i];
             const dmg = Math.max(1, perHit) * sk_def.hits;
             curEnemies[i].hp = Math.max(0, e.hp - dmg);
             if (curEnemies[i].hp <= 0) curEnemies[i].defeated = true;
             pendingHitFx.push({ slotIdx: i, dmg, type: "normal" });
             if (curEnemies[i].defeated) pendingDefeatFx.push({ slotIdx: i });
+            logs.push(`  → ${e.def.em}${e.def.name} に${dmg}ダメージ！`);
           });
-          const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵にダメージ！`);
         } else {
           const { perHit } = resolveSkillDamage({
             skillId, atkBonus: memberAtkBonus, weaponType,
@@ -3493,6 +3495,12 @@ export default function ArcadiaCh2() {
             });
             const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
             logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵にダメージ！`);
+            curEnemies.forEach((e, i) => {
+              if (e.defeated) return;
+              const { perHit } = aoeDmgs[i];
+              const dmg = Math.max(1, perHit) * sk_def.hits;
+              logs.push(`  → ${e.def.em}${e.def.name} に${dmg}ダメージ！`);
+            });
           } else {
             const { perHit } = resolveSkillDamage({
               skillId, atkBonus: memberAtkBonus, weaponType,
@@ -3671,8 +3679,6 @@ export default function ArcadiaCh2() {
             memberDmg[k] = (memberDmg[k] ?? 0) + mDmg;
             logs.push(`  → ${ALL_CHAR_DEFS[k]?.icon ?? ""}${ALL_CHAR_DEFS[k]?.name ?? k} ${mDmg}ダメージ！`);
           }
-          // ※ memberDmg への代入が重複するので、直後の Object.keys(memberDmg).forEach(...) を削除
-          Object.keys(memberDmg).forEach(k => memberDmg[k] += dmg);
           setShowAtkAllAnim(false); // 一旦リセットして再マウントを強制
           setTimeout(() => { setAtkAllAnimKey(k => k + 1); setShowAtkAllAnim(true); }, 0);
         } else if (eAction === "unavoidable") {
