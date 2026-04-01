@@ -240,9 +240,9 @@ const INITIAL_BATTLE_DEFS = {
   // ── オルガ：最終話手合わせ ────────────────────────────────────────────────
   olga: {
     name:"オルガ", em:"⚔️",
-    maxHp:999, atk:[99,99], elk:0, exp:0, lv:23, spd:13,pdef:18, mdef:18,
+    maxHp:999, atk:[99,99], elk:0, exp:0, lv:23, spd:11,pdef:18, mdef:18,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:true, isFloating:false, isGround:true,
-    pattern:["atk","counter","dodge","atk_all","atk","dodge","unavoidable","atk","counter","atk_all",],
+    pattern:["counter","dodge","atk_all","atk","dodge","unavoidable","atk","reverse","takedown","unavoidable","elem_earth","unavoidable","atk_all","counter","dodge","elem_thunder",],
     unavoidableAtk:[99,99],
     elementCycle:["fire","ice","thunder","earth","none"],
   },
@@ -419,8 +419,8 @@ const SKILL_DEFS = {
   takedown: {
     label:"テイクダウン", icon:"🦵", color:"#ef4444", cost:0, cooldown:3,
     isPrephase:false, isEndphase:false,
-    dmgType:"fixed", baseDmg:[0,0], weaponMult:false, atkMult:false, dmgMult:0,
-    hits:0, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
+    dmgType:"physical", baseDmg:[10,15], weaponMult:false, atkMult:false, dmgMult:0,
+    hits:1, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:1, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null,
@@ -561,7 +561,7 @@ const SKILL_DEFS = {
     dmgType:"fixed", baseDmg:[30,36], weaponMult:true, atkMult:true, dmgMult:1.0,
     hits:1, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
-    enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
+    enemyStun:1, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:{ target:"single", turns:2, patk:1.0, pdef:1.0, matk:1.0, mdef:1.0, spd:-6 },
     selfBuff:null, enrageBreak:false,
   },
@@ -722,7 +722,20 @@ const SKILL_DEFS = {
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null, selfBuff:null, enrageBreak:false,
   },
+  reverse: {
+    label:"リバース", icon:"🔃", color:"#c084fc", cost:0, cooldown:0,
+    isPrephase:false, isEndphase:false,
+    dmgType:"physical", baseDmg:[0,0], weaponMult:false, atkMult:false, dmgMult:0,
+    hits:0, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
+    healFlat:0, healTarget:"self",
+    enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
+    enemyDebuff:null,
+    selfBuff:null,
+    enrageBreak:false,
+    reversePhase:5,  // 継続ターン数（変更したい場合はここを編集）
+  },
 };
+
 
 // ── resolveSkillDamage: 1ターン総ダメージ計算 ─────────────────────────────
 // 戻り値: { perHit, totalDmg }
@@ -774,6 +787,7 @@ function applySkillSideEffects({
   sleepActive,
   straightShotActive = 0,   // ← 追加
   waterSphereActive = 0,
+  reverseActive = 0,   // ← 追加
   bikerAtkBonus,
   enrageCount,
   // CDマップ（key → 現在CD値）
@@ -790,6 +804,7 @@ function applySkillSideEffects({
     waterSphereActive: Math.max(0, (typeof waterSphereActive !== "undefined" ? waterSphereActive : 0) - 1),
     bikerAtkBonus,
     enrageCount:      Math.max(0, enrageCount     - 1),
+    reverseActive:    Math.max(0, reverseActive - 1),   // ← 追加
     nextCdMap: Object.fromEntries(
       Object.entries(cdMap).map(([skillId, memberVals]) => [
         skillId,
@@ -851,7 +866,10 @@ function applySkillSideEffects({
           next.sleepActive = sk.enemyStun - 1;
         }
       }
-
+      // reversePhase
+      if (sk.reversePhase > 0) {
+        next.reverseActive = sk.reversePhase - 1; // 使用ターンを1T消費済みとして扱う
+      }
       // overheal: CDはnextCdMapに統合済み（追加処理不要）
 
       // enrageBreak
@@ -910,7 +928,7 @@ const ALL_CHAR_DEFS = {
         "fireball","stone_blitz","air_cutter","thunderbolt"
       ]
      },
-  swift:   { id:"swift",   name:"スウィフト", icon:"\u{1F9D1}\u200D\u{1F9B1}",     spd:18, mhp:125, mmp:105,  atk:15,  def:10,  skills:["atk","counter","dodge","heal","takedown","windmill","elem_fire"] },
+  swift:   { id:"swift",   name:"スウィフト", icon:"\u{1F9D1}\u200D\u{1F9B1}",     spd:18, mhp:125, mmp:105,  atk:15,  def:10,  skills:["atk","counter","dodge","heal","takedown","windmill","elem_fire","slow_blade"] },
   linz:    { id:"linz",    name:"リンス",    icon:"\u{1F469}",                     spd:11, mhp:122, mmp:100,  atk:10,  def:10,  skills:["atk","counter","dodge","heal","overheal","trick_attack","arrow_rain"] },
   chopper: { id:"chopper", name:"チョッパー", icon:"\u{1F466}",                     spd:9,  mhp:110,  mmp:90,  atk:5,  def:8,  skills:["atk","counter","dodge","heal","elem_fire","elem_earth"] },
   aries:   { id:"aries",   name:"アリエス",  icon:"\u{1F30A}",                     spd:13, mhp:125, mmp:105,  atk:10,  def:10,  skills:["atk","counter","dodge","heal","water_sphere"] },
@@ -1998,7 +2016,7 @@ const SCENES = [
     { sp:"オルガ", t:"「いい突きだった......今まで受けた中で最高のな。\n\nこれからはこのコミュニティを背負う\n者としての自覚を身に付けて欲しい」" , sprites:["🎭","⚔️"] },
     { sp:"ドナテロ", t:"「いずれその後姿、追い越して見せますよ。必ずね」", sprites:["🎭","⚔️"]  },
     { sp:"ナレーション", t:"続くスニーピィ、ウィル・シュラク・チョッパーの三人、\nリーベルトとフランクのペア、ユミルとケヴィン──\n皆がオルガと手合わせをした。\n\nそして残るはエルツ、スウィフト、リンスの三名。", sprites:["🧑","🧑‍🦱","👩"]  },
-    { sp:"エルツ", t:"「オルガさん、行きます！」", sprites:["🧑","🧑‍🦱","👩"], battle:true, battleType:"olga", battleNext:37 }
+    { sp:"エルツ", t:"「オルガさん、行きます！」", sprites:["🧑","🧑‍🦱","👩"], battle:true, multiEnemyTypes:["moocat","olga","moocat"], battleNext:37 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -2171,6 +2189,9 @@ export default function ArcadiaCh2() {
   // ── パーティSPDバフ管理（雷神斬効果） ─────────────────────────────────
   // partySpdBuff > 0 のとき、全味方のSPDを+3する残りターン数
   const [partySpdBuff, setPartySpdBuff] = useState(0);
+
+ // 行動順序を逆転させる
+  const [reverseActive, setReverseActive] = useState(0);
 
   // provokeActive > 0 のとき敵の行動を強制的にatkに変換する（残りターン数）。
   const [provokeActive,   setProvokeActive  ] = useState(0);
@@ -2895,6 +2916,8 @@ export default function ArcadiaCh2() {
       return;
     }
 
+
+
     // ── バトル突入フラグ ────────────────────────────────────────────────────
     if (dl.battle) {
       sceneIdxBeforeBattle.current = sceneIdx; // 敗北時の戻り先を記録
@@ -3313,6 +3336,7 @@ export default function ArcadiaCh2() {
     let straightShotUsed  = false;
     let arrowRainUsed     = false;
     let waterSphereUsed   = false;
+    let enemyReverseSet   = -1;
     let elemBreakTriggered = false;
     let newElemAccum = elemDmgAccum;
     // エフェクト蓄積バッファ（ターン処理後にまとめてsetStateする）
@@ -3321,6 +3345,11 @@ export default function ArcadiaCh2() {
 
     logs.push(`─ ターン ${turn + 1} ─`);
     setcurrentBattleTotalTurns(prev => prev + 1);
+
+    // ── リバース中ログ表示 ──
+     const reverseUsedThisTurn = Object.values(cmds).includes("reverse");
+    const isReversed = reverseActive > 0 
+    if (isReversed) logs.push(`🔃 リバース中！ フェイズ順序が逆転（残${reverseActive}T）`);
 
     // ══════════════════════════════════════════════════════════════════
     // プリフェイズ：回避・カウンター宣言
@@ -3341,11 +3370,14 @@ export default function ArcadiaCh2() {
       if (eAction === "dodge")   logs.push(`${e.def.em}${e.def.name} 💨 回避態勢！`);
     });
 
+
+    // ── フェイズ順序（リバース時は逆転） ──────────────────────────────────
+    const runPrephase  = () => { /* 既存のプリフェイズ処理をそのままここに移動 */
     // ══════════════════════════════════════════════════════════════════
     // プリフェイズ：攻撃スキル（isPrephase:true かつ hits>0）
     //   counter/dodge はログ宣言のみ。攻撃系プリフェイズはここでダメージ処理。
     // ══════════════════════════════════════════════════════════════════
-    logs.push(`── プリフェイズ ──`);
+    //logs.push(`── プリフェイズ ──`);
     for (const actor of actors.filter(a => a.type === "player")) {
       const skillId = cmds[actor.id] ?? "atk";
       const sk_def  = SKILL_DEFS[skillId];
@@ -3407,386 +3439,397 @@ export default function ArcadiaCh2() {
 
       skillsUsedThisTurn.set(skillId, actor.id);
     }
-    logs.push(`── メインフェイズ ──`);  // ← 元からある行（削除しない）
+    };
+    const runMainphase = () => { /* 既存のメインフェイズ処理をそのままここに移動 */
+     // logs.push(`── メインフェイズ ──`);  // ← 元からある行（削除しない）
 
-    for (const actor of actors) {
-      if (actor.type === "player") {
-        const skillId = cmds[actor.id] ?? "atk";
-        const sk_def  = SKILL_DEFS[skillId];
-        const isEltz  = actor.id === "eltz";
-        if (!sk_def) continue;
-      
-        // ── プリフェイズ/エンドフェイズ スキルはメインフェイズをスキップ ────────
-        // counter/dodge(isPrephase) は敵行動タイミングで解決済み
-        // overheal等(isEndphase) はエンドフェイズブロックで処理
-        if (sk_def.isPrephase || sk_def.isEndphase) continue;
-      
-        // ── MP消費 ────────────────────────────────────────────────────────────
-        if (sk_def.cost > 0) {
-          if (isEltz) curMp = Math.max(0, curMp - sk_def.cost);
-          else curPartyMp[actor.id] = Math.max(0, (curPartyMp[actor.id]??0) - sk_def.cost);
-        }
-      
-        // ── 回復スキル（hits=0 かつ healFlat>0） ──────────────────────────────
-        if (sk_def.hits === 0 && sk_def.healFlat > 0) {
-          const healAmt = sk_def.healFlat;
-          if (sk_def.healTarget === "party") {
-            // パーティ全体（通常healはselfなのでここはoverheal等の即時全体回復用）
-            curHp = Math.min(curHp + healAmt, mhp);
-            for (const k of currentPartyKeys.filter(k2 => k2 !== "eltz")) {
-              if ((curPartyHp[k] ?? 0) <= 0) continue;
-              curPartyHp[k] = Math.min((curPartyHp[k]??0) + healAmt, partyMhp[k]);
-            }
-            logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}！ 全員HP+${healAmt}`);
-          } else {
-            // 自己回復
-            if (isEltz) curHp = Math.min(curHp + healAmt, mhp);
-            else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0)+healAmt, partyMhp[actor.id]);
-            memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
-            logs.push(`${actor.icon}${actor.name} ${sk_def.icon} HP+${healAmt}`);
-          }
-          // 副作用（baff/debuff）記録
-          skillsUsedThisTurn.set(skillId, actor.id);
-          continue;
-        }
-      
-        // ── 補助スキル（hits=0 かつ healFlat=0）─────────────────────────────
-        // enemyStun / enemyForceAction / selfBuff のみ → ログ出してskillsUsedに積む
-        if (sk_def.hits === 0) {
-          let logMsg = `${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}！`;
-          if (sk_def.enemyForceAction === "atk") {
-            provokeUsed = true;
-            logMsg += ` 全敵を${sk_def.enemyForceActionTurns}T強攻固定！`;
-          }
-          if (sk_def.enemyStun > 0) {
-            if (skillId === "takedown") takedownUsed = true;
-            else if (skillId === "straight_shot") straightShotUsed = true;
-            else sleepUsed = true;
-            logMsg += ` 全敵を${sk_def.enemyStun}T行動不能！`;
-          }
-          if (sk_def.selfBuff && sk_def.selfBuff.spd > 0) {
-            logMsg += ` 味方SPD+${sk_def.selfBuff.spd}（${sk_def.selfBuff.turns}T）！`;
-          }
-          logs.push(logMsg);
-          skillsUsedThisTurn.set(skillId, actor.id);
-          continue;
-        }
-      
-        // ── 攻撃スキル ────────────────────────────────────────────────────────
-        const weaponType     = equippedWeapon?.weaponType ?? "none";
-        const memberAtkBonus = isEltz
-          ? atkBonus
-          : (ALL_CHAR_DEFS[actor.id]?.atk ?? 0);
-      
-        // 行動不能状態判定（comboBonus用）
-        // ※ 単体バトルは takedownActive/sleepActive/straightShotActive で判断
-        // ※ マルチバトルは各敵のstunフラグ（将来拡張）。現状は単体と同じ値を参照
-        const isTargetStunned = (takedownActive > 0 || sleepActive > 0 || straightShotActive > 0);
-      
-        // ── 全体攻撃 ──────────────────────────────────────────────────────
-        if (sk_def.target === "all") {
-          if (typeof curEnemies !== "undefined" && curEnemies) {
-            const aoeDmgs = resolveAoeDamage({
-              skillId, atkBonus: memberAtkBonus, weaponType,
-              comboMult: comboAtkMult, isStunned: isTargetStunned,
-              enemies: curEnemies,
-            });
-            curEnemies.forEach((e, i) => {
-              if (e.defeated) return;
-              const { perHit } = aoeDmgs[i];
-              const dmg = Math.max(1, perHit) * sk_def.hits;
-              curEnemies[i].hp = Math.max(0, e.hp - dmg);
-              if (curEnemies[i].hp <= 0) curEnemies[i].defeated = true;
-              pendingHitFx.push({ slotIdx: i, dmg, type: "normal" });
-              if (curEnemies[i].defeated) pendingDefeatFx.push({ slotIdx: i });
-            });
-            const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-            logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵にダメージ！`);
-            curEnemies.forEach((e, i) => {
-              if (e.defeated) return;
-              const { perHit } = aoeDmgs[i];
-              const dmg = Math.max(1, perHit) * sk_def.hits;
-              logs.push(`  → ${e.def.em}${e.def.name} に${dmg}ダメージ！`);
-            });
-          } else {
-            const { perHit } = resolveSkillDamage({
-              skillId, atkBonus: memberAtkBonus, weaponType,
-              comboMult: comboAtkMult, targetDef: 0, targetMagDef: 0,
-              isStunned: isTargetStunned,
-            });
-            const dmg = Math.max(1, perHit) * sk_def.hits;
-            curEnemyHp = Math.max(0, curEnemyHp - dmg);
-            pendingHitFx.push({ slotIdx: 0, dmg, type: "normal" });
-            const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-            logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ ${dmg}ダメージ！`);
-          }
-          skillsUsedThisTurn.set(skillId, actor.id);
-          continue;
-        }
-      
-        // ── 単体攻撃：ターゲット解決 ──────────────────────────────────────────
-        // マルチバトル用（curEnemiesが存在する場合）
-        let tIdx = actor.targetIdx ?? 0;
-        if (typeof curEnemies !== "undefined" && curEnemies) {
-          if (!curEnemies[tIdx] || curEnemies[tIdx].defeated) {
-            const fb = curEnemies.findIndex(e => !e.defeated);
-            if (fb < 0) { logs.push(`${actor.icon}${actor.name} 攻撃対象なし`); continue; }
-            tIdx = fb;
-          }
-        }
-      
-        // 対象敵のアクション取得（カウンター判定用）
-        const tDef = typeof curEnemies !== "undefined" && curEnemies
-          ? curEnemies[tIdx]
-          : null;
-        const eActionForJudge = tDef
-          ? tDef.def.pattern[tDef.turnIdx % tDef.def.pattern.length]
-          : eAction; // 単体バトルはターン冒頭で決定済みの eAction を使用
-      
-        // atk vs 敵counter → 敵ターン側（eAction==="counter"ブロック）で一括処理するためここではスキップ
-        if (skillId === "atk" && eActionForJudge === "counter" && !sk_def.pierceCounter) {
-          continue;
-        }
-      
-        // ── 属性計算 ──────────────────────────────────────────────────────────
-        const tEnemyDef = tDef ? tDef.def : null;
-        const meElemCycle = tEnemyDef.elementCycle ?? null;
-        const meElemKey   = meElemCycle
-          ? meElemCycle[enemyElementIdx % meElemCycle.length]
-          : null;
-        let elemMult  = 1.0;
-        let isWeakHit = false;
-        if (sk_def.element && meElemKey && meElemKey !== "none") {
-          const rel = ELEMENT_RELATIONS[sk_def.element];
-          isWeakHit = rel ? meElemKey === rel.weak    : false;
-          const isResist = rel ? meElemKey === rel.resist : false;
-          elemMult  = isWeakHit ? 2.0 : isResist ? 0.5 : 1.0;
-        }
-      
-        // ── ダメージ計算 ──────────────────────────────────────────────────────
-        const { totalDmg } = resolveSkillDamage({
-          skillId, atkBonus:memberAtkBonus, weaponType,
-          comboMult:comboAtkMult,
-          targetDef:    tEnemyDef?.pdef ?? 0,
-          targetMagDef: tEnemyDef?.mdef ?? 0,
-          isStunned:isTargetStunned,
-        });
-        const finalDmg = Math.max(1, Math.round(totalDmg * elemMult));
-      
-        // HP反映
-        if (tDef) {
-          // マルチバトル
-          curEnemies[tIdx].hp = Math.max(0, tDef.hp - finalDmg);
-          if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
-          pendingHitFx.push({ slotIdx:tIdx, dmg:finalDmg, type:isWeakHit?"weak":"normal" });
-          if (curEnemies[tIdx].defeated) pendingDefeatFx.push({ slotIdx:tIdx });
-        } else {
-          // 単体バトル
-          curEnemyHp = Math.max(0, curEnemyHp - finalDmg);
-          pendingHitFx.push({ slotIdx:0, dmg:finalDmg, type:isWeakHit?"weak":"normal" });
-        }
-      
-        // ログ
-        const tEmName = tDef ? `${tDef.def.em}${tDef.def.name}` : "???";
-        const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-        const eLabel   = isWeakHit ? " ⚡弱点!" : elemMult===0.5 ? " 耐性½" : "";
-        logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel} → ${tEmName} ${finalDmg}ダメージ！${eLabel}`);
-      
-        // 属性ブレイク蓄積
-        if (isWeakHit && !elemBreakTriggered) {
-          newElemAccum += finalDmg;
-          if (newElemAccum >= ELEMENT_BREAK_THRESHOLD) {
-            elemBreakTriggered = true; newElemAccum = 0;
-            logs.push(`💥 ELEMENT BREAK！`);
-            setElemBreakAnim(true); setTimeout(()=>setElemBreakAnim(false), 1500);
-            setcurrentBattleElemBreaks(prev => prev + 1);
-          }
-        }
-      
-        // ── 攻撃+回復複合（hits>0 かつ healFlat>0 のスキル：シーソー等） ──
-        if (sk_def.healFlat > 0) {
-          const healAmt = sk_def.healFlat;
-          const isEltzHeal = actor.id === "eltz";
-          if (isEltzHeal) curHp = Math.min(curHp + healAmt, mhp);
-          else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0) + healAmt, partyMhp[actor.id]);
-          memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
-          logs.push(`${actor.icon}${actor.name} ⚖ HP+${healAmt}（複合回復）`);
-        }
-
-        skillsUsedThisTurn.set(skillId, actor.id);
-      
-      } else {
-        // ── 敵行動 ──────────────────────────────────────────────────────────
-        const slot = actor.enemySlot;
-        const e = curEnemies.find(e => e.slot === slot);
-        if (!e || e.defeated) continue;
-
-          const prephaseStunUsed = [...skillsUsedThisTurn.keys()].some(sid => {
-          const sk = SKILL_DEFS[sid];
-          return sk && sk.isPrephase && sk.enemyStun >= 1 && sk.hits > 0;
-        });
-        if (elemBreakTriggered || prephaseStunUsed || takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0 || straightShotUsed || straightShotActive > 0) {
+      for (const actor of actors) {
+        if (actor.type === "player") {
+          const skillId = cmds[actor.id] ?? "atk";
+          const sk_def  = SKILL_DEFS[skillId];
+          const isEltz  = actor.id === "eltz";
+          if (!sk_def) continue;
         
-          if (elemBreakTriggered && !takedownUsed && takedownActive === 0 && !sleepUsed && sleepActive === 0 && !straightShotUsed && straightShotActive === 0) {
-            logs.push(`${e.def.em}${e.def.name} 💥 ELEMENT BREAKで行動不能！`);
-          } else {
-            const stunLabel = prephaseStunUsed
-              ? "🗡 スタン"
-              : (takedownUsed || takedownActive > 0) ? "🦵 テイクダウン"
-              : (straightShotUsed || straightShotActive > 0) ? "😵 ストレートショット"
-              : "😴 スリープ";
-            logs.push(`${e.def.em}${e.def.name} ${stunLabel}で行動不能！`);
+          // ── プリフェイズ/エンドフェイズ スキルはメインフェイズをスキップ ────────
+          // counter/dodge(isPrephase) は敵行動タイミングで解決済み
+          // overheal等(isEndphase) はエンドフェイズブロックで処理
+          if (sk_def.isPrephase || sk_def.isEndphase) continue;
+        
+          // ── MP消費 ────────────────────────────────────────────────────────────
+          if (sk_def.cost > 0) {
+            if (isEltz) curMp = Math.max(0, curMp - sk_def.cost);
+            else curPartyMp[actor.id] = Math.max(0, (curPartyMp[actor.id]??0) - sk_def.cost);
           }
-          // turnIdx更新はアップデートフェイズで一括処理するためここでは更新しない
-          continue;
-        }
-
-        const rawEAction = actor.skill;
-        const eAction = (provokeUsed || provokeActive > 0) ? "atk" : rawEAction;
-        if ((provokeUsed || provokeActive > 0) && rawEAction !== "atk") {
-          logs.push(`👊 挑発中！ ${e.def.name}の行動を強制的に強攻に変換！`);
-        }
-
-        const isEnraged = enrageCount > 0 && !iceSlashUsed;
-        const atkHalf = enemyAtkDebuff > 0 || waterSphereActive > 0;
-        const totalMult = (isEnraged ? 2.0 : 1.0) * (atkHalf ? 0.5 : 1.0);
-        const rageLabel = isEnraged ? "🔴" : "";
-        const halfLabel = atkHalf ? "（ATK½）" : "";
-
-        // ターゲット（SPD最低のメンバー）
-        const spdSorted = [...PARTY_DEFS].sort((a, b) => a.spd - b.spd);
-        const tMember = spdSorted[0];
-        const tid = tMember.id;
-        const tDodge   = memberDodge[tid]   ?? false;
-        const tCounter = memberCounter[tid] ?? false;
-        if (eAction === "dodge") {
-          if (tCounter) {
-            const baseRaw = randInt(e.def.atk[0], e.def.atk[1]) + Math.floor(e.def.atk[1] * 0.3);
-            const cd = Math.max(1, Math.round(baseRaw * totalMult) - getMemberDef(tid));
-            if (tid === "eltz") { curHp = Math.max(0, curHp - cd); }
-            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - cd); }
-            memberDmg[tid] = (memberDmg[tid] ?? 0) + cd;
-            logs.push(`${e.def.em}${e.def.name} 💨 回避！ ${tMember.icon}${tMember.name}のカウンターをかわし → ${tMember.icon}${tMember.name}に ${cd} ダメージで反撃！（${tMember.name}の強攻を無効化）`);
-          } else if (tDodge) {
-            logs.push(`💨 回避相殺！ ${tMember.icon}${tMember.name} vs ${e.def.em}${e.def.name}（互いに無効）`);
-          } else {
-            logs.push(`${e.def.em}${e.def.name} 💨 回避！`);
-          }
-        } else if (eAction === "enrage") {
-          logs.push(`${e.def.em}${e.def.name} 🔴 怒り状態に！`);
-        } else if (eAction === "atk_all") {
-          // 全体攻撃：回避・カウンター無効、全員にダメージ
-          const baseAtk = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult);
-          logs.push(`${e.def.em}${e.def.name} 🌊全体攻撃${halfLabel}`);
-          for (const k of currentPartyKeys) {
-            const mDef = getMemberDef(k);
-            const mDmg = Math.max(1, baseAtk - mDef);
-            if (k === "eltz") { curHp = Math.max(0, curHp - mDmg); }
-            else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - mDmg); }
-            memberDmg[k] = (memberDmg[k] ?? 0) + mDmg;
-            logs.push(`  → ${ALL_CHAR_DEFS[k]?.icon ?? ""}${ALL_CHAR_DEFS[k]?.name ?? k} ${mDmg}ダメージ！`);
-          }
-          setShowAtkAllAnim(false); // 一旦リセットして再マウントを強制
-          setTimeout(() => { setAtkAllAnimKey(k => k + 1); setShowAtkAllAnim(true); }, 0);
-        } else if (eAction === "unavoidable") {
-          // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
-          const [minD, maxD] = e.def.unavoidableAtk ?? [30,45];
-          const dmg = Math.max(1, Math.round(randInt(minD, maxD) * totalMult) - getMemberDef(tid));
-          logs.push(`${e.def.em}${rageLabel}💥回避不能${halfLabel} ${tMember.icon}${tMember.name}に${dmg}ダメージ！`);
-          if (tid === "eltz") { curHp = Math.max(0, curHp - dmg); }
-          else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg); }
-          memberDmg[tid] = (memberDmg[tid] ?? 0) + dmg;
-        } else if (eAction === "counter") {
-          // 敵カウンター：攻撃(atk)したメンバー全員に個別ダメージ、dodge→回避+反撃、counter→相殺
-          // まずdodge/counterの代表判定（spdSorted[0]基準）
-          if (tDodge) {
-            const csk = BATTLE_SKILLS.find(s => s.id === "dodge");
-            const dodgeDmg = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult) - (e.def.pdef ?? 0));
-            const eIdx = curEnemies.findIndex(en => en.slot === slot);
-            curEnemies[eIdx].hp = Math.max(0, e.hp - dodgeDmg);
-            if (curEnemies[eIdx].hp <= 0) { curEnemies[eIdx].defeated = true; pendingDefeatFx.push({ slotIdx: eIdx }); }
-            pendingHitFx.push({ slotIdx: eIdx, dmg: dodgeDmg, type: "normal" });
-            logs.push(`${tMember.icon}${tMember.name} 💨 回避成功！ ${e.def.name}のカウンターをかわし → ${e.def.em}${e.def.name}に${dodgeDmg}ダメージで反撃！`);
-          } else if (tCounter) {
-            logs.push(`🔄 カウンター相殺！ ${tMember.icon}${tMember.name} vs ${e.def.em}${e.def.name}（互いの攻撃無効化）`);
-          } else {
-            // atk を選択したメンバー全員に個別カウンターダメージ（executePartyTurnと同式）
-            let anyAtk = false;
-            for (const k of currentPartyKeys) {
-              if (cmds[k] !== "atk") continue;
-              anyAtk = true;
-              const m = PARTY_DEFS.find(p => p.id === k);
-              const baseRaw = randInt(e.def.atk[0], e.def.atk[1]) + Math.floor(e.def.atk[1] * 0.3);
-              const cd = Math.max(1, Math.round(baseRaw * totalMult) - getMemberDef(k));
-              if (k === "eltz") { curHp = Math.max(0, curHp - cd); }
-              else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - cd); }
-              memberDmg[k] = (memberDmg[k] ?? 0) + cd;
-              logs.push(`${e.def.em}${rageLabel}🔄 ${e.def.name}カウンター！${halfLabel} ${m.icon}${m.name}に ${cd} ダメージ！（${m.name}の強攻を無効化）`);
+        
+          // ── 回復スキル（hits=0 かつ healFlat>0） ──────────────────────────────
+          if (sk_def.hits === 0 && sk_def.healFlat > 0) {
+            const healAmt = sk_def.healFlat;
+            if (sk_def.healTarget === "party") {
+              // パーティ全体（通常healはselfなのでここはoverheal等の即時全体回復用）
+              curHp = Math.min(curHp + healAmt, mhp);
+              for (const k of currentPartyKeys.filter(k2 => k2 !== "eltz")) {
+                if ((curPartyHp[k] ?? 0) <= 0) continue;
+                curPartyHp[k] = Math.min((curPartyHp[k]??0) + healAmt, partyMhp[k]);
+              }
+              logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}！ 全員HP+${healAmt}`);
+            } else {
+              // 自己回復
+              if (isEltz) curHp = Math.min(curHp + healAmt, mhp);
+              else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0)+healAmt, partyMhp[actor.id]);
+              memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
+              logs.push(`${actor.icon}${actor.name} ${sk_def.icon} HP+${healAmt}`);
             }
-            if (!anyAtk) {
-              // heal等の非攻撃行動のみ：カウンター不成立
-              logs.push(`${e.def.em}${e.def.name} 🔄 カウンター構え...しかし不発！`);
-            }
+            // 副作用（baff/debuff）記録
+            skillsUsedThisTurn.set(skillId, actor.id);
+            continue;
           }
-        } else if (SKILL_DEFS[eAction] && !["atk","counter","dodge","unavoidable","atk_all","enrage"].includes(eAction)) {
-          // ── 敵がプレイヤースキルを使用 ──────────────────────────────────
-          const sk_def = SKILL_DEFS[eAction];
-          const eAtkBonus = Math.round((e.def.atk[0] + e.def.atk[1]) / 2); // 敵ATKの平均値をatkBonusに
-
+        
+          // ── 補助スキル（hits=0 かつ healFlat=0）─────────────────────────────
+          // enemyStun / enemyForceAction / selfBuff のみ → ログ出してskillsUsedに積む
+          if (sk_def.hits === 0) {
+            let logMsg = `${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}！`;
+            if (sk_def.reversePhase > 0) {
+             // setReverseActive(sk_def.reversePhase);
+            }
+            if (sk_def.enemyForceAction === "atk") {
+              provokeUsed = true;
+              logMsg += ` 全敵を${sk_def.enemyForceActionTurns}T強攻固定！`;
+            }
+            if (sk_def.enemyStun > 0) {
+              if (skillId === "takedown") takedownUsed = true;
+              else if (skillId === "straight_shot") straightShotUsed = true;
+              else sleepUsed = true;
+              logMsg += ` 全敵を${sk_def.enemyStun}T行動不能！`;
+            }
+            if (sk_def.selfBuff && sk_def.selfBuff.spd > 0) {
+              logMsg += ` 味方SPD+${sk_def.selfBuff.spd}（${sk_def.selfBuff.turns}T）！`;
+            }
+            if (!sk_def.reversePhase) logs.push(logMsg);  // ← リバースはログ非表示
+            skillsUsedThisTurn.set(skillId, actor.id);
+            continue;
+          }
+        
+          // ── 攻撃スキル ────────────────────────────────────────────────────────
+          const weaponType     = equippedWeapon?.weaponType ?? "none";
+          const memberAtkBonus = isEltz
+            ? atkBonus
+            : (ALL_CHAR_DEFS[actor.id]?.atk ?? 0);
+        
+          // 行動不能状態判定（comboBonus用）
+          // ※ 単体バトルは takedownActive/sleepActive/straightShotActive で判断
+          // ※ マルチバトルは各敵のstunフラグ（将来拡張）。現状は単体と同じ値を参照
+          const isTargetStunned = (takedownActive > 0 || sleepActive > 0 || straightShotActive > 0);
+        
+          // ── 全体攻撃 ──────────────────────────────────────────────────────
           if (sk_def.target === "all") {
-            // 全体攻撃スキル
+            if (typeof curEnemies !== "undefined" && curEnemies) {
+              const aoeDmgs = resolveAoeDamage({
+                skillId, atkBonus: memberAtkBonus, weaponType,
+                comboMult: comboAtkMult, isStunned: isTargetStunned,
+                enemies: curEnemies,
+              });
+              curEnemies.forEach((e, i) => {
+                if (e.defeated) return;
+                const { perHit } = aoeDmgs[i];
+                const dmg = Math.max(1, perHit) * sk_def.hits;
+                curEnemies[i].hp = Math.max(0, e.hp - dmg);
+                if (curEnemies[i].hp <= 0) curEnemies[i].defeated = true;
+                pendingHitFx.push({ slotIdx: i, dmg, type: "normal" });
+                if (curEnemies[i].defeated) pendingDefeatFx.push({ slotIdx: i });
+              });
+              const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+              logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全敵にダメージ！`);
+              curEnemies.forEach((e, i) => {
+                if (e.defeated) return;
+                const { perHit } = aoeDmgs[i];
+                const dmg = Math.max(1, perHit) * sk_def.hits;
+                logs.push(`  → ${e.def.em}${e.def.name} に${dmg}ダメージ！`);
+              });
+            } else {
+              const { perHit } = resolveSkillDamage({
+                skillId, atkBonus: memberAtkBonus, weaponType,
+                comboMult: comboAtkMult, targetDef: 0, targetMagDef: 0,
+                isStunned: isTargetStunned,
+              });
+              const dmg = Math.max(1, perHit) * sk_def.hits;
+              curEnemyHp = Math.max(0, curEnemyHp - dmg);
+              pendingHitFx.push({ slotIdx: 0, dmg, type: "normal" });
+              const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+              logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ ${dmg}ダメージ！`);
+            }
+            skillsUsedThisTurn.set(skillId, actor.id);
+            continue;
+          }
+        
+          // ── 単体攻撃：ターゲット解決 ──────────────────────────────────────────
+          // マルチバトル用（curEnemiesが存在する場合）
+          let tIdx = actor.targetIdx ?? 0;
+          if (typeof curEnemies !== "undefined" && curEnemies) {
+            if (!curEnemies[tIdx] || curEnemies[tIdx].defeated) {
+              const fb = curEnemies.findIndex(e => !e.defeated);
+              if (fb < 0) { logs.push(`${actor.icon}${actor.name} 攻撃対象なし`); continue; }
+              tIdx = fb;
+            }
+          }
+        
+          // 対象敵のアクション取得（カウンター判定用）
+          const tDef = typeof curEnemies !== "undefined" && curEnemies
+            ? curEnemies[tIdx]
+            : null;
+          const eActionForJudge = tDef
+            ? tDef.def.pattern[tDef.turnIdx % tDef.def.pattern.length]
+            : eAction; // 単体バトルはターン冒頭で決定済みの eAction を使用
+        
+          // atk vs 敵counter → 敵ターン側（eAction==="counter"ブロック）で一括処理するためここではスキップ
+          if (skillId === "atk" && eActionForJudge === "counter" && !sk_def.pierceCounter) {
+            continue;
+          }
+        
+          // ── 属性計算 ──────────────────────────────────────────────────────────
+          const tEnemyDef = tDef ? tDef.def : null;
+          const meElemCycle = tEnemyDef.elementCycle ?? null;
+          const meElemKey   = meElemCycle
+            ? meElemCycle[enemyElementIdx % meElemCycle.length]
+            : null;
+          let elemMult  = 1.0;
+          let isWeakHit = false;
+          if (sk_def.element && meElemKey && meElemKey !== "none") {
+            const rel = ELEMENT_RELATIONS[sk_def.element];
+            isWeakHit = rel ? meElemKey === rel.weak    : false;
+            const isResist = rel ? meElemKey === rel.resist : false;
+            elemMult  = isWeakHit ? 2.0 : isResist ? 0.5 : 1.0;
+          }
+        
+          // ── ダメージ計算 ──────────────────────────────────────────────────────
+          const { totalDmg } = resolveSkillDamage({
+            skillId, atkBonus:memberAtkBonus, weaponType,
+            comboMult:comboAtkMult,
+            targetDef:    tEnemyDef?.pdef ?? 0,
+            targetMagDef: tEnemyDef?.mdef ?? 0,
+            isStunned:isTargetStunned,
+          });
+          const finalDmg = Math.max(1, Math.round(totalDmg * elemMult));
+        
+          // HP反映
+          if (tDef) {
+            // マルチバトル
+            curEnemies[tIdx].hp = Math.max(0, tDef.hp - finalDmg);
+            if (curEnemies[tIdx].hp <= 0) curEnemies[tIdx].defeated = true;
+            pendingHitFx.push({ slotIdx:tIdx, dmg:finalDmg, type:isWeakHit?"weak":"normal" });
+            if (curEnemies[tIdx].defeated) pendingDefeatFx.push({ slotIdx:tIdx });
+          } else {
+            // 単体バトル
+            curEnemyHp = Math.max(0, curEnemyHp - finalDmg);
+            pendingHitFx.push({ slotIdx:0, dmg:finalDmg, type:isWeakHit?"weak":"normal" });
+          }
+        
+          // ログ
+          const tEmName = tDef ? `${tDef.def.em}${tDef.def.name}` : "???";
+          const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+          const eLabel   = isWeakHit ? " ⚡弱点!" : elemMult===0.5 ? " 耐性½" : "";
+          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}${hitLabel} → ${tEmName} ${finalDmg}ダメージ！${eLabel}`);
+        
+          // 属性ブレイク蓄積
+          if (isWeakHit && !elemBreakTriggered) {
+            newElemAccum += finalDmg;
+            if (newElemAccum >= ELEMENT_BREAK_THRESHOLD) {
+              elemBreakTriggered = true; newElemAccum = 0;
+              logs.push(`💥 ELEMENT BREAK！`);
+              setElemBreakAnim(true); setTimeout(()=>setElemBreakAnim(false), 1500);
+              setcurrentBattleElemBreaks(prev => prev + 1);
+            }
+          }
+        
+          // ── 攻撃+回復複合（hits>0 かつ healFlat>0 のスキル：シーソー等） ──
+          if (sk_def.healFlat > 0) {
+            const healAmt = sk_def.healFlat;
+            const isEltzHeal = actor.id === "eltz";
+            if (isEltzHeal) curHp = Math.min(curHp + healAmt, mhp);
+            else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0) + healAmt, partyMhp[actor.id]);
+            memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
+            logs.push(`${actor.icon}${actor.name} ⚖ HP+${healAmt}（複合回復）`);
+          }
+  
+          skillsUsedThisTurn.set(skillId, actor.id);
+        
+        } else {
+          // ── 敵行動 ──────────────────────────────────────────────────────────
+          const slot = actor.enemySlot;
+          const e = curEnemies.find(e => e.slot === slot);
+          if (!e || e.defeated) continue;
+  
+            const prephaseStunUsed = [...skillsUsedThisTurn.keys()].some(sid => {
+            const sk = SKILL_DEFS[sid];
+            return sk && sk.isPrephase && sk.enemyStun >= 1 && sk.hits > 0;
+          });
+          if (elemBreakTriggered || prephaseStunUsed || takedownUsed || takedownActive > 0 || sleepUsed || sleepActive > 0 || straightShotUsed || straightShotActive > 0) {
+          
+            if (elemBreakTriggered && !takedownUsed && takedownActive === 0 && !sleepUsed && sleepActive === 0 && !straightShotUsed && straightShotActive === 0) {
+              logs.push(`${e.def.em}${e.def.name} 💥 ELEMENT BREAKで行動不能！`);
+            } else {
+              const stunLabel = prephaseStunUsed
+                ? "🗡 スタン"
+                : (takedownUsed || takedownActive > 0) ? "🦵 テイクダウン"
+                : (straightShotUsed || straightShotActive > 0) ? "😵 ストレートショット"
+                : "😴 スリープ";
+              logs.push(`${e.def.em}${e.def.name} ${stunLabel}で行動不能！`);
+            }
+            // turnIdx更新はアップデートフェイズで一括処理するためここでは更新しない
+            continue;
+          }
+  
+          const rawEAction = actor.skill;
+          const eAction = (provokeUsed || provokeActive > 0) ? "atk" : rawEAction;
+          if ((provokeUsed || provokeActive > 0) && rawEAction !== "atk") {
+            logs.push(`👊 挑発中！ ${e.def.name}の行動を強制的に強攻に変換！`);
+          }
+  
+          const isEnraged = enrageCount > 0 && !iceSlashUsed;
+          const atkHalf = enemyAtkDebuff > 0 || waterSphereActive > 0;
+          const totalMult = (isEnraged ? 2.0 : 1.0) * (atkHalf ? 0.5 : 1.0);
+          const rageLabel = isEnraged ? "🔴" : "";
+          const halfLabel = atkHalf ? "（ATK½）" : "";
+  
+          // ターゲット（SPD最低のメンバー）
+          const spdSorted = [...PARTY_DEFS].sort((a, b) => a.spd - b.spd);
+          const tMember = spdSorted[0];
+          const tid = tMember.id;
+          const tDodge   = memberDodge[tid]   ?? false;
+          const tCounter = memberCounter[tid] ?? false;
+          if (eAction === "dodge") {
+            if (tCounter) {
+              const baseRaw = randInt(e.def.atk[0], e.def.atk[1]) + Math.floor(e.def.atk[1] * 0.3);
+              const cd = Math.max(1, Math.round(baseRaw * totalMult) - getMemberDef(tid));
+              if (tid === "eltz") { curHp = Math.max(0, curHp - cd); }
+              else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - cd); }
+              memberDmg[tid] = (memberDmg[tid] ?? 0) + cd;
+              logs.push(`${e.def.em}${e.def.name} 💨 回避！ ${tMember.icon}${tMember.name}のカウンターをかわし → ${tMember.icon}${tMember.name}に ${cd} ダメージで反撃！（${tMember.name}の強攻を無効化）`);
+            } else if (tDodge) {
+              logs.push(`💨 回避相殺！ ${tMember.icon}${tMember.name} vs ${e.def.em}${e.def.name}（互いに無効）`);
+            } else {
+              logs.push(`${e.def.em}${e.def.name} 💨 回避！`);
+            }
+          } else if (eAction === "enrage") {
+            logs.push(`${e.def.em}${e.def.name} 🔴 怒り状態に！`);
+          } else if (eAction === "atk_all") {
+            // 全体攻撃：回避・カウンター無効、全員にダメージ
             const baseAtk = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult);
-            const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-            logs.push(`${e.def.em}${e.def.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全体攻撃${halfLabel}`);
+            logs.push(`${e.def.em}${e.def.name} 🌊全体攻撃${halfLabel}`);
             for (const k of currentPartyKeys) {
               const mDef = getMemberDef(k);
-              const dmgPerHit = Math.max(1, Math.round(baseAtk * sk_def.dmgMult) - mDef);
+              const mDmg = Math.max(1, baseAtk - mDef);
+              if (k === "eltz") { curHp = Math.max(0, curHp - mDmg); }
+              else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - mDmg); }
+              memberDmg[k] = (memberDmg[k] ?? 0) + mDmg;
+              logs.push(`  → ${ALL_CHAR_DEFS[k]?.icon ?? ""}${ALL_CHAR_DEFS[k]?.name ?? k} ${mDmg}ダメージ！`);
+            }
+            setShowAtkAllAnim(false); // 一旦リセットして再マウントを強制
+            setTimeout(() => { setAtkAllAnimKey(k => k + 1); setShowAtkAllAnim(true); }, 0);
+          } else if (eAction === "unavoidable") {
+            // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
+            const [minD, maxD] = e.def.unavoidableAtk ?? [30,45];
+            const dmg = Math.max(1, Math.round(randInt(minD, maxD) * totalMult) - getMemberDef(tid));
+            logs.push(`${e.def.em}${rageLabel}💥回避不能${halfLabel} ${tMember.icon}${tMember.name}に${dmg}ダメージ！`);
+            if (tid === "eltz") { curHp = Math.max(0, curHp - dmg); }
+            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - dmg); }
+            memberDmg[tid] = (memberDmg[tid] ?? 0) + dmg;
+          } else if (eAction === "counter") {
+            // 敵カウンター：攻撃(atk)したメンバー全員に個別ダメージ、dodge→回避+反撃、counter→相殺
+            // まずdodge/counterの代表判定（spdSorted[0]基準）
+            if (tDodge) {
+              const csk = BATTLE_SKILLS.find(s => s.id === "dodge");
+              const dodgeDmg = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult) - (e.def.pdef ?? 0));
+              const eIdx = curEnemies.findIndex(en => en.slot === slot);
+              curEnemies[eIdx].hp = Math.max(0, e.hp - dodgeDmg);
+              if (curEnemies[eIdx].hp <= 0) { curEnemies[eIdx].defeated = true; pendingDefeatFx.push({ slotIdx: eIdx }); }
+              pendingHitFx.push({ slotIdx: eIdx, dmg: dodgeDmg, type: "normal" });
+              logs.push(`${tMember.icon}${tMember.name} 💨 回避成功！ ${e.def.name}のカウンターをかわし → ${e.def.em}${e.def.name}に${dodgeDmg}ダメージで反撃！`);
+            } else if (tCounter) {
+              logs.push(`🔄 カウンター相殺！ ${tMember.icon}${tMember.name} vs ${e.def.em}${e.def.name}（互いの攻撃無効化）`);
+            } else {
+              // atk を選択したメンバー全員に個別カウンターダメージ（executePartyTurnと同式）
+              let anyAtk = false;
+              for (const k of currentPartyKeys) {
+                if (cmds[k] !== "atk") continue;
+                anyAtk = true;
+                const m = PARTY_DEFS.find(p => p.id === k);
+                const baseRaw = randInt(e.def.atk[0], e.def.atk[1]) + Math.floor(e.def.atk[1] * 0.3);
+                const cd = Math.max(1, Math.round(baseRaw * totalMult) - getMemberDef(k));
+                if (k === "eltz") { curHp = Math.max(0, curHp - cd); }
+                else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - cd); }
+                memberDmg[k] = (memberDmg[k] ?? 0) + cd;
+                logs.push(`${e.def.em}${rageLabel}🔄 ${e.def.name}カウンター！${halfLabel} ${m.icon}${m.name}に ${cd} ダメージ！（${m.name}の強攻を無効化）`);
+              }
+              if (!anyAtk) {
+                // heal等の非攻撃行動のみ：カウンター不成立
+                logs.push(`${e.def.em}${e.def.name} 🔄 カウンター構え...しかし不発！`);
+              }
+            }
+          } else if (SKILL_DEFS[eAction] && !["atk","counter","dodge","unavoidable","atk_all","enrage"].includes(eAction)) {
+            // ── 敵がプレイヤースキルを使用 ──────────────────────────────────
+            const sk_def = SKILL_DEFS[eAction];
+            const eAtkBonus = Math.round((e.def.atk[0] + e.def.atk[1]) / 2); // 敵ATKの平均値をatkBonusに
+  
+            if (sk_def.target === "all") {
+              // 全体攻撃スキル
+              const baseAtk = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult);
+              const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+              logs.push(`${e.def.em}${e.def.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全体攻撃${halfLabel}`);
+              for (const k of currentPartyKeys) {
+                const mDef = getMemberDef(k);
+                const dmgPerHit = Math.max(1, Math.round(baseAtk * sk_def.dmgMult) - mDef);
+                const totalSkDmg = dmgPerHit * sk_def.hits;
+                if (k === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
+                else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - totalSkDmg); }
+                memberDmg[k] = (memberDmg[k] ?? 0) + totalSkDmg;
+                logs.push(`  → ${ALL_CHAR_DEFS[k]?.icon ?? ""}${ALL_CHAR_DEFS[k]?.name ?? k} ${totalSkDmg}ダメージ！`);
+              }
+            } else {
+              // 単体攻撃スキル（SPD最低のメンバーを狙う）
+              const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+              const baseRaw = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult * sk_def.dmgMult);
+              const dmgPerHit = Math.max(1, baseRaw - getMemberDef(tid));
               const totalSkDmg = dmgPerHit * sk_def.hits;
-              if (k === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
-              else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - totalSkDmg); }
-              memberDmg[k] = (memberDmg[k] ?? 0) + totalSkDmg;
-              logs.push(`  → ${ALL_CHAR_DEFS[k]?.icon ?? ""}${ALL_CHAR_DEFS[k]?.name ?? k} ${totalSkDmg}ダメージ！`);
+              if (tid === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
+              else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - totalSkDmg); }
+              memberDmg[tid] = (memberDmg[tid] ?? 0) + totalSkDmg;
+              if (sk_def.label === "リバース"){
+                enemyReverseSet = sk_def.reversePhaze ?? 5;
+              logs.push(`${e.def.em}${e.def.name}がリバースを発動！　何かがおかしい。空間が逆転する`);
+              }else {
+                logs.push(`${e.def.em}${rageLabel}${sk_def.icon}${e.def.name}が${sk_def.label}${hitLabel}！${halfLabel} ${tMember.icon}${tMember.name}に${totalSkDmg}ダメージ！`);
+              }
             }
           } else {
-            // 単体攻撃スキル（SPD最低のメンバーを狙う）
-            const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-            const baseRaw = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult * sk_def.dmgMult);
-            const dmgPerHit = Math.max(1, baseRaw - getMemberDef(tid));
-            const totalSkDmg = dmgPerHit * sk_def.hits;
-            if (tid === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
-            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - totalSkDmg); }
-            memberDmg[tid] = (memberDmg[tid] ?? 0) + totalSkDmg;
-            logs.push(`${e.def.em}${rageLabel}${sk_def.icon}${e.def.name}が${sk_def.label}${hitLabel}！${halfLabel} ${tMember.icon}${tMember.name}に${totalSkDmg}ダメージ！`);
+            // 通常強攻：counter→反撃×1.5、dodge/atk→被弾
+            if (tCounter) {
+              const csk = BATTLE_SKILLS.find(s => s.id === "counter");
+              const bd = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) * 1.5 + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult) - (e.def.pdef ?? 0));
+              const eIdx = curEnemies.findIndex(en => en.slot === slot);
+              curEnemies[eIdx].hp = Math.max(0, e.hp - bd);
+              if (curEnemies[eIdx].hp <= 0) { curEnemies[eIdx].defeated = true; pendingDefeatFx.push({ slotIdx: eIdx }); }
+              pendingHitFx.push({ slotIdx: eIdx, dmg: bd, type: "normal" });
+              logs.push(`${tMember.icon}${tMember.name} 🔄カウンター成功！ → ${e.def.em}${e.def.name} ${bd}ダメージ（×1.5）！ ${tMember.name}は被弾を免れた！`);
+            } else {
+              // dodge も atk も通常被弾
+              const d = Math.max(1, Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - getMemberDef(tid));
+              if (tid === "eltz") { curHp = Math.max(0, curHp - d); }
+              else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - d); }
+              memberDmg[tid] = (memberDmg[tid] ?? 0) + d;
+              const dodgeLabel = tDodge ? "（回避しようとしたが直撃！）" : "";
+              logs.push(`${e.def.em}${rageLabel}⚔${e.def.name}！${halfLabel} ${tMember.icon}${tMember.name}に${d}ダメージ！${dodgeLabel}`);
+            }
           }
-        } else {
-          // 通常強攻：counter→反撃×1.5、dodge/atk→被弾
-          if (tCounter) {
-            const csk = BATTLE_SKILLS.find(s => s.id === "counter");
-            const bd = Math.max(1, Math.round((randInt(csk.dmg[0], csk.dmg[1]) * 1.5 + (tid === "eltz" ? atkBonus : 0)) * comboAtkMult) - (e.def.pdef ?? 0));
-            const eIdx = curEnemies.findIndex(en => en.slot === slot);
-            curEnemies[eIdx].hp = Math.max(0, e.hp - bd);
-            if (curEnemies[eIdx].hp <= 0) { curEnemies[eIdx].defeated = true; pendingDefeatFx.push({ slotIdx: eIdx }); }
-            pendingHitFx.push({ slotIdx: eIdx, dmg: bd, type: "normal" });
-            logs.push(`${tMember.icon}${tMember.name} 🔄カウンター成功！ → ${e.def.em}${e.def.name} ${bd}ダメージ（×1.5）！ ${tMember.name}は被弾を免れた！`);
-          } else {
-            // dodge も atk も通常被弾
-            const d = Math.max(1, Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult) - getMemberDef(tid));
-            if (tid === "eltz") { curHp = Math.max(0, curHp - d); }
-            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - d); }
-            memberDmg[tid] = (memberDmg[tid] ?? 0) + d;
-            const dodgeLabel = tDodge ? "（回避しようとしたが直撃！）" : "";
-            logs.push(`${e.def.em}${rageLabel}⚔${e.def.name}！${halfLabel} ${tMember.icon}${tMember.name}に${d}ダメージ！${dodgeLabel}`);
-          }
+          // turnIdx更新はアップデートフェイズで一括処理
         }
-        // turnIdx更新はアップデートフェイズで一括処理
       }
-    }
-
-    // ══════════════════════════════════════════════════════════════════
+    };
+    const runEndphase  = () => { /* 既存のエンドフェイズ処理をそのままここに移動 */
+        // ══════════════════════════════════════════════════════════════════
     // エンドフェイズ：最遅延行動（オーバーヒール）
     // ══════════════════════════════════════════════════════════════════
     // ── エンドフェイズ：isEndphase:true のスキルを処理 ─────────────────────
-    logs.push(`── エンドフェイズ ──`);
+   // logs.push(`── エンドフェイズ ──`);
     for (const actor of actors.filter(a => a.type === "player")) {
       const skillId = cmds[actor.id] ?? "atk";
       const sk_def  = SKILL_DEFS[skillId];
@@ -3868,6 +3911,17 @@ export default function ArcadiaCh2() {
         overhealUsed = true;
         skillsUsedThisTurn.set(skillId, actor.id);
       }
+    } 
+    };
+
+    if (isReversed) {
+      logs.push(`── エンドフェイズ ──`);  runEndphase();
+      logs.push(`── メインフェイズ ──`);  runMainphase();
+      logs.push(`── プリフェイズ ──`);    runPrephase();
+    } else {
+      logs.push(`── プリフェイズ ──`);    runPrephase();
+      logs.push(`── メインフェイズ ──`);  runMainphase();
+      logs.push(`── エンドフェイズ ──`);  runEndphase();
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -3938,13 +3992,15 @@ export default function ArcadiaCh2() {
       provokeActive,
       takedownActive,
       sleepActive,
-      straightShotActive,   // ← 追加
+      straightShotActive,  
       waterSphereActive,
       bikerAtkBonus,
       enrageCount,
+      reverseActive,   // ← 追加
       cdMap: memberCdMap,   // すでに { skillId: { memberId: value } } 形式
     });
 
+  
     // 属性チェンジログ（isBossかつelementCycle持ちの敵のみ）
     // ※ 既存の属性チェンジログ処理はここに残す
 
@@ -3955,10 +4011,11 @@ export default function ArcadiaCh2() {
     setProvokeActive(sideEffects.provokeActive);
     setTakedownActive(sideEffects.takedownActive);
     setSleepActive(sideEffects.sleepActive);
-    setStraightShotActive(sideEffects.straightShotActive);   // ← 追加
+    setStraightShotActive(sideEffects.straightShotActive);   
     setBikerAtkBonus(sideEffects.bikerAtkBonus);
     setEnrageCount(sideEffects.enrageCount);
     setWaterSphereActive(sideEffects.waterSphereActive);
+    setReverseActive(enemyReverseSet >= 0 ? enemyReverseSet : sideEffects.reverseActive);  // ← 追加
 
     // 個別setterは全廃。1つのsetMemberCdMapで管理
     setMemberCdMap(sideEffects.nextCdMap);
@@ -4030,6 +4087,7 @@ export default function ArcadiaCh2() {
     statAlloc, weaponPatk, partySpdBuff, enemySpdDebuff, enrageCount, enemyAtkDebuff,
     provokeActive, takedownActive, sleepActive,
     bikerAtkBonus, straightShotActive, waterSphereActive, memberCdMap,
+    reverseActive,
     noDmgStreak, turn, lv, showNotif, handleExpGain,
     fireHitEffect, fireDefeatEffect,
   ]);
@@ -4258,6 +4316,7 @@ export default function ArcadiaCh2() {
         // ── 補助スキル（hits=0 かつ healFlat=0）─────────────────────────────
         // enemyStun / enemyForceAction / selfBuff のみ → ログ出してskillsUsedに積む
         if (sk_def.hits === 0) {
+          
           let logMsg = `${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}！`;
           if (sk_def.enemyForceAction === "atk") {
             provokeUsed = true;
@@ -4679,6 +4738,7 @@ export default function ArcadiaCh2() {
       waterSphereActive,
       bikerAtkBonus,
       enrageCount,
+      reverseActive,   // ← 追加
       cdMap: memberCdMap,   // すでに { skillId: { memberId: value } } 形式
     });
 
@@ -4696,6 +4756,7 @@ export default function ArcadiaCh2() {
     setBikerAtkBonus(sideEffects.bikerAtkBonus);
     setEnrageCount(sideEffects.enrageCount);
     setWaterSphereActive(sideEffects.waterSphereActive);
+    setReverseActive(sideEffects.reverseActive);   // ← 追加
 
     // 個別setterは全廃。1つのsetMemberCdMapで管理
     setMemberCdMap(sideEffects.nextCdMap);
@@ -6519,31 +6580,31 @@ export default function ArcadiaCh2() {
                         // 特殊スキル定義
                         const SPEC_DEF = {
                           provoke:       { icon:"👊", label:"挑発",              color:"#f97316", cd: memberCdMap["provoke"]?.[currentCmdMember.id]      ?? 0, desc:"敵行動を3T強攻に変換" },
-                          takedown:      { icon:"🦵", label:"テイクダウン",       color:"#ef4444", cd: memberCdMap["takedown"]?.[currentCmdMember.id]     ?? 0, desc:"敵を1T行動不能" },
-                          overheal:      { icon:"💚", label:"オーバーヒール",     color:"#22c55e", cd: memberCdMap["overheal"]?.[currentCmdMember.id]     ?? 0, desc:"全員HP+80（最遅）" },
+                          takedown:      { icon:"🦵", label:"テイクダウン",       color:"#ef4444", cd: memberCdMap["takedown"]?.[currentCmdMember.id]     ?? 0, desc:"全敵を1T行動不能" },
+                          overheal:      { icon:"💚", label:"オーバーヒール",     color:"#22c55e", cd: memberCdMap["overheal"]?.[currentCmdMember.id]     ?? 0, desc:"エンドフェイズ全体回復" },
                           sleep:         { icon:"😴", label:"スリープ",           color:"#a78bfa", cd: memberCdMap["sleep"]?.[currentCmdMember.id]        ?? 0, desc:"敵を2T眠らせ行動不能" },
                           biker_slash:   { icon:"⚡", label:"バイカースラッシュ", color:"#facc15", cd: memberCdMap["biker_slash"]?.[currentCmdMember.id]   ?? 0, desc:`単体ダメージ＋ATK+5(累積/最大20) [+${bikerAtkBonus}]` },
                           sansanka:      { icon:"⚔", label:"三散華",             color:"#00ffcc", cd: memberCdMap["sansanka"]?.[currentCmdMember.id]      ?? 0, desc:"3連撃×3回ダメージ" },
                           stinger_bite:  { icon:"🗡", label:"スティンガーバイト", color:"#f43f5e", cd: memberCdMap["stinger_bite"]?.[currentCmdMember.id]  ?? 0, desc:"行動不能の敵に×2ダメージ" },
                           straight_shot: { icon:"🏹", label:"ストレートショット", color:"#38bdf8", cd: memberCdMap["straight_shot"]?.[currentCmdMember.id] ?? 0, desc:"単体ダメージ＋1T行動不能" },
-                          arrow_rain:    { icon:"🏹", label:"アローレイン",       color:"#a3e635", cd: memberCdMap["arrow_rain"]?.[currentCmdMember.id]    ?? 0, desc:"全敵に弓矢ダメージ" },
+                          arrow_rain:    { icon:"🏹", label:"アローレイン",       color:"#a3e635", cd: memberCdMap["arrow_rain"]?.[currentCmdMember.id]    ?? 0, desc:"プリフェイズ全敵に弓矢ダメージ" },
                           water_sphere:  { icon:"🌊", label:"ウォータースフィア", color:"#22d3ee", cd: memberCdMap["water_sphere"]?.[currentCmdMember.id]  ?? 0, desc:"単体ダメージ＋水濡れ3T(敵ATK½)" },
                           // ── 新規追加 ──────────────────────────────────────────────────────────────
-                          trick_attack:  { icon:"🗡", label:"トリックアタック",   color:"#c084fc", cd: memberCdMap["trick_attack"]?.[currentCmdMember.id]  ?? 0, desc:"単体物理ダメージ" },
+                          trick_attack:  { icon:"🗡", label:"トリックアタック",   color:"#c084fc", cd: memberCdMap["trick_attack"]?.[currentCmdMember.id]  ?? 0, desc:"プリフェイズスタン攻撃" },
                           flat_strike:   { icon:"⚔", label:"フラットストライク", color:"#00ffcc", cd: memberCdMap["flat_strike"]?.[currentCmdMember.id]   ?? 0, desc:"単体物理ダメージ" },
-                          slow_blade:    { icon:"🗡", label:"スローブレード",     color:"#94a3b8", cd: memberCdMap["slow_blade"]?.[currentCmdMember.id]    ?? 0, desc:"単体物理ダメージ" },
+                          slow_blade:    { icon:"🗡", label:"スローブレード",     color:"#94a3b8", cd: memberCdMap["slow_blade"]?.[currentCmdMember.id]    ?? 0, desc:"エンドフェイズ単体物理ダメージ" },
                           penetrate:     { icon:"⚔", label:"ペネトレイト",       color:"#fb923c", cd: memberCdMap["penetrate"]?.[currentCmdMember.id]     ?? 0, desc:"単体物理ダメージ" },
                           spiral_axe:    { icon:"🪓", label:"スパイラルアックス", color:"#f87171", cd: memberCdMap["spiral_axe"]?.[currentCmdMember.id]    ?? 0, desc:"単体物理ダメージ" },
                           double_arrow:  { icon:"🏹", label:"ダブルアロー",       color:"#a3e635", cd: memberCdMap["double_arrow"]?.[currentCmdMember.id]  ?? 0, desc:"2連射ダメージ" },
-                          double_bite:   { icon:"🗡", label:"ダブルバイト",       color:"#f43f5e", cd: memberCdMap["double_bite"]?.[currentCmdMember.id]   ?? 0, desc:"2連撃ダメージ" },
-                          deep_edge:     { icon:"⚔", label:"ディープエッジ",     color:"#60a5fa", cd: memberCdMap["deep_edge"]?.[currentCmdMember.id]     ?? 0, desc:"単体物理ダメージ" },
+                          double_bite:   { icon:"🗡", label:"ダブルバイト",       color:"#f43f5e", cd: memberCdMap["double_bite"]?.[currentCmdMember.id]   ?? 0, desc:"プリフェイズ2連撃ダメージ" },
+                          deep_edge:     { icon:"⚔", label:"ディープエッジ",     color:"#60a5fa", cd: memberCdMap["deep_edge"]?.[currentCmdMember.id]     ?? 0, desc:"エンドフェイズ単体物理ダメージ" },
                           seesaw:        { icon:"⚔", label:"シーソー",           color:"#34d399", cd: memberCdMap["seesaw"]?.[currentCmdMember.id]        ?? 0, desc:"単体物理ダメージ" },
                           windmill:      { icon:"🌀", label:"風車",       color:"#22d3ee", cd: memberCdMap["windmill"]?.[currentCmdMember.id]      ?? 0, desc:"全敵物理ダメージ" },
-                          onslaught:     { icon:"🪓", label:"オンスロート",       color:"#ef4444", cd: memberCdMap["onslaught"]?.[currentCmdMember.id]     ?? 0, desc:"単体大ダメージ" },
+                          onslaught:     { icon:"🪓", label:"オンスロート",       color:"#ef4444", cd: memberCdMap["onslaught"]?.[currentCmdMember.id]     ?? 0, desc:"エンドフェイズ全体物理大ダメージ" },
                           fireball:      { icon:"🔥", label:"ファイアボール",     color:"#ff6633", cd: memberCdMap["fireball"]?.[currentCmdMember.id]      ?? 0, desc:"単体火属性ダメージ" },
                           stone_blitz:   { icon:"🪨", label:"ストーンブリッツ",  color:"#a8a29e", cd: memberCdMap["stone_blitz"]?.[currentCmdMember.id]   ?? 0, desc:"単体土属性ダメージ" },
                           air_cutter:    { icon:"💨", label:"エアカッター",       color:"#7dd3fc", cd: memberCdMap["air_cutter"]?.[currentCmdMember.id]    ?? 0, desc:"全敵風属性ダメージ" },
-                          thunderbolt:   { icon:"⚡", label:"サンダーボルト",     color:"#ffee44", cd: memberCdMap["thunderbolt"]?.[currentCmdMember.id]   ?? 0, desc:"単体雷属性ダメージ" },
+                          thunderbolt:   { icon:"⚡", label:"サンダーボルト",     color:"#ffee44", cd: memberCdMap["thunderbolt"]?.[currentCmdMember.id]   ?? 0, desc:"全体雷属性ダメージ" },
                         };
                         const memberMp = currentCmdMember.id === "eltz" ? mp : (partyMp[currentCmdMember.id] ?? 0);
                         const extraEffectMap = {
