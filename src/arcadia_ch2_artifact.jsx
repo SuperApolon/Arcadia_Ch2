@@ -163,7 +163,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"ドナテロ", em:"🎭",
     maxHp:326, atk:[60,75], elk:0, exp:0, lv:18, spd:14,pdef:12, mdef:12,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
-    pattern:["atk","counter","atk","dodge","atk","atk","unavoidable"],
+    pattern:["atk","counter","atk","dodge","atk","counter","unavoidable","unavoidable","windmill","windmill","windmill"],
     unavoidableAtk:[90,100],
     elementCycle:["fire"],
   },
@@ -3098,9 +3098,16 @@ export default function ArcadiaCh2() {
     counter:          { icon:"🔄", text:"カウンター" },
     dodge:            { icon:"💨", text:"回避" },
     unavoidable:      { icon:"💥", text:"回避不能攻撃！" },
-
     atk_all:          { icon:"🌊", text:"全体攻撃！" },
     enrage:           { icon:"🔴", text:"怒り状態！" },
+    // SKILL_DEFS のスキルは動的にフォールバック（下のヘルパーで解決）
+  };
+  // 敵行動ラベル取得ヘルパー（SKILL_DEFSにもフォールバック）
+  const getEnemyActionLabel = (actionId) => {
+    if (ENEMY_ACTION_LABEL[actionId]) return ENEMY_ACTION_LABEL[actionId];
+    const sk = SKILL_DEFS[actionId];
+    if (sk) return { icon: sk.icon, text: sk.label };
+    return { icon:"⚔", text: actionId };
   };
   // ── スキルCDの一元取得ヘルパー ────────────────────────────────────────────
   // SKILL_DEFS に cooldown > 0 のスキルを全て網羅する。
@@ -3720,6 +3727,36 @@ export default function ArcadiaCh2() {
               // heal等の非攻撃行動のみ：カウンター不成立
               logs.push(`${e.def.em}${e.def.name} 🔄 カウンター構え...しかし不発！`);
             }
+          }
+        } else if (SKILL_DEFS[eAction] && !["atk","counter","dodge","unavoidable","atk_all","enrage"].includes(eAction)) {
+          // ── 敵がプレイヤースキルを使用 ──────────────────────────────────
+          const sk_def = SKILL_DEFS[eAction];
+          const eAtkBonus = Math.round((e.def.atk[0] + e.def.atk[1]) / 2); // 敵ATKの平均値をatkBonusに
+
+          if (sk_def.target === "all") {
+            // 全体攻撃スキル
+            const baseAtk = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult);
+            const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+            logs.push(`${e.def.em}${e.def.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全体攻撃${halfLabel}`);
+            for (const k of currentPartyKeys) {
+              const mDef = getMemberDef(k);
+              const dmgPerHit = Math.max(1, Math.round(baseAtk * sk_def.dmgMult) - mDef);
+              const totalSkDmg = dmgPerHit * sk_def.hits;
+              if (k === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
+              else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - totalSkDmg); }
+              memberDmg[k] = (memberDmg[k] ?? 0) + totalSkDmg;
+              logs.push(`  → ${ALL_CHAR_DEFS[k]?.icon ?? ""}${ALL_CHAR_DEFS[k]?.name ?? k} ${totalSkDmg}ダメージ！`);
+            }
+          } else {
+            // 単体攻撃スキル（SPD最低のメンバーを狙う）
+            const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+            const baseRaw = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult * sk_def.dmgMult);
+            const dmgPerHit = Math.max(1, baseRaw - getMemberDef(tid));
+            const totalSkDmg = dmgPerHit * sk_def.hits;
+            if (tid === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
+            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - totalSkDmg); }
+            memberDmg[tid] = (memberDmg[tid] ?? 0) + totalSkDmg;
+            logs.push(`${e.def.em}${rageLabel}${sk_def.icon}${e.def.name}が${sk_def.label}${hitLabel}！${halfLabel} ${tMember.icon}${tMember.name}に${totalSkDmg}ダメージ！`);
           }
         } else {
           // 通常強攻：counter→反撃×1.5、dodge/atk→被弾
@@ -6019,7 +6056,7 @@ export default function ArcadiaCh2() {
                   const meHpPct = Math.max(0, me.hp / meDef.maxHp * 100);
                   const meIsBoss = meDef.isBoss;
                   const meNextAction = meDef.pattern[me.turnIdx % meDef.pattern.length];
-                  const meLabel = ENEMY_ACTION_LABEL[meNextAction];
+                  const meLabel = getEnemyActionLabel(meNextAction);
                   const meIsUnavoidable = meNextAction === "unavoidable";
                   const meColor = meIsUnavoidable ? C.red : meNextAction === "counter" ? "#f97316" : meNextAction === "dodge" ? C.muted : "#60a5fa";
                   const isTargetable = !!pendingTargetSelect && !me.defeated;
@@ -6282,7 +6319,7 @@ export default function ArcadiaCh2() {
                      <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>{Math.round(enemyHp)} / {ed.maxHp}</div>
                    </div>
                    {!victory && !defeat && enemyNextAction && (() => {
-                     const eLabel = ENEMY_ACTION_LABEL[enemyNextAction];
+                     const eLabel = getEnemyActionLabel(enemyNextAction);
                      const isUnavoidable = enemyNextAction === "unavoidable";
                      const previewColor = isUnavoidable ? C.red : enemyNextAction === "counter" ? "#f97316" : enemyNextAction === "dodge" ? C.muted : "#60a5fa";
                      return (
@@ -6363,7 +6400,11 @@ export default function ArcadiaCh2() {
                 const hasHeal      = l.includes("HP+") || l.includes("オーバーヒール") || l.includes("大回復");
                 // 味方が攻撃側になる「に+ダメージ」ログ（回避成功・カウンター成功の反撃）
                 const isAllyAttack = l.includes("回避成功！") || l.includes("カウンター成功！");
-                const hasTakenDmg  = !isAllyAttack && !l.includes("全敵に") && (/に\s*\d+\s*ダメージ/.test(l) || /全員\s*(に\s*)?\d+\s*ダメージ/.test(l));
+                const hasTakenDmg  = !isAllyAttack && !l.includes("全敵に") && (
+                  /に\s*\d+\s*ダメージ/.test(l) ||
+                  /全員\s*(に\s*)?\d+\s*ダメージ/.test(l) ||
+                  /^\s*→\s*.+\s*\d+\s*ダメージ/.test(l)
+                );
                 const hasDmg       = l.includes("ダメージ");
                 if (hasHeal) {
                   logColor = "#4ade80";
