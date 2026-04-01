@@ -3319,6 +3319,7 @@ export default function ArcadiaCh2() {
     let curPartyHp = { ...partyHp };
     let curPartyMp = { ...partyMp };
     let curEnemies = enemies.map(e => ({ ...e }));
+    let curEnemyHp = 0; // マルチ敵モードではcurEnemiesを使用するが、フォールバックコード用に定義
     const memberDmg = Object.fromEntries(currentPartyKeys.map(k => [k, 0]));  // 各メンバーの受けたダメージ合計
     const memberHeal = Object.fromEntries(currentPartyKeys.map(k => [k, 0])); // 各メンバーのメインフェイズ回復量
     let earthSlashUsed = false;
@@ -3427,6 +3428,14 @@ export default function ArcadiaCh2() {
         if (aliveIdx < 0) continue; // 全滅済みならスキップ
         const tIdx = (actor.targetIdx != null && !curEnemies[actor.targetIdx]?.defeated)
           ? actor.targetIdx : aliveIdx;
+        const tEnemyDefPre = curEnemies[tIdx]?.def;
+        const { totalDmg } = resolveSkillDamage({
+          skillId, atkBonus: memberAtkBonus, weaponType,
+          comboMult: 1.0,
+          targetDef:    tEnemyDefPre?.pdef ?? 0,
+          targetMagDef: tEnemyDefPre?.mdef ?? 0,
+          isStunned: false,
+        });
         const finalDmg = Math.max(1, totalDmg);
         curEnemies[tIdx].hp = Math.max(0, curEnemies[tIdx].hp - finalDmg);
         if (curEnemies[tIdx].hp <= 0) {
