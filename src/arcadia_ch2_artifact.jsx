@@ -559,7 +559,7 @@ const SKILL_DEFS = {
     label:"スローブレード", icon:"⚔", color:"#67e8f9", cost:0, cooldown:3,
     isPrephase:false, isEndphase:true,
     dmgType:"fixed", baseDmg:[30,36], weaponMult:true, atkMult:true, dmgMult:1.0,
-    hits:1, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
+    hits:0, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:1, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:{ target:"single", turns:2, patk:1.0, pdef:1.0, matk:1.0, mdef:1.0, spd:-6 },
