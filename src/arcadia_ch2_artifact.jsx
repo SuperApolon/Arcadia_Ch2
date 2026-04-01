@@ -844,11 +844,11 @@ function applySkillSideEffects({
       // enemyStun
       if (sk.enemyStun > 0) {
         if (skillId === "takedown") {
-          next.takedownActive = sk.enemyStun;
+          next.takedownActive = sk.enemyStun - 1;
         } else if (skillId === "straight_shot") {
-          next.straightShotActive = sk.enemyStun;
+          next.straightShotActive = sk.enemyStun - 1;
         } else {
-          next.sleepActive = sk.enemyStun;
+          next.sleepActive = sk.enemyStun - 1;
         }
       }
 
