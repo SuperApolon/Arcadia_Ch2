@@ -420,7 +420,7 @@ const SKILL_DEFS = {
     label:"テイクダウン", icon:"🦵", color:"#ef4444", cost:0, cooldown:3,
     isPrephase:false, isEndphase:false,
     dmgType:"physical", baseDmg:[10,15], weaponMult:false, atkMult:false, dmgMult:0,
-    hits:1, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
+    hits:0, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:1, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null,
@@ -3658,6 +3658,13 @@ export default function ArcadiaCh2() {
             memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
             logs.push(`${actor.icon}${actor.name} ⚖ HP+${healAmt}（複合回復）`);
           }
+
+          // ── 攻撃+スタン複合（hits>0 かつ enemyStun>0 のスキル：テイクダウン等） ──
+          if (sk_def.enemyStun > 0) {
+            if (skillId === "takedown") takedownUsed = true;
+            else if (skillId === "straight_shot") straightShotUsed = true;
+            else sleepUsed = true;
+          }
   
           skillsUsedThisTurn.set(skillId, actor.id);
         
@@ -4462,6 +4469,13 @@ export default function ArcadiaCh2() {
           else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0) + healAmt, partyMhp[actor.id]);
           memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
           logs.push(`${actor.icon}${actor.name} ⚖ HP+${healAmt}（複合回復）`);
+        }
+
+        // ── 攻撃+スタン複合（hits>0 かつ enemyStun>0 のスキル：テイクダウン等） ──
+        if (sk_def.enemyStun > 0) {
+          if (skillId === "takedown") takedownUsed = true;
+          else if (skillId === "straight_shot") straightShotUsed = true;
+          else sleepUsed = true;
         }
 
         skillsUsedThisTurn.set(skillId, actor.id);
