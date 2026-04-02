@@ -668,7 +668,7 @@ const SKILL_DEFS = {
   triple_arrow: {
     label:"トリプルアロー", icon:"⚔", color:"#38bdf8", cost:0, cooldown:3,
     isPrephase:false, isEndphase:false,
-    dmgType:"physical", baseDmg:[18,25], weaponMult:true, atkMult:false, dmgMult:1.0,
+    dmgType:"physical", baseDmg:[25,27], weaponMult:true, atkMult:false, dmgMult:1.0,
     hits:3, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
@@ -679,7 +679,7 @@ const SKILL_DEFS = {
     label:"ファイアボール", icon:"🔥", color:"#f97316", cost:18, cooldown:2,
     isPrephase:false, isEndphase:false,
     dmgType:"magic", baseDmg:[50,55], weaponMult:false, atkMult:true, dmgMult:1.0,
-    hits:1, target:"single", element:"fire", pierceCounter:false, comboBonus:1.0,
+    hits:2, target:"single", element:"fire", pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null, selfBuff:null, enrageBreak:false,
@@ -689,7 +689,7 @@ const SKILL_DEFS = {
     label:"ウォータースフィア", icon:"🌊", color:"#22d3ee", cost:0, cooldown:3,
     isPrephase:false, isEndphase:false,
     dmgType:"magic", baseDmg:[48,50], weaponMult:false, atkMult:true, dmgMult:1.0,
-    hits:1, target:"single", element:"ice", pierceCounter:false, comboBonus:1.0,
+    hits:2, target:"single", element:"ice", pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     // 敵ATKを0.5倍に3ターン（水濡れ状態）
@@ -700,8 +700,8 @@ const SKILL_DEFS = {
 
   thunderbolt: {
     label:"サンダーボルト", icon:"⚡", color:"#fde047", cost:22, cooldown:3,
-    isPrephase:false, isEndphase:false,
-    dmgType:"magic", baseDmg:[36,40], weaponMult:false, atkMult:true, dmgMult:1.0,
+    isPrephase:true, isEndphase:false,
+    dmgType:"magic", baseDmg:[45,50], weaponMult:false, atkMult:true, dmgMult:1.0,
     hits:1, target:"all", element:"thunder", pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
@@ -712,7 +712,7 @@ const SKILL_DEFS = {
     label:"ストーンブリッツ", icon:"🌿", color:"#a8a29e", cost:0, cooldown:2,
     isPrephase:false, isEndphase:true,
     dmgType:"physical", baseDmg:[60,72], weaponMult:true, atkMult:true, dmgMult:1.0,
-    hits:1, target:"single", element:"earth", pierceCounter:false, comboBonus:1.0,
+    hits:2, target:"single", element:"earth", pierceCounter:false, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null, selfBuff:null, enrageBreak:false,
@@ -944,7 +944,7 @@ const ALL_CHAR_DEFS = {
   karma:   { id:"karma",   name:"カルマ",    icon:"\u{1F61C}",                     spd:16, mhp:115, mmp:95,  atk:0,  def:0,  skills:["atk","counter","dodge","heal","provoke"] },
   frank:   { id:"frank",   name:"フランク",  icon:"\u{1F917}",                     spd:10, mhp:240, mmp:180,  atk:30,  def:36, skills:["atk","counter","dodge","heal","provoke","takedown"] },
   will:    { id:"will",    name:"ウィル",    icon:"\u{1F624}",                     spd:18, mhp:99,  mmp:88,  atk:10,  def:5,  skills:["atk","counter","dodge","heal","elem_thunder","elem_earth"] },
-  ponkiti: { id:"ponkiti", name:"ポンキチ",  icon:"\u{1F929}",                     spd:17, mhp:135, mmp:95,  atk:16,  def:3,  skills:["atk","counter","dodge","heal","stinger_bite"] },
+  ponkiti: { id:"ponkiti", name:"ポンキチ",  icon:"\u{1F929}",                     spd:17, mhp:135, mmp:95,  atk:16,  def:3,  skills:["atk","counter","dodge","heal","stinger_bite","thunderbolt"] },
   persia:  { id:"persia",  name:"ペルシア",  icon:"\u{1F338}",                     spd:14, mhp:130, mmp:100,  atk:16,  def:5,  skills:["atk","counter","dodge","heal","straight_shot","arrow_rain"] },
 };
 
