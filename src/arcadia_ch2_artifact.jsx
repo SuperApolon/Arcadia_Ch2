@@ -142,9 +142,9 @@ const INITIAL_BATTLE_DEFS = {
 
   mandragora: {
     name:"マンドラゴラ", em:"🌿",
-    maxHp:50, atk:[8,14], elk:57, exp:35, lv:4, spd:6,pdef:999, mdef:0,
+    maxHp:50, atk:[8,14], elk:57, exp:35, lv:4, spd:1,pdef:999, mdef:0,
     bg:["#0a1808","#184018","#203020"], isFloating:false, isGround:true,
-    pattern:["atk","atk","counter","dodge","atk","counter"],
+    pattern:["counter","counter","heal","dodge","dodge","heal"],
     elementCycle:["ice"],
   },
 
@@ -1768,7 +1768,7 @@ const SCENES = [
     { sp:"ナレーション", t:"スティアルーフ東門をくぐり、東エイビス平原へ。\n\n西の広大な原野とは異なり、\n東は小さな森が散開する地形。\n林の中で不可思議な動きをする生物を発見──" },
     { sp:"スウィフト", t:"「見つけた......」\n\n体長六十センチ、巨大な木の根に蔓がゆらゆら。\nマンドラゴラだ。" },
     { sp:"エルツ", t:"「あいつって、あそこに生えてるんじゃないの？\n確かめてみるか」\n\n遠距離から銅の矢を撃ち込む。\n矢が命中した途端、マンドラゴラの動きが止まった。" },
-    { sp:"ナレーション", t:"「ん......動かないな......どうしたんだ？」\n\n一歩踏み出したその時──\n地を這うように蔓の手を振り回しながら\n突進するマンドラゴラ！\n\n「ぎゃぁぁぁ！」", battle:true, battleType:"mandragora", battleNext:17 }
+    { sp:"ナレーション", t:"「ん......動かないな......どうしたんだ？」\n\n一歩踏み出したその時──\n地を這うように蔓の手を振り回しながら\n突進するマンドラゴラ！\n\n「ぎゃぁぁぁ！」", battle:true, multiEnemyTypes:["mandragora","mandragora","mandragora"], battleNext:17 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -3765,8 +3765,9 @@ export default function ArcadiaCh2() {
           const rageLabel = isEnraged ? "🔴" : "";
           const halfLabel = atkHalf ? "（ATK½）" : "";
   
-          // ターゲット（SPD最低のメンバー）
-          const spdSorted = [...PARTY_DEFS].sort((a, b) => a.spd - b.spd);
+          // ターゲット（生存メンバーの中でSPD最低のメンバー）
+          const alivePartyDefs = PARTY_DEFS.filter(m => (m.id === "eltz" ? curHp : (curPartyHp[m.id] ?? 0)) > 0);
+          const spdSorted = [...(alivePartyDefs.length > 0 ? alivePartyDefs : PARTY_DEFS)].sort((a, b) => a.spd - b.spd);
           const tMember = spdSorted[0];
           const tid = tMember.id;
           const tDodge   = memberDodge[tid]   ?? false;
@@ -3879,6 +3880,31 @@ export default function ArcadiaCh2() {
             if (sk_def.enemyStun > 0) {
               newPlayerStunTurns = Math.max(newPlayerStunTurns, sk_def.enemyStun);
               logs.push(`${e.def.em}${e.def.name} 🦵 パーティを${sk_def.enemyStun}T行動不能にした！`);
+            }
+            // ── 敵スキルに回復効果がある場合 ──────────────────────────────
+            if (sk_def.healFlat > 0) {
+              const healAmt = sk_def.healFlat;
+              if (sk_def.healTarget === "party") {
+                // 全敵回復
+                let healLog = `${e.def.em}${e.def.name} ${sk_def.icon}${sk_def.label}！ 全敵HP+${healAmt}！`;
+                curEnemies.forEach((te, ti) => {
+                  if (te.defeated) return;
+                  const before = curEnemies[ti].hp;
+                  curEnemies[ti].hp = Math.min(te.hp + healAmt, te.def.maxHp);
+                  const actual = curEnemies[ti].hp - before;
+                  if (actual > 0) healLog += ` ${te.def.em}${te.def.name}+${actual}`;
+                });
+                logs.push(healLog);
+              } else {
+                // 自己回復
+                const eIdx = curEnemies.findIndex(te => te.slot === slot);
+                if (eIdx >= 0 && !curEnemies[eIdx].defeated) {
+                  const before = curEnemies[eIdx].hp;
+                  curEnemies[eIdx].hp = Math.min(curEnemies[eIdx].hp + healAmt, curEnemies[eIdx].def.maxHp);
+                  const actual = curEnemies[eIdx].hp - before;
+                  logs.push(`${e.def.em}${e.def.name} ${sk_def.icon}${sk_def.label}！ HP+${actual}回復！（${curEnemies[eIdx].hp}/${curEnemies[eIdx].def.maxHp}）`);
+                }
+              }
             }
           } else {
             // 通常強攻：counter→反撃×1.5、dodge/atk→被弾
@@ -4626,8 +4652,9 @@ export default function ArcadiaCh2() {
         const rageLabel = isEnraged ? "🔴" : "";
         const halfLabel = atkHalf ? "（ATK半減）" : "";
 
-        // ターゲット決定（SPD最低のメンバー）
-        const spdSorted = [...PARTY_DEFS].sort((a, b) => a.spd - b.spd);
+        // ターゲット決定（生存メンバーの中でSPD最低のメンバー）
+        const alivePartyDefs2 = PARTY_DEFS.filter(m => (m.id === "eltz" ? curHp : (curPartyHp[m.id] ?? 0)) > 0);
+        const spdSorted = [...(alivePartyDefs2.length > 0 ? alivePartyDefs2 : PARTY_DEFS)].sort((a, b) => a.spd - b.spd);
         const targetMember = spdSorted[0];
         const tid = targetMember.id;
         const tDodge   = memberDodge[tid]   ?? false;
@@ -4739,6 +4766,14 @@ export default function ArcadiaCh2() {
           if (sk_def.enemyStun > 0) {
             newPlayerStunTurns = Math.max(newPlayerStunTurns, sk_def.enemyStun);
             logs.push(`${ed.em}${ed.name} 🦵 パーティを${sk_def.enemyStun}T行動不能にした！`);
+          }
+          // ── 敵スキルに回復効果がある場合（単体バトル：自己回復のみ） ──────
+          if (sk_def.healFlat > 0) {
+            const healAmt = sk_def.healFlat;
+            const before = curEnemyHp;
+            curEnemyHp = Math.min(curEnemyHp + healAmt, ed.maxHp);
+            const actual = curEnemyHp - before;
+            logs.push(`${ed.em}${ed.name} ${sk_def.icon}${sk_def.label}！ HP+${actual}回復！（${curEnemyHp}/${ed.maxHp}）`);
           }
 
         } else {
