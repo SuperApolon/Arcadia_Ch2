@@ -382,7 +382,7 @@ TO ALL 金策について / Elz
 地を這うように蔓の手を振り回しながら
 突進するマンドラゴラ！
 
-「ぎゃぁぁぁ！」`,battle:!0,multiEnemyTypes:["mandragora","mandragora","mandragora"],battleNext:17}]},{bg:["#0a1808","#1a2a08","#182808"],loc:"エイビス平原 東",sprites:["🧑","🧑‍🦱","👩"],dl:[{sp:"エルツ",t:`「ふぅ、これがマンドラゴラか。
+「ぎゃぁぁぁ！」`,battle:!0,multiEnemyTypes:["mandragora","mandragora"],battleNext:17}]},{bg:["#0a1808","#1a2a08","#182808"],loc:"エイビス平原 東",sprites:["🧑","🧑‍🦱","👩"],dl:[{sp:"エルツ",t:`「ふぅ、これがマンドラゴラか。
 あの鳴き声は厄介だけど、
 耐久力も無いし慣れれば狩りやすいかも。
 ムーキャットよりは落ち着いて闘えそうだね」`},{sp:"スウィフト",t:`「確かに、あの鳴き声の前に予備動作もあるし。
