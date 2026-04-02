@@ -2213,6 +2213,8 @@ export default function ArcadiaCh2() {
   const [slowbladeActive,      setslowbladeActive        ] = useState(0);
   const [waterSphereActive,    setWaterSphereActive   ] = useState(0);
   const [memberCdMap,          setMemberCdMap         ] = useState({}); // ← 追加
+  // playerStunActive > 0: 敵スキル（テイクダウン等）によりパーティが行動不能な残りターン数
+  const [playerStunActive,     setPlayerStunActive    ] = useState(0);
    // ── プレイング分析ステート ──────────────────────────────────────────────
    const [battleAnalytics, setBattleAnalytics] = useState([]);
    const [totalElemBreaks, setTotalElemBreaks] = useState(0);
@@ -2951,7 +2953,7 @@ export default function ArcadiaCh2() {
           const pi = buildPartyInit(pKeys);
           setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
         setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);  setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0);  setWaterSphereActive(0); setslowbladeActive(0);  
+        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);  setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0);  setWaterSphereActive(0); setslowbladeActive(0); setPlayerStunActive(0);  
         setPhase("battle");
         return;
       }
@@ -2973,7 +2975,7 @@ export default function ArcadiaCh2() {
         const pi = buildPartyInit(pKeys);
         setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);setslowbladeActive(0)
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);setslowbladeActive(0); setPlayerStunActive(0);
       setMultiEnemies(null);
       setPhase("battle");
       return;
@@ -3073,7 +3075,7 @@ export default function ArcadiaCh2() {
         const pi = buildPartyInit(pKeys);
         setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);setslowbladeActive(0)
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);setslowbladeActive(0); setPlayerStunActive(0);
       setMemberCdMap({});  // 1行でリセット完了
       setMultiEnemies(null);
       setPhase("battle");
@@ -3345,6 +3347,7 @@ export default function ArcadiaCh2() {
     let enemyReverseSet   = -1;
     let elemBreakTriggered = false;
     let newElemAccum = elemDmgAccum;
+    let newPlayerStunTurns = 0; // 敵スキルによるパーティ行動不能の付与ターン数
     // エフェクト蓄積バッファ（ターン処理後にまとめてsetStateする）
     const pendingHitFx    = []; // { slotIdx, dmg, type }
     const pendingDefeatFx = []; // { slotIdx }
@@ -3591,14 +3594,9 @@ export default function ArcadiaCh2() {
           const tDef = typeof curEnemies !== "undefined" && curEnemies
             ? curEnemies[tIdx]
             : null;
-          // tDefのスロットと一致するactorのskill（今ターン確定済みの行動）を参照する
-          // これにより「別の敵のパターンを誤参照する」問題を防ぐ
-          const tActor = tDef
-            ? actors.find(a => a.type === "enemy" && a.enemySlot === tDef.slot)
-            : null;
-          const eActionForJudge = tActor
-            ? tActor.skill
-            : (tDef ? tDef.def.pattern[tDef.turnIdx % tDef.def.pattern.length] : eAction);
+          const eActionForJudge = tDef
+            ? tDef.def.pattern[tDef.turnIdx % tDef.def.pattern.length]
+            : eAction; // 単体バトルはターン冒頭で決定済みの eAction を使用
         
           // atk vs 敵counter → 敵ターン側（eAction==="counter"ブロック）で一括処理するためここではスキップ
           if (skillId === "atk" && eActionForJudge === "counter" && !sk_def.pierceCounter) {
@@ -3780,10 +3778,6 @@ export default function ArcadiaCh2() {
               let anyAtk = false;
               for (const k of currentPartyKeys) {
                 if (cmds[k] !== "atk") continue;
-                // マルチ敵の場合：この敵（slot）を狙ったメンバーのみカウンター対象にする
-                const kTargetIdx = targets[k] ?? 0;
-                const kTargetEnemy = curEnemies[kTargetIdx] ?? curEnemies.find(en => !en.defeated);
-                if (kTargetEnemy && kTargetEnemy.slot !== slot) continue;
                 anyAtk = true;
                 const m = PARTY_DEFS.find(p => p.id === k);
                 const baseRaw = randInt(e.def.atk[0], e.def.atk[1]) + Math.floor(e.def.atk[1] * 0.3);
@@ -3832,6 +3826,11 @@ export default function ArcadiaCh2() {
               }else {
                 logs.push(`${e.def.em}${rageLabel}${sk_def.icon}${e.def.name}が${sk_def.label}${hitLabel}！${halfLabel} ${tMember.icon}${tMember.name}に${totalSkDmg}ダメージ！`);
               }
+            }
+            // 敵スキルにパーティスタン効果がある場合
+            if (sk_def.enemyStun > 0) {
+              newPlayerStunTurns = Math.max(newPlayerStunTurns, sk_def.enemyStun);
+              logs.push(`${e.def.em}${e.def.name} 🦵 パーティを${sk_def.enemyStun}T行動不能にした！`);
             }
           } else {
             // 通常強攻：counter→反撃×1.5、dodge/atk→被弾
@@ -4095,7 +4094,21 @@ export default function ArcadiaCh2() {
     Object.entries(hitFxBySlot).forEach(([slotIdx, fx]) => fireHitEffect(Number(slotIdx), fx.dmg, fx.type));
     pendingDefeatFx.forEach(fx => fireDefeatEffect(fx.slotIdx));
     setElemDmgAccum(newElemAccum);
- //   if (multiElemCycle) setEnemyElementIdx(multiNextElemIdx);
+    // isBoss かつ elementCycle を持つ敵（オルガ等）が存在する場合、毎ターン idx を進める
+    const bossWithCycle = curEnemies.find(e => e.def.isBoss && e.def.elementCycle && e.def.elementCycle.length > 0);
+    if (bossWithCycle) {
+      const cycle = bossWithCycle.def.elementCycle;
+      const nextKey = cycle[(enemyElementIdx + 1) % cycle.length];
+      const info = ELEMENT_NAMES[nextKey];
+      if (info) logs.push(`${bossWithCycle.def.em}${bossWithCycle.def.name} 属性チェンジ → ${info.icon}${info.label}`);
+      setEnemyElementIdx(prev => (prev + 1) % cycle.length);
+    }
+    // プレイヤースタン：新規付与があればセット、なければデクリメント
+    if (newPlayerStunTurns > 0) {
+      setPlayerStunActive(newPlayerStunTurns);
+    } else if (playerStunActive > 0) {
+      setPlayerStunActive(prev => Math.max(0, prev - 1));
+    }
     setTurn(t => t + 1);
     setNoDmgStreak(newStreak);
     setBtlAnimEnemy(true); setTimeout(() => setBtlAnimEnemy(false), 400);
@@ -4139,8 +4152,8 @@ export default function ArcadiaCh2() {
     multiEnemies, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, partySpdBuff, enemySpdDebuff, enrageCount, enemyAtkDebuff,
     provokeActive, takedownActive, sleepActive,
-    bikerAtkBonus, straightShotActive, waterSphereActive, slowbladeActive,memberCdMap,
-    reverseActive,
+    bikerAtkBonus, straightShotActive, waterSphereActive, slowbladeActive, memberCdMap,
+    reverseActive, playerStunActive, enemyElementIdx,
     noDmgStreak, turn, lv, showNotif, handleExpGain,
     fireHitEffect, fireDefeatEffect,
   ]);
@@ -4230,6 +4243,7 @@ export default function ArcadiaCh2() {
     let waterSphereUsed   = false;
     // 属性スキル使用フラグ（CDセット用）
     const elemUsed = { elem_fire:false, elem_ice:false, elem_thunder:false, elem_earth:false };
+    let newPlayerStunTurns = 0; // 敵スキルによるパーティ行動不能の付与ターン数
     // このターンで敵行動が割り込んだ後の全メンバーの被弾フラグ
     const memberDmg = Object.fromEntries(currentPartyKeys.map(k => [k, 0]));  // 各メンバーの受けたダメージ合計
     const memberHeal = Object.fromEntries(currentPartyKeys.map(k => [k, 0])); // 各メンバーのメインフェイズ回復量
@@ -4635,6 +4649,37 @@ export default function ArcadiaCh2() {
             }
           }
 
+        } else if (SKILL_DEFS[resolvedEAction] && !["atk","counter","dodge","unavoidable","atk_all","enrage"].includes(resolvedEAction)) {
+          // ── 敵がプレイヤースキルを使用（単体バトル） ─────────────────────
+          const sk_def = SKILL_DEFS[resolvedEAction];
+          if (sk_def.target === "all") {
+            const baseAtk = Math.round(randInt(ed.atk[0], ed.atk[1]) * totalMult);
+            const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+            logs.push(`${ed.em}${ed.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全体攻撃${halfLabel}`);
+            for (const k of currentPartyKeys) {
+              const mDef = getMemberDef(k);
+              const dmgPerHit = Math.max(1, Math.round(baseAtk * sk_def.dmgMult) - mDef);
+              const totalSkDmg = dmgPerHit * sk_def.hits;
+              if (k === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
+              else { curPartyHp[k] = Math.max(0, (curPartyHp[k] ?? 0) - totalSkDmg); }
+              memberDmg[k] = (memberDmg[k] ?? 0) + totalSkDmg;
+              logs.push(`  → ${ALL_CHAR_DEFS[k]?.icon ?? ""}${ALL_CHAR_DEFS[k]?.name ?? k} ${totalSkDmg}ダメージ！`);
+            }
+          } else {
+            const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
+            const baseRaw = Math.round(randInt(ed.atk[0], ed.atk[1]) * totalMult * (sk_def.dmgMult || 1.0));
+            const totalSkDmg = Math.max(1, baseRaw - getMemberDef(tid)) * (sk_def.hits || 1);
+            if (tid === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
+            else { curPartyHp[tid] = Math.max(0, (curPartyHp[tid] ?? 0) - totalSkDmg); }
+            memberDmg[tid] = (memberDmg[tid] ?? 0) + totalSkDmg;
+            logs.push(`${ed.em}${rageLabel}${sk_def.icon}${ed.name}が${sk_def.label}${hitLabel}！${halfLabel} ${targetMember.icon}${targetMember.name}に${totalSkDmg}ダメージ！`);
+          }
+          // パーティスタン効果
+          if (sk_def.enemyStun > 0) {
+            newPlayerStunTurns = Math.max(newPlayerStunTurns, sk_def.enemyStun);
+            logs.push(`${ed.em}${ed.name} 🦵 パーティを${sk_def.enemyStun}T行動不能にした！`);
+          }
+
         } else {
           // 敵通常強攻
           // dodge vs atk → 敵攻撃直撃（被弾）
@@ -4808,7 +4853,11 @@ export default function ArcadiaCh2() {
     });
 
     // 属性チェンジログ（isBossかつelementCycle持ちの敵のみ）
-    // ※ 既存の属性チェンジログ処理はここに残す
+    if (elementCycle && ed.isBoss) {
+      const nextKey = elementCycle[nextElementIdx];
+      const info = ELEMENT_NAMES[nextKey];
+      if (info) logs.push(`${ed.em}${ed.name} 属性チェンジ → ${info.icon}${info.label}`);
+    }
 
     // ステート一括セット
     setEnemySpdDebuff(sideEffects.enemySpdDebuff);
@@ -4835,6 +4884,12 @@ export default function ArcadiaCh2() {
     setEnemyHp(curEnemyHp);
     setElemDmgAccum(newElemAccum);
     if (elementCycle) setEnemyElementIdx(nextElementIdx);
+    // プレイヤースタン：新規付与があればセット、なければデクリメント
+    if (newPlayerStunTurns > 0) {
+      setPlayerStunActive(newPlayerStunTurns);
+    } else if (playerStunActive > 0) {
+      setPlayerStunActive(prev => Math.max(0, prev - 1));
+    }
     setTurn(t => t + 1);
     setNoDmgStreak(newStreak);
     setEnemyTurnIdx(nextEnemyTurnIdx);
@@ -4905,7 +4960,7 @@ export default function ArcadiaCh2() {
     enemyHp, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, noDmgStreak, lv,
     showNotif, handleExpGain, turn,
-    fireHitEffect, fireDefeatEffect,
+    fireHitEffect, fireDefeatEffect, playerStunActive,
   ]);
 
   // @@SECTION:LOGIC_PENDING_EXEC ────────────────────────────────────────────────
@@ -4921,6 +4976,23 @@ export default function ArcadiaCh2() {
       executePartyTurn(pendingExecution.cmds);
     }
   }, [pendingExecution, executeMultiTurn, executePartyTurn]);
+
+  // ── プレイヤースタン中：コマンドフェーズ開始時に全員 heal を自動セットして即実行 ──
+  useEffect(() => {
+    if (playerStunActive <= 0) return;
+    if (victory || defeat) return;
+    if (inputPhase !== "command") return;
+    // 全員 heal（行動不能扱い）を自動割り当て
+    const stunCmds = Object.fromEntries(PARTY_DEFS.map(m => [m.id, "heal"]));
+    const stunTgts = multiEnemies
+      ? Object.fromEntries(PARTY_DEFS.map(m => [m.id, 0]))
+      : null;
+    setBtlLogs(prev => [...prev, `🦵 行動不能！ パーティは動けない（残${playerStunActive}T）`].slice(-20));
+    setInputPhase("execute");
+    setPendingExecution(multiEnemies
+      ? { mode:"multi", cmds:stunCmds, targets:stunTgts }
+      : { mode:"single", cmds:stunCmds, targets:null });
+  }, [playerStunActive, inputPhase, victory, defeat, multiEnemies]);
   // @@SECTION:LOGIC_BATTLE_CMD ──────────────────────────────────────────────────
   // onCancelCommand（コマンドキャンセル）・exitBattle（バトル終了・勝敗処理）
   // コマンドキャンセル（最後に選んだメンバーの選択を1つ戻す）
@@ -5524,7 +5596,7 @@ export default function ArcadiaCh2() {
       setPartyHp({ swift:80, linz:70, chopper:65 });
       setPartyMp({ swift:60, linz:70, chopper:50 });
       setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setStraightShotActive(0); setWaterSphereActive(0);
+      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setStraightShotActive(0); setWaterSphereActive(0); setPlayerStunActive(0);
       setslowbladeActive(0);
       setPhase("battle");
     };
