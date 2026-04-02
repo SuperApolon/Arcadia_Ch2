@@ -246,7 +246,14 @@ const INITIAL_BATTLE_DEFS = {
     unavoidableAtk:[99,99],
     elementCycle:["fire","ice","thunder","earth","none"],
   },
-
+  olga_pet: {
+    name:"傀儡駒", em:"🐱",
+    maxHp:99, atk:[23,30], elk:0, exp:0, lv:1, spd:17,pdef:0, mdef:0,
+    bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
+    pattern:["unavoidable"],
+    elementCycle:["thunder"],
+    unavoidableAtk:[55,55],  // ← 追加
+  },
 };
 // ── 武器別使用可能スキル定義（エルツ専用） ────────────────────────────────
 const ELTZ_BASE_SKILLS = ["atk","counter","dodge","heal"];
@@ -972,6 +979,7 @@ const BATTLE_PARTY_MAP = {
   pvp_kevin:        ["eltz","frank","will"],
   pvp_chopper:      ["eltz","frank","will"],
   olga:             ["eltz","swift","linz"],
+  olga_pet:         ["eltz","swift","linz"],
 };
 
 
@@ -1219,6 +1227,7 @@ const BATTLE_BGM = {
   pvp_kevin:           "bgm/battle_normal2",
   pvp_chopper:         "bgm/battle_normal2",
   olga:                "bgm/battle_boss2",
+  olga_pet:            "bgm/battle_boss2",
 };
 
 function resolveBgmId(phase, sceneLoc, enemyType) {
@@ -1252,6 +1261,7 @@ const ENEMY_IMG_MAP = {
   pvp_kevin:           "enemies/kevin",
   pvp_chopper:         "enemies/chopper",
   olga:                "enemies/olga",
+  olga_pet:            "enemies/moocat",
 };
 
 const SPRITE_MAP = {
@@ -1363,6 +1373,7 @@ const ENEMY_IMG_SIZE = {
   pvp_kevin:           { mode:"fixed", size: 450 },
   pvp_chopper:         { mode:"fixed", size: 320 },
   olga:                { mode:"fixed", size: 380 },
+  olga_pet:            { mode:"fixed", size: 220 },
 };
 
 const BATTLE_BG_MAP = {
@@ -1385,6 +1396,7 @@ const BATTLE_BG_MAP = {
   pvp_kevin:           "scenes/ch2_s03_central_square",
   pvp_chopper:         "scenes/ch2_s03_central_square",
   olga:                "scenes/ch2_s03_central_square",
+  olga_pet:            "scenes/ch2_s03_central_square", 
 };
 
 // @@SECTION:BATTLE_BG_STYLE ─────────────────────────────────────────────────
@@ -1411,6 +1423,7 @@ const BATTLE_BG_STYLE = {
   pvp_kevin:           { size: "cover",   position: "center 40%" },
   pvp_chopper:         { size: "cover",   position: "center 40%" },
   olga:                { size: "cover",   position: "center 40%" },
+  olga_pet:            { size: "cover",   position: "center 40%" },
 };
 
 // @@SECTION:SCENE_BG_STYLE ──────────────────────────────────────────────────
@@ -2019,7 +2032,7 @@ const SCENES = [
     { sp:"オルガ", t:"「いい突きだった......今まで受けた中で最高のな。\n\nこれからはこのコミュニティを背負う\n者としての自覚を身に付けて欲しい」" , sprites:["🎭","⚔️"] },
     { sp:"ドナテロ", t:"「いずれその後姿、追い越して見せますよ。必ずね」", sprites:["🎭","⚔️"]  },
     { sp:"ナレーション", t:"続くスニーピィ、ウィル・シュラク・チョッパーの三人、\nリーベルトとフランクのペア、ユミルとケヴィン──\n皆がオルガと手合わせをした。\n\nそして残るはエルツ、スウィフト、リンスの三名。", sprites:["🧑","🧑‍🦱","👩"]  },
-    { sp:"エルツ", t:"「オルガさん、行きます！」", sprites:["🧑","🧑‍🦱","👩"], battle:true, multiEnemyTypes:["moocat","olga","moocat"], battleNext:37 }
+    { sp:"エルツ", t:"「オルガさん、行きます！」", sprites:["🧑","🧑‍🦱","👩"], battle:true, multiEnemyTypes:["olga_pet","olga","olga_pet"], battleNext:37 }
   ]},
 
   // ─────────────────────────────────────────────────────────────
@@ -3218,8 +3231,8 @@ export default function ArcadiaCh2() {
       const nm = PARTY_DEFS[nextIdx];
       const nmHp = nm.id === "eltz" ? hp : (partyHp[nm.id] ?? 0);
       if (nmHp > 0) break;
-      // 戦闘不能 → healを自動割り当てしてスキップ
-      newCmds[nm.id] = "heal";
+      // 戦闘不能 → dodgeを自動割り当てしてスキップ（healで復活させない）
+      newCmds[nm.id] = "dodge";
       if (multiEnemies) newTgts[nm.id] = 0;
       nextIdx++;
     }
@@ -3257,8 +3270,8 @@ export default function ArcadiaCh2() {
       const nm = PARTY_DEFS[nextIdx];
       const nmHp = nm.id === "eltz" ? hp : (partyHp[nm.id] ?? 0);
       if (nmHp > 0) break;
-      // 戦闘不能 → healを自動割り当てしてスキップ
-      newCmds[nm.id] = "heal";
+      // 戦闘不能 → dodgeを自動割り当てしてスキップ（healで復活させない）
+      newCmds[nm.id] = "dodge";
       newTgts[nm.id] = 0;
       nextIdx++;
     }
@@ -3480,6 +3493,9 @@ export default function ArcadiaCh2() {
         
           // ── 回復スキル（hits=0 かつ healFlat>0） ──────────────────────────────
           if (sk_def.hits === 0 && sk_def.healFlat > 0) {
+            // 戦闘不能メンバーは回復をスキップ
+            const actorCurrentHp = isEltz ? curHp : (curPartyHp[actor.id] ?? 0);
+            if (actorCurrentHp <= 0) { skillsUsedThisTurn.set(skillId, actor.id); continue; }
             const healAmt = sk_def.healFlat;
             if (sk_def.healTarget === "party") {
               // パーティ全体（通常healはselfなのでここはoverheal等の即時全体回復用）
@@ -3660,15 +3676,16 @@ export default function ArcadiaCh2() {
         
           // ── 攻撃+回復複合（hits>0 かつ healFlat>0 のスキル：シーソー等） ──
           if (sk_def.healFlat > 0) {
-            const healAmt = sk_def.healFlat;
             const isEltzHeal = actor.id === "eltz";
-            if (isEltzHeal) curHp = Math.min(curHp + healAmt, mhp);
-            else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0) + healAmt, partyMhp[actor.id]);
-            memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
-            logs.push(`${actor.icon}${actor.name} ⚖ HP+${healAmt}（複合回復）`);
+            const actorComboHp = isEltzHeal ? curHp : (curPartyHp[actor.id] ?? 0);
+            if (actorComboHp > 0) {
+              const healAmt = sk_def.healFlat;
+              if (isEltzHeal) curHp = Math.min(curHp + healAmt, mhp);
+              else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0) + healAmt, partyMhp[actor.id]);
+              memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
+              logs.push(`${actor.icon}${actor.name} ⚖ HP+${healAmt}（複合回復）`);
+            }
           }
-
-          // ── 攻撃+スタン複合（hits>0 かつ enemyStun>0 のスキル：テイクダウン等） ──
           if (sk_def.enemyStun > 0) {
             if (skillId === "takedown") takedownUsed = true;
             else if (skillId === "straight_shot") straightShotUsed = true;
@@ -3944,6 +3961,10 @@ export default function ArcadiaCh2() {
           }
       // ── 回復スキル（healFlat > 0）────────────────────────────────────────
       if (sk_def.healFlat > 0) {
+        // 戦闘不能メンバーは回復をスキップ
+        const isEltzEnd = actor.id === "eltz";
+        const actorEndHp = isEltzEnd ? curHp : (curPartyHp[actor.id] ?? 0);
+        if (actorEndHp > 0) {
         const healAmt = sk_def.healFlat;
         if (sk_def.healTarget === "party") {
           curHp = Math.min(curHp + healAmt, mhp);
@@ -3960,6 +3981,7 @@ export default function ArcadiaCh2() {
         }
         overhealUsed = true;
         skillsUsedThisTurn.set(skillId, actor.id);
+        }
       }
     } 
     };
@@ -4361,6 +4383,9 @@ export default function ArcadiaCh2() {
       
         // ── 回復スキル（hits=0 かつ healFlat>0） ──────────────────────────────
         if (sk_def.hits === 0 && sk_def.healFlat > 0) {
+          // 戦闘不能メンバーは回復をスキップ
+          const actorCurrentHp2 = isEltz ? curHp : (curPartyHp[actor.id] ?? 0);
+          if (actorCurrentHp2 <= 0) { skillsUsedThisTurn.set(skillId, actor.id); continue; }
           const healAmt = sk_def.healFlat;
           if (sk_def.healTarget === "party") {
             // パーティ全体（通常healはselfなのでここはoverheal等の即時全体回復用）
@@ -4517,12 +4542,15 @@ export default function ArcadiaCh2() {
       
         // ── 攻撃+回復複合（hits>0 かつ healFlat>0 のスキル：シーソー等） ──
         if (sk_def.healFlat > 0) {
-          const healAmt = sk_def.healFlat;
           const isEltzHeal = actor.id === "eltz";
-          if (isEltzHeal) curHp = Math.min(curHp + healAmt, mhp);
-          else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0) + healAmt, partyMhp[actor.id]);
-          memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
-          logs.push(`${actor.icon}${actor.name} ⚖ HP+${healAmt}（複合回復）`);
+          const actorComboHp2 = isEltzHeal ? curHp : (curPartyHp[actor.id] ?? 0);
+          if (actorComboHp2 > 0) {
+            const healAmt = sk_def.healFlat;
+            if (isEltzHeal) curHp = Math.min(curHp + healAmt, mhp);
+            else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0) + healAmt, partyMhp[actor.id]);
+            memberHeal[actor.id] = (memberHeal[actor.id]??0) + healAmt;
+            logs.push(`${actor.icon}${actor.name} ⚖ HP+${healAmt}（複合回復）`);
+          }
         }
 
         // ── 攻撃+スタン複合（hits>0 かつ enemyStun>0 のスキル：テイクダウン等） ──
@@ -4757,22 +4785,27 @@ export default function ArcadiaCh2() {
 
       // ── 回復スキル（healFlat > 0）────────────────────────────────────────
       if (sk_def.healFlat > 0) {
-        const healAmt = sk_def.healFlat;
-        if (sk_def.healTarget === "party") {
-          curHp = Math.min(curHp + healAmt, mhp);
-          for (const k of currentPartyKeys.filter(k2 => k2 !== "eltz")) {
-            if ((curPartyHp[k]??0) <= 0) continue;
-            curPartyHp[k] = Math.min((curPartyHp[k]??0)+healAmt, partyMhp[k]);
+        // 戦闘不能メンバーは回復をスキップ
+        const isEltzEnd2 = actor.id === "eltz";
+        const actorEndHp2 = isEltzEnd2 ? curHp : (curPartyHp[actor.id] ?? 0);
+        if (actorEndHp2 > 0) {
+          const healAmt = sk_def.healFlat;
+          if (sk_def.healTarget === "party") {
+            curHp = Math.min(curHp + healAmt, mhp);
+            for (const k of currentPartyKeys.filter(k2 => k2 !== "eltz")) {
+              if ((curPartyHp[k]??0) <= 0) continue;
+              curPartyHp[k] = Math.min((curPartyHp[k]??0)+healAmt, partyMhp[k]);
+            }
+            logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}発動！ 全員HP+${healAmt}！`);
+          } else {
+            const isEltz2 = actor.id === "eltz";
+            if (isEltz2) curHp = Math.min(curHp + healAmt, mhp);
+            else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0)+healAmt, partyMhp[actor.id]);
+            logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}発動！ HP+${healAmt}！`);
           }
-          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}発動！ 全員HP+${healAmt}！`);
-        } else {
-          const isEltz2 = actor.id === "eltz";
-          if (isEltz2) curHp = Math.min(curHp + healAmt, mhp);
-          else curPartyHp[actor.id] = Math.min((curPartyHp[actor.id]??0)+healAmt, partyMhp[actor.id]);
-          logs.push(`${actor.icon}${actor.name} ${sk_def.icon}${sk_def.label}発動！ HP+${healAmt}！`);
+          overhealUsed = true;
+          skillsUsedThisTurn.set(skillId, actor.id);
         }
-        overhealUsed = true;
-        skillsUsedThisTurn.set(skillId, actor.id);
       }
     }
     // ══════════════════════════════════════════════════════════════════
