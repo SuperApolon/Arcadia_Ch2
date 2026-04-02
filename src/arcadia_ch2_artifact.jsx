@@ -3591,9 +3591,14 @@ export default function ArcadiaCh2() {
           const tDef = typeof curEnemies !== "undefined" && curEnemies
             ? curEnemies[tIdx]
             : null;
-          const eActionForJudge = tDef
-            ? tDef.def.pattern[tDef.turnIdx % tDef.def.pattern.length]
-            : eAction; // 単体バトルはターン冒頭で決定済みの eAction を使用
+          // tDefのスロットと一致するactorのskill（今ターン確定済みの行動）を参照する
+          // これにより「別の敵のパターンを誤参照する」問題を防ぐ
+          const tActor = tDef
+            ? actors.find(a => a.type === "enemy" && a.enemySlot === tDef.slot)
+            : null;
+          const eActionForJudge = tActor
+            ? tActor.skill
+            : (tDef ? tDef.def.pattern[tDef.turnIdx % tDef.def.pattern.length] : eAction);
         
           // atk vs 敵counter → 敵ターン側（eAction==="counter"ブロック）で一括処理するためここではスキップ
           if (skillId === "atk" && eActionForJudge === "counter" && !sk_def.pierceCounter) {
@@ -3775,6 +3780,10 @@ export default function ArcadiaCh2() {
               let anyAtk = false;
               for (const k of currentPartyKeys) {
                 if (cmds[k] !== "atk") continue;
+                // マルチ敵の場合：この敵（slot）を狙ったメンバーのみカウンター対象にする
+                const kTargetIdx = targets[k] ?? 0;
+                const kTargetEnemy = curEnemies[kTargetIdx] ?? curEnemies.find(en => !en.defeated);
+                if (kTargetEnemy && kTargetEnemy.slot !== slot) continue;
                 anyAtk = true;
                 const m = PARTY_DEFS.find(p => p.id === k);
                 const baseRaw = randInt(e.def.atk[0], e.def.atk[1]) + Math.floor(e.def.atk[1] * 0.3);
