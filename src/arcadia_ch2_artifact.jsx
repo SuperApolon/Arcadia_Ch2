@@ -2209,6 +2209,34 @@ export default function ArcadiaCh2() {
  // 行動順序を逆転させる
   const [reverseActive, setReverseActive] = useState(0);
 
+  // リバースエフェクト：null=非表示, 0〜9=フレーム番号（12fps×10f=5ループ）
+  const [reverseAnimFrame, setReverseAnimFrame] = useState(null);
+  const REVERSE_ANIM_URLS = [
+    "https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Reverse/Eff_reverse_00.webp",
+    "https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Reverse/Eff_reverse_01.webp",
+  ];
+  const REVERSE_ANIM_FPS    = 2;
+  const REVERSE_ANIM_FRAMES = 5; // 5ループ × 2フレーム
+  const REVERSE_ANIM_INTERVAL = Math.round(1000 / REVERSE_ANIM_FPS); // ≒83ms
+  const reverseAnimTimerRef = useRef(null);
+
+  const playReverseEffect = useCallback(() => {
+    // 再生中は上書きしない
+    if (reverseAnimTimerRef.current) return;
+    let frame = 0;
+    setReverseAnimFrame(0);
+    reverseAnimTimerRef.current = setInterval(() => {
+      frame++;
+      if (frame < REVERSE_ANIM_FRAMES) {
+        setReverseAnimFrame(frame);
+      } else {
+        clearInterval(reverseAnimTimerRef.current);
+        reverseAnimTimerRef.current = null;
+        setReverseAnimFrame(null);
+      }
+    }, REVERSE_ANIM_INTERVAL);
+  }, []);
+
   // provokeActive > 0 のとき敵の行動を強制的にatkに変換する（残りターン数）。
   const [provokeActive,   setProvokeActive  ] = useState(0);
 
@@ -3371,7 +3399,10 @@ export default function ArcadiaCh2() {
     // ── リバース中ログ表示 ──
      const reverseUsedThisTurn = Object.values(cmds).includes("reverse");
     const isReversed = reverseActive > 0 
-    if (isReversed) logs.push(`🔃 リバース中！ フェイズ順序が逆転（残${reverseActive}T）`);
+    if (isReversed) {
+      logs.push(`🔃 リバース中！ フェイズ順序が逆転（残${reverseActive}T）`);
+      playReverseEffect();
+    }
 
     // ══════════════════════════════════════════════════════════════════
     // プリフェイズ：回避・カウンター宣言
@@ -4177,7 +4208,7 @@ export default function ArcadiaCh2() {
     bikerAtkBonus, straightShotActive, waterSphereActive, slowbladeActive, memberCdMap,
     reverseActive, playerStunActive, enemyElementIdx,
     noDmgStreak, turn, lv, showNotif, handleExpGain,
-    fireHitEffect, fireDefeatEffect,
+    fireHitEffect, fireDefeatEffect, playReverseEffect,
   ]);
 
   // @@SECTION:LOGIC_PARTY_TURN ──────────────────────────────────────────────────
@@ -4276,6 +4307,8 @@ export default function ArcadiaCh2() {
     // ── 現在有効なバフ・デバフ表示 ──────────────────────────────────────
     logs.push(`─ ターン ${turn + 1} ─`);
     setcurrentBattleTotalTurns(prev => prev + 1);
+    // リバース中はターン開始時にエフェクト再生
+    if (reverseActive > 0) playReverseEffect();
     if (enemySpdDebuff > 0)     logs.push(`⬇️ ${ed.name} SPD -5 デバフ中（残${enemySpdDebuff}T）`);
     if (enrageCount > 0)        logs.push(`🔴 ${ed.name} 怒り状態！ 攻撃力×2（残${enrageCount}T）-- 氷結斬で解除可能`);
     if (enemyAtkDebuff > 0)     logs.push(`🔥 ${ed.name} ATK半減中（残${enemyAtkDebuff}T）`);
@@ -4993,7 +5026,7 @@ export default function ArcadiaCh2() {
     enemyHp, hp, mp, mhp, mmp, partyHp, partyMhp, partyMp, partyMmp,
     statAlloc, weaponPatk, noDmgStreak, lv,
     showNotif, handleExpGain, turn,
-    fireHitEffect, fireDefeatEffect, playerStunActive,
+    fireHitEffect, fireDefeatEffect, playerStunActive, playReverseEffect,
   ]);
 
   // @@SECTION:LOGIC_PENDING_EXEC ────────────────────────────────────────────────
@@ -6213,6 +6246,23 @@ export default function ArcadiaCh2() {
                   </React.Fragment>
                 );
               })}
+
+              {/* リバースエフェクト（リバース中ターン開始時・12fps×10f=5ループ） */}
+              {reverseAnimFrame !== null && (
+                <img
+                  src={REVERSE_ANIM_URLS[reverseAnimFrame % 2]}
+                  style={{
+                    position:"fixed",
+                    left:0, top:0,
+                    width:`${enemyAreaW}vw`,
+                    height:`${enemyAreaH}vh`,
+                    objectFit:"cover",
+                    pointerEvents:"none", zIndex:400,
+                    mixBlendMode:"screen",
+                  }}
+                  alt=""
+                />
+              )}
             </>
           );
         })()}
