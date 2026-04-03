@@ -1708,10 +1708,35 @@ export default function ArcadiaCh2() {
   // ── パーティSPDバフ管理（雷神斬効果） ─────────────────────────────────
   // partySpdBuff > 0 のとき、全味方のSPDを+3する残りターン数
   const [partySpdBuff, setPartySpdBuff] = useState(0);
+  // カットインエフェクト：null=非表示, 0〜9=フレーム番号（1fps×1f=3ループ）
+  const [CUTINAnimFrame, setCUTINAnimFrame] = useState(null);
+  const CUTIN_ANIM_URLS = [
+    "https://superapolon.github.io/Arcadia_Assets/Animation/cutin/CT_olga.webp",
+  ];
+  const CUTIN_ANIM_FPS    = 1;
+  const CUTIN_ANIM_FRAMES = 1; // 1フレーム
+  const CUTIN_ANIM_INTERVAL = Math.round(1000 / CUTIN_ANIM_FPS); //
+  const CUTINAnimTimerRef = useRef(null);
 
- // 行動順序を逆転させる
+  const playCUTINEffect = useCallback(() => {
+    // 再生中は上書きしない
+    if (CUTINAnimTimerRef.current) return;
+    let frame = 0;
+    setCUTINAnimFrame(0);
+    CUTINAnimTimerRef.current = setInterval(() => {
+      frame++;
+      if (frame < CUTIN_ANIM_FRAMES) {
+        setCUTINAnimFrame(frame);
+      } else {
+        clearInterval(CUTINAnimTimerRef.current);
+        CUTINAnimTimerRef.current = null;
+        setCUTINAnimFrame(null);
+      }
+    }, CUTIN_ANIM_INTERVAL);
+  }, []);
+
+  // 行動順序を逆転させる
   const [reverseActive, setReverseActive] = useState(0);
-
   // リバースエフェクト：null=非表示, 0〜9=フレーム番号（12fps×10f=5ループ）
   const [reverseAnimFrame, setReverseAnimFrame] = useState(null);
   const REVERSE_ANIM_URLS = [
@@ -3379,6 +3404,7 @@ export default function ArcadiaCh2() {
               if (sk_def.label === "リバース"){
                 enemyReverseSet = sk_def.reversePhaze ?? 5;
               logs.push(`${e.def.em}${e.def.name}がリバースを発動！　何かがおかしい。空間が逆転する`);
+              playCUTINEffect();
               }else {
                 logs.push(`${e.def.em}${rageLabel}${sk_def.icon}${e.def.name}が${sk_def.label}${hitLabel}！${halfLabel} ${tMember.icon}${tMember.name}に${totalSkDmg}ダメージ！`);
               }
@@ -4978,6 +5004,22 @@ export default function ArcadiaCh2() {
               {reverseAnimFrame !== null && (
                 <img
                   src={REVERSE_ANIM_URLS[reverseAnimFrame % 2]}
+                  style={{
+                    position:"fixed",
+                    left:0, top:0,
+                    width:`${enemyAreaW}vw`,
+                    height:`${enemyAreaH}vh`,
+                    objectFit:"cover",
+                    pointerEvents:"none", zIndex:400,
+                    mixBlendMode:"screen",
+                  }}
+                  alt=""
+                />
+              )}
+              {/* オルガカットイン */}
+              {CUTINAnimFrame !== null && (
+                <img
+                  src={CUTIN_ANIM_URLS[CUTINAnimFrame % 2]}
                   style={{
                     position:"fixed",
                     left:0, top:0,
