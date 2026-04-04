@@ -395,7 +395,7 @@ const INITIAL_BATTLE_DEFS = {
    // ── アリエス・カルマとのコカトリス3体 ──────────────────────────────────
    cocatris_karma_a: {
     name:"コカトリス Lv.5", em:"🐔",
-    maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:14,pdef:5, mdef:0,
+    maxHp:75, atk:[12,18], elk:15, exp:15, lv:1, spd:3,pdef:0, mdef:0,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","counter","atk","dodge","atk","counter","atk"],
     unavoidableAtk:[18,26],
@@ -403,15 +403,15 @@ const INITIAL_BATTLE_DEFS = {
   },
   cocatris_karma_b: {
     name:"コカトリス Lv.5", em:"🐔",
-    maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:14,pdef:5, mdef:0,
+    maxHp:300, atk:[26,36], elk:90, exp:90, lv:5, spd:14,pdef:8, mdef:0,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
-    pattern:["counter","atk","counter","dodge","atk","counter","counter"],
+    pattern:["counter","atk","counter","dodge","atk","counter","unavoidable"],
     unavoidableAtk:[18,26],
     elementCycle:["earth"],
   },
   cocatris_karma_c: {
-    name:"コカトリス Lv.5", em:"🐔",
-    maxHp:200, atk:[12,18], elk:45, exp:45, lv:5, spd:14,pdef:5, mdef:0,
+    name:"コカトリス Lv.3", em:"🐔",
+    maxHp:195, atk:[18,25], elk:45, exp:45, lv:3, spd:11,pdef:5, mdef:0,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","atk","counter"],
     unavoidableAtk:[18,26],
@@ -420,23 +420,23 @@ const INITIAL_BATTLE_DEFS = {
   // ── ポンキチ・ペルシアとのコカトリス3体 ──────────────────────────────────
   cocatris_ponki_a: {
     name:"コカトリス Lv.5", em:"🐔",
-    maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:14,pdef:5, mdef:0,
+    maxHp:210, atk:[24,36], elk:90, exp:90, lv:5, spd:13,pdef:0, mdef:0,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","counter","atk","dodge","atk","counter","dodge"],
     unavoidableAtk:[18,26],
     elementCycle:["earth"],
   },
   cocatris_ponki_b: {
-    name:"コカトリス Lv.5", em:"🐔",
-    maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:14,pdef:5, mdef:0,
+    name:"コカトリス Lv.4", em:"🐔",
+    maxHp:70, atk:[20,21], elk:60, exp:60, lv:4, spd:20,pdef:0, mdef:0,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["counter","atk","counter","dodge","atk","counter","dodge"],
     unavoidableAtk:[18,26],
     elementCycle:["earth"],
   },
   cocatris_ponki_c: {
-    name:"コカトリス Lv.5", em:"🐔",
-    maxHp:230, atk:[12,18], elk:45, exp:45, lv:5, spd:14,pdef:5, mdef:0,
+    name:"コカトリス Lv.6", em:"🐔",
+    maxHp:384, atk:[30,49], elk:120, exp:160, lv:6, spd:8,pdef:9, mdef:0,
     bg:["#0a1808","#184010","#283020"], isFloating:false, isGround:true,
     pattern:["atk","atk","counter","dodge","atk","atk","unavoidable"],
     unavoidableAtk:[18,26],
@@ -1580,12 +1580,12 @@ const ENEMY_IMG_SIZE = {
   moocat:        { mode:"fixed", size: 220 },
   mandragora:    { mode:"fixed", size: 220 },
   cocatris:      { mode:"fixed", size: 360 },
-  cocatris_karma_a:    { mode:"fixed", size: 330 },
+  cocatris_karma_a:    { mode:"fixed", size: 180 },
   cocatris_karma_b:    { mode:"fixed", size: 360 },
-  cocatris_karma_c:    { mode:"fixed", size: 345 },
-  cocatris_ponki_a:    { mode:"fixed", size: 330 },
-  cocatris_ponki_b:    { mode:"fixed", size: 360 },
-  cocatris_ponki_c:    { mode:"fixed", size: 345 },
+  cocatris_karma_c:    { mode:"fixed", size: 240 },
+  cocatris_ponki_a:    { mode:"fixed", size: 280 },
+  cocatris_ponki_b:    { mode:"fixed", size: 210 },
+  cocatris_ponki_c:    { mode:"fixed", size: 400 },
   pvp_donatello:       { mode:"fixed", size: 480 },
   pvp_kevin:           { mode:"fixed", size: 450 },
   pvp_chopper:         { mode:"fixed", size: 320 },
@@ -5438,8 +5438,14 @@ export default function ArcadiaCh2() {
                           }}>
                           {meImg
                             ? <img src={meImg} alt={meDef.name} style={{
-                                width:"100%", maxWidth:"96%",
-                                height:"100%", maxHeight:"100%",
+                                width:"auto",
+                                maxWidth:"96%",
+                                height:"auto",
+                                maxHeight: (() => {
+                                  const _r = ENEMY_IMG_SIZE[me.type] ?? { mode:"fixed", size:200 };
+                                  const _c = typeof _r === "number" ? { mode:"fixed", size:_r } : _r;
+                                  return _c.size + "px";
+                                })(),
                                 objectFit:"contain",
                                 animation: me.defeated ? "none" : (meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite"),
                                 filter: me.defeated
