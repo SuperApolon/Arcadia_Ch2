@@ -1569,28 +1569,25 @@ const SPRITE_SIZE = {
 //   - 小さめに見せたい雑魚・人型エネミー    → mode:"fixed" or 数値
 //
 const ENEMY_IMG_SIZE = {
-  seagull:       { mode:"fixed", size: 180 },
-  koza:          { mode:"fixed", size: 450 },
-  shamerlot:     { mode:"fixed", size: 220 },
-  shamerlot_lv3: { mode:"fixed", size: 260 },
-  shamerlot_lv5: { mode:"fixed", size: 300 },
-  simuluu:       { mode:"fixed", size: 500 },
+  seagull:       { mode:"auto", pct: 50 },
+  shamerlot:     { mode:"auto", pct: 50 },
+  shamerlot_lv3: { mode:"auto", pct: 60 },
+  shamerlot_lv5: { mode:"auto", pct: 70 },
   // ── 第二章 ────────────────────────────────────────────────────────────────
-  woopy:         { mode:"fixed", size: 180 },
-  moocat:        { mode:"fixed", size: 220 },
-  mandragora:    { mode:"fixed", size: 220 },
-  cocatris:      { mode:"fixed", size: 360 },
-  cocatris_karma_a:    { mode:"fixed", size: 180 },
-  cocatris_karma_b:    { mode:"fixed", size: 360 },
-  cocatris_karma_c:    { mode:"fixed", size: 240 },
-  cocatris_ponki_a:    { mode:"fixed", size: 280 },
-  cocatris_ponki_b:    { mode:"fixed", size: 210 },
-  cocatris_ponki_c:    { mode:"fixed", size: 400 },
-  pvp_donatello:       { mode:"fixed", size: 480 },
-  pvp_kevin:           { mode:"fixed", size: 450 },
-  pvp_chopper:         { mode:"fixed", size: 320 },
-  olga:                { mode:"fixed", size: 380 },
-  olga_pet:            { mode:"fixed", size: 220 },
+  moocat:        { mode:"auto", pct: 55 },
+  mandragora:    { mode:"auto", pct: 65 },
+  cocatris:      { mode:"auto", pct: 70 },
+  cocatris_karma_a:    { mode:"auto", pct: 55 },
+  cocatris_karma_b:    { mode:"auto", pct: 80 },
+  cocatris_karma_c:    { mode:"auto", pct: 70 },
+  cocatris_ponki_a:    { mode:"auto", pct: 70 },
+  cocatris_ponki_b:    { mode:"auto", pct: 55 },
+  cocatris_ponki_c:    { mode:"auto", pct: 90 },
+  pvp_donatello:       { mode:"auto", pct: 99 },
+  pvp_kevin:           { mode:"auto", pct: 99 },
+  pvp_chopper:         { mode:"auto", pct: 70 },
+  olga:                { mode:"auto", pct: 99 },
+  olga_pet:            { mode:"auto", pct: 50 },
 };
 
 const BATTLE_BG_MAP = {
@@ -5438,13 +5435,12 @@ export default function ArcadiaCh2() {
                           }}>
                           {meImg
                             ? <img src={meImg} alt={meDef.name} style={{
-                                width:"auto",
-                                maxWidth:"96%",
+                                width:"100%", maxWidth:"96%",
                                 height:"auto",
                                 maxHeight: (() => {
-                                  const _r = ENEMY_IMG_SIZE[me.type] ?? { mode:"fixed", size:200 };
-                                  const _c = typeof _r === "number" ? { mode:"fixed", size:_r } : _r;
-                                  return _c.size + "px";
+                                  const _r = ENEMY_IMG_SIZE[me.type] ?? { mode:"fixed", size: 200 };
+                                  const _c = typeof _r === "number" ? { mode:"fixed", size: _r } : _r;
+                                  return _c.mode === "auto" ? `${_c.pct ?? 99}%` : _c.size + "px";
                                 })(),
                                 objectFit:"contain",
                                 animation: me.defeated ? "none" : (meIsBoss ? "bossFloat 2s infinite" : "idle 2.2s infinite"),
