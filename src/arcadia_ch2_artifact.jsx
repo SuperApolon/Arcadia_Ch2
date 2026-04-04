@@ -110,12 +110,91 @@ const ST_MONO_TEXT   = { fontFamily:FONT_MONO, fontSize:12, color:"#c8e8f8" };  
 /**
  * コンボ数表示オーバーレイ（マルチ敵・単体敵で共通）
  */
+// ── スロット回転設定 ──────────────────────────────────────────────
+const COMBO_SLOT_FRAMES   = 18;   // 回転フレーム数（増やすと長く回る）
+const COMBO_SLOT_INTERVAL = 55;   // 1フレームの時間ms（増やすと遅くなる）
+
 const ComboOverlay = ({ streak, accentColor }) => {
+  const [displayDigits, setDisplayDigits] = useState([]);
+  const [spinning,      setSpinning      ] = useState(false);
+  const [slotFrames,    setSlotFrames    ] = useState([]);   // 各桁の現在表示値
+  const prevStreakRef = useRef(0);
+  const timerRef     = useRef(null);
+
+  useEffect(() => {
+    if (streak < 3) { prevStreakRef.current = streak; return; }
+    const prev = prevStreakRef.current;
+    prevStreakRef.current = streak;
+
+    // 前回と同じ or 減少時はスロット不要
+    if (streak <= prev) {
+      const digits = String(streak).split("");
+      setDisplayDigits(digits);
+      setSpinning(false);
+      return;
+    }
+
+    // 桁数
+    const targetStr  = String(streak);
+    const numDigits  = targetStr.length;
+    const targetDigs = targetStr.split("");
+
+    // スロット開始
+    setSpinning(true);
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    let frame = 0;
+    // 初期ランダム表示
+    setSlotFrames(Array.from({ length: numDigits }, () => String(Math.floor(Math.random() * 10))));
+
+    timerRef.current = setInterval(() => {
+      frame++;
+      if (frame < COMBO_SLOT_FRAMES) {
+        // ランダム回転
+        setSlotFrames(Array.from({ length: numDigits }, () => String(Math.floor(Math.random() * 10))));
+      } else {
+        // 確定
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+        setSpinning(false);
+        setDisplayDigits(targetDigs);
+        setSlotFrames(targetDigs);
+      }
+    }, COMBO_SLOT_INTERVAL);
+
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [streak]);
+
+  // 初回表示（streak が 3 になった瞬間）
+  useEffect(() => {
+    if (streak >= 3 && displayDigits.length === 0) {
+      setDisplayDigits(String(streak).split(""));
+    }
+  }, [streak]);
+
   if (streak < 3) return null;
+
+  const shownDigits = spinning ? slotFrames : displayDigits;
+
   return (
     <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%, -50%)",zIndex:10,pointerEvents:"none",textAlign:"center",animation:"comboPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-      <div style={{fontSize:"clamp(36px, 8vw, 64px)",fontWeight:900,fontFamily:FONT_MONO,color:"#f0c040",letterSpacing:2,lineHeight:1,animation:"comboPulse 1s infinite",WebkitTextStroke:"1px #ffffff44"}}>
-        {streak}
+      <div style={{fontSize:"clamp(36px, 8vw, 64px)",fontWeight:900,fontFamily:FONT_MONO,color:"#f0c040",letterSpacing:2,lineHeight:1,animation:"comboPulse 1s infinite",WebkitTextStroke:"1px #ffffff44",display:"flex",flexDirection:"column",alignItems:"center"}}>
+        {/* 数字部分：各桁をスロット表示 */}
+        <div style={{display:"flex",gap:2,justifyContent:"center",
+          filter: spinning ? "drop-shadow(0 0 8px #f0c040cc)" : "none",
+          transition:"filter 0.2s",
+        }}>
+          {(shownDigits.length > 0 ? shownDigits : String(streak).split("")).map((d, i) => (
+            <span key={i} style={{
+              display:"inline-block",
+              minWidth:"0.65em",
+              textAlign:"center",
+              animation: spinning ? `comboPulse 0.1s infinite` : "none",
+              opacity: spinning ? 0.85 : 1,
+              transition: spinning ? "none" : "opacity 0.15s",
+            }}>{d}</span>
+          ))}
+        </div>
         <span style={{fontSize:"0.45em",letterSpacing:4,display:"block",marginTop:2,color:"#ffe08a"}}>COMBO</span>
       </div>
       <div style={{fontSize:10,color:"#ffe08a",fontFamily:FONT_MONO,letterSpacing:2,marginTop:4,opacity:0.85}}>MP +{5 + streak} / turn</div>
@@ -391,7 +470,7 @@ const WEAPON_SKILL_MAP = {
   copper_lance:        ["penetrate"],
   copper_axe:          ["spiral_axe"],
   copper_bow:          ["double_arrow"],
-  baroque_knife:       ["double_bite","stinger_bite"],
+  baroque_knife:       ["ten_bite","stinger_bite"],
   baroque_sword:       ["biker_slash","sansanka"],
   baroque_blade:       ["provoke","deep_edge"],
   baroque_lance:       ["seesaw","windmill"],
@@ -633,11 +712,11 @@ const SKILL_DEFS = {
     enemyDebuff:null, selfBuff:null, enrageBreak:false,
   },
   
-  double_bite: {
-    label:"ダブルバイト", icon:"⚔", color:"#c084fc", cost:12, cooldown:2,
+  ten_bite: {
+    label:"テンタクルスバイト", icon:"⚔", color:"#c084fc", cost:12, cooldown:2,
     isPrephase:true, isEndphase:false,
     dmgType:"physical", baseDmg:[20,23], weaponMult:true, atkMult:true, dmgMult:1.2,
-    hits:2, target:"single", element:null, pierceCounter:true, comboBonus:1.0,
+    hits:10, target:"single", element:null, pierceCounter:true, comboBonus:1.0,
     healFlat:0, healTarget:"self",
     enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
     enemyDebuff:null, selfBuff:null, enrageBreak:false,
@@ -1072,7 +1151,7 @@ const ALL_CHAR_DEFS = {
         "stinger_bite","straight_shot","arrow_rain","water_sphere",
         // 新規追加（WEAPON_SKILL_MAPの全スキル）
         "trick_attack","flat_strike","slow_blade","penetrate","spiral_axe","double_arrow",
-        "double_bite","deep_edge","seesaw","windmill","onslaught",
+        "ten_bite","deep_edge","seesaw","windmill","onslaught",
         "fireball","stone_blitz","air_cutter","thunderbolt"
       ]
      },
@@ -1083,7 +1162,7 @@ const ALL_CHAR_DEFS = {
   karma:   { id:"karma",   name:"カルマ",    icon:"\u{1F61C}",                     spd:16, mhp:115, mmp:95,  atk:0,  def:0,  skills:["atk","counter","dodge","heal","provoke"] },
   frank:   { id:"frank",   name:"フランク",  icon:"\u{1F917}",                     spd:10, mhp:240, mmp:180,  atk:30,  def:36, skills:["atk","counter","dodge","heal","provoke","takedown"] },
   will:    { id:"will",    name:"ウィル",    icon:"\u{1F624}",                     spd:18, mhp:99,  mmp:88,  atk:10,  def:5,  skills:["atk","counter","dodge","heal","elem_thunder","elem_earth"] },
-  ponkiti: { id:"ponkiti", name:"ポンキチ",  icon:"\u{1F929}",                     spd:17, mhp:135, mmp:95,  atk:16,  def:3,  skills:["atk","counter","dodge","heal","stinger_bite","thunderbolt"] },
+  ponkiti: { id:"ponkiti", name:"ポンキチ",  icon:"\u{1F929}",                     spd:17, mhp:135, mmp:95,  atk:16,  def:3,  skills:["atk","counter","dodge","heal","ten_bite","thunderbolt"] },
   persia:  { id:"persia",  name:"ペルシア",  icon:"\u{1F338}",                     spd:14, mhp:130, mmp:100,  atk:16,  def:5,  skills:["atk","counter","dodge","heal","straight_shot","arrow_rain"] },
 };
 
@@ -2920,7 +2999,7 @@ export default function ArcadiaCh2() {
       "biker_slash","sansanka","stinger_bite","straight_shot","arrow_rain","water_sphere",
       // 新規追加
       "trick_attack","flat_strike","slow_blade","penetrate","spiral_axe","double_arrow",
-      "double_bite","deep_edge","seesaw","windmill","onslaught",
+      "ten_bite","deep_edge","seesaw","windmill","onslaught",
       "fireball","stone_blitz","air_cutter","thunderbolt",
     ];
     const specialSk = SPECIAL_IDS.includes(skillId) ? { id:skillId, cost:0, dmg:[0,0] } : null;
@@ -3814,7 +3893,14 @@ export default function ArcadiaCh2() {
     } else {
       comboOk = currentPartyKeys.every(k => (memberDmg[k] ?? 0) === 0);
     }
-    const newStreak = comboOk ? noDmgStreak + partySize : 0;
+        // 各メンバーの使用スキルのhits数を合算してコンボ加算値を計算
+        const totalHits = currentPartyKeys.reduce((sum, k) => {
+        const skillId = cmds[k] ?? "atk";
+        const sk = SKILL_DEFS[skillId];
+        const hits = (sk?.hits ?? 1) > 0 ? (sk?.hits ?? 1) : 1;
+        return sum + hits;
+        }, 0);
+        const newStreak = comboOk ? noDmgStreak + totalHits : 0;
     if (comboOk) {
       const gain = 5 + newStreak;
       curMp = Math.min(curMp + gain, mmp);
@@ -5730,7 +5816,7 @@ export default function ArcadiaCh2() {
                           penetrate:     { icon:"⚔", label:"ペネトレイト",       color:"#fb923c", cd: memberCdMap["penetrate"]?.[currentCmdMember.id]     ?? 0, desc:"単体物理ダメージ" },
                           spiral_axe:    { icon:"🪓", label:"スパイラルアックス", color:"#f87171", cd: memberCdMap["spiral_axe"]?.[currentCmdMember.id]    ?? 0, desc:"単体物理ダメージ" },
                           double_arrow:  { icon:"🏹", label:"ダブルアロー",       color:"#a3e635", cd: memberCdMap["double_arrow"]?.[currentCmdMember.id]  ?? 0, desc:"2連射ダメージ" },
-                          double_bite:   { icon:"🗡", label:"ダブルバイト",       color:"#f43f5e", cd: memberCdMap["double_bite"]?.[currentCmdMember.id]   ?? 0, desc:"プリフェイズ2連撃ダメージ" },
+                          ten_bite:   { icon:"🗡", label:"テンタクルスバイト",       color:"#f43f5e", cd: memberCdMap["ten_bite"]?.[currentCmdMember.id]   ?? 0, desc:"プリフェイズ2連撃ダメージ" },
                           deep_edge:     { icon:"⚔", label:"ディープエッジ",     color:"#60a5fa", cd: memberCdMap["deep_edge"]?.[currentCmdMember.id]     ?? 0, desc:"エンドフェイズ単体物理ダメージ" },
                           seesaw:        { icon:"⚔", label:"シーソー",           color:"#34d399", cd: memberCdMap["seesaw"]?.[currentCmdMember.id]        ?? 0, desc:"単体物理ダメージ" },
                           windmill:      { icon:"🌀", label:"風車",       color:"#22d3ee", cd: memberCdMap["windmill"]?.[currentCmdMember.id]      ?? 0, desc:"全敵物理ダメージ" },
