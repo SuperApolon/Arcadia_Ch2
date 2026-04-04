@@ -369,7 +369,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"ドナテロ", em:"🎭",
     maxHp:326, atk:[60,75], elk:0, exp:0, lv:18, spd:14,pdef:12, mdef:12,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:false, isFloating:false, isGround:true,
-    pattern:["atk","counter","atk","dodge","atk","counter","unavoidable","unavoidable","windmill","windmill","windmill"],
+    pattern:["atk","counter","atk","dodge","atk","counter","unavoidable","unavoidable","StellaFritz","StellaFritz","StellaFritz"],
     unavoidableAtk:[90,100],
     elementCycle:["fire"],
   },
@@ -957,6 +957,18 @@ const SKILL_DEFS = {
     selfBuff:null,
     enrageBreak:false,
   },
+  StellaFritz: {
+    label:"ステラフリッツ", icon:"✨", color:"#ff80ff", cost:0, cooldown:0,
+    isPrephase:false, isEndphase:false,
+    dmgType:"physical", baseDmg:[540,560], weaponMult:false, atkMult:false, dmgMult:1.0,
+    hits:1, target:"single", element:null, pierceCounter:false, comboBonus:1.0,
+    healFlat:0, healTarget:"self",
+    enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
+    enemyDebuff:null,
+    selfBuff:null,
+    enrageBreak:false,
+  },
+
 };
 
 
@@ -1922,7 +1934,7 @@ export default function ArcadiaCh2() {
   // ── パーティSPDバフ管理（雷神斬効果） ─────────────────────────────────
   // partySpdBuff > 0 のとき、全味方のSPDを+3する残りターン数
   const [partySpdBuff, setPartySpdBuff] = useState(0);
-  // カットインエフェクト：null=非表示, 0〜9=フレーム番号（1fps×1f=3ループ）
+  // オルガカットインエフェクト：null=非表示, 0〜9=フレーム番号（1fps×1f=3ループ）
   const [CUTINAnimFrame, setCUTINAnimFrame] = useState(null);
   const CUTIN_ANIM_URLS = [
     "https://superapolon.github.io/Arcadia_Assets/Animation/cutin/CT_olga.webp",
@@ -1948,7 +1960,32 @@ export default function ArcadiaCh2() {
       }
     }, CUTIN_ANIM_INTERVAL);
   }, []);
+  // ドナテロカットインエフェクト：null=非表示, 0〜9=フレーム番号（1fps×1f=3ループ）
+  const [CUTIN2AnimFrame, setCUTIN2AnimFrame] = useState(null);
+  const CUTIN2_ANIM_URLS = [
+    "https://superapolon.github.io/Arcadia_Assets/Animation/cutin/CT_donatello.webp",
+  ];
+  const CUTIN2_ANIM_FPS    = 1;
+  const CUTIN2_ANIM_FRAMES = 1; // 1フレーム
+  const CUTIN2_ANIM_INTERVAL = Math.round(1000 / CUTIN2_ANIM_FPS); //
+  const CUTIN2AnimTimerRef = useRef(null);
 
+  const playCUTIN2Effect = useCallback(() => {
+    // 再生中は上書きしない
+    if (CUTIN2AnimTimerRef.current) return;
+    let frame = 0;
+    setCUTIN2AnimFrame(0);
+    CUTIN2AnimTimerRef.current = setInterval(() => {
+      frame++;
+      if (frame < CUTIN2_ANIM_FRAMES) {
+        setCUTIN2AnimFrame(frame);
+      } else {
+        clearInterval(CUTIN2AnimTimerRef.current);
+        CUTIN2AnimTimerRef.current = null;
+        setCUTIN2AnimFrame(null);
+      }
+    }, CUTIN2_ANIM_INTERVAL);
+  }, []);
   // 行動順序を逆転させる
   const [reverseActive, setReverseActive] = useState(0);
   // リバースエフェクト：null=非表示, 0〜9=フレーム番号（12fps×10f=5ループ）
@@ -1984,11 +2021,11 @@ export default function ArcadiaCh2() {
     const LIGHTNING_ANIM_SEQUENCE = [
       { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_00.webp", fps:6 },
       { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_01.webp", fps:6 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_02.webp", fps:6 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_02.webp", fps:12 },
       { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_03.webp", fps:12 },
       { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_04.webp", fps:12 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_05.webp", fps:12 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_06.webp", fps:6 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_05.webp", fps:18 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_06.webp", fps:18 },
       { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
       { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
       { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
@@ -2013,7 +2050,32 @@ export default function ArcadiaCh2() {
       const ms = Math.round(1000 / LIGHTNING_ANIM_SEQUENCE[0].fps);
       lightningTimerRef.current = setTimeout(advance, ms);
     }, []);
-
+    // ── ライトニングスラッシュ画像プリロード ─────────────────────────────────
+    useEffect(() => {
+      LIGHTNING_ANIM_SEQUENCE.forEach(frame => {
+        const img = new Image();
+        img.src = frame.url;
+      });
+    }, []);
+    // ── ステラフリッツエフェクト ─────────────────────────────────────────
+    const [stellaAnimFrame, setStellaAnimFrame] = useState(null);
+    // 0 = 静止表示フェーズ、1 = 回転フェーズ、null = 非表示
+    const stellaTimerRef = useRef(null);
+    
+    const playStellaEffect = useCallback(() => {
+      if (stellaTimerRef.current) return;
+      // フェーズ0：静止表示（0.5秒）
+      setStellaAnimFrame(0);
+      stellaTimerRef.current = setTimeout(() => {
+        // フェーズ1：回転開始（2.5秒）
+        setStellaAnimFrame(1);
+        stellaTimerRef.current = setTimeout(() => {
+          stellaTimerRef.current = null;
+          setStellaAnimFrame(null);
+        }, 2500);
+      }, 500);
+    }, []);
+    
   // provokeActive > 0 のとき敵の行動を強制的にatkに変換する（残りターン数）。
   const [provokeActive,   setProvokeActive  ] = useState(0);
 
@@ -3637,12 +3699,15 @@ export default function ArcadiaCh2() {
           } else if (SKILL_DEFS[eAction] && !["atk","counter","dodge","unavoidable","atk_all","enrage"].includes(eAction)) {
             // ── 敵がプレイヤースキルを使用 ──────────────────────────────────
             if (eAction === "LightningSlash") playLightningEffect();
+            if (eAction === "StellaFritz") playStellaEffect(),playCUTIN2Effect();
             const sk_def = SKILL_DEFS[eAction];
             const eAtkBonus = Math.round((e.def.atk[0] + e.def.atk[1]) / 2); // 敵ATKの平均値をatkBonusに
   
             if (sk_def.target === "all") {
               // 全体攻撃スキル
-              const baseAtk = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult);
+              const baseAtk = sk_def.baseDmg && sk_def.baseDmg[0] > 0
+              ? Math.round(randInt(sk_def.baseDmg[0], sk_def.baseDmg[1]) * totalMult)
+              : Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult);
               const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
               logs.push(`${e.def.em}${e.def.name} ${sk_def.icon}${sk_def.label}${hitLabel}！ 全体攻撃${halfLabel}`);
               for (const k of currentPartyKeys) {
@@ -3657,7 +3722,9 @@ export default function ArcadiaCh2() {
             } else {
               // 単体攻撃スキル（SPD最低のメンバーを狙う）
               const hitLabel = sk_def.hits > 1 ? ` (${sk_def.hits}hit)` : "";
-              const baseRaw = Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult * sk_def.dmgMult);
+              const baseRaw = sk_def.baseDmg && sk_def.baseDmg[0] > 0
+                ? Math.round(randInt(sk_def.baseDmg[0], sk_def.baseDmg[1]) * totalMult * sk_def.dmgMult)
+                : Math.round(randInt(e.def.atk[0], e.def.atk[1]) * totalMult * sk_def.dmgMult);
               const dmgPerHit = Math.max(1, baseRaw - getMemberDef(tid));
               const totalSkDmg = dmgPerHit * sk_def.hits;
               if (tid === "eltz") { curHp = Math.max(0, curHp - totalSkDmg); }
@@ -4246,6 +4313,9 @@ export default function ArcadiaCh2() {
     @keyframes rankParticle { 0%{opacity:0;transform:translateY(0) scale(0)} 20%{opacity:1;transform:translateY(-20px) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(0.3)} }
     @keyframes rankSlideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
     @keyframes lightningShake { 0%{transform:translate(0,0)} 10%{transform:translate(-8px,4px)} 20%{transform:translate(8px,-4px)} 30%{transform:translate(-6px,6px)} 40%{transform:translate(6px,-6px)} 50%{transform:translate(-4px,3px)} 60%{transform:translate(4px,-3px)} 70%{transform:translate(-6px,5px)} 80%{transform:translate(6px,-5px)} 90%{transform:translate(-3px,2px)} 100%{transform:translate(0,0)} }
+    @keyframes stellaSpin {
+      0%   { transform: translate(-50%, -50%) rotate(0deg)   scale(1.0); }
+      100% { transform: translate(-50%, -50%) rotate(1800deg) scale(1.02); }
     `;
 
   // @@SECTION:RENDER_VICTORY
@@ -5278,10 +5348,64 @@ export default function ArcadiaCh2() {
                   />
                 </>
               )}
+              {/* ステラフリッツエフェクト */}
+                {stellaAnimFrame !== null && (
+                  <>
+                    {/* 背景フラッシュ */}
+                    <div style={{
+                      position:"fixed", left:0, top:0,
+                      width:"100vw", height:"100vh",
+                      pointerEvents:"none", zIndex:402,
+                      background:"radial-gradient(ellipse at 50% 40%, rgba(255,128,255,0.45) 0%, rgba(180,80,255,0.25) 50%, transparent 75%)",
+                      opacity: stellaAnimFrame === 0 ? 1 : 0.6,
+                      transition:"opacity 0.3s",
+                    }} />
+                    {/* 画像：フェーズ0=静止、フェーズ1=高速回転 */}
+                    <img
+                      src="https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Eff_stellaflitz.webp"
+                      alt=""
+                      style={{
+                        position:"fixed",
+                        left:`${enemyAreaW/2}vw`, 
+                        top:`${enemyAreaH/2}vh`,
+                        width:`${enemyAreaW}vw`,
+                        height:`${enemyAreaH}vh`,
+                        objectFit:"contain",
+                        pointerEvents:"none",
+                        zIndex:403,
+                        transformOrigin:"center center",
+                        transform: stellaAnimFrame === 0
+                          ? "translate(-50%, -50%) rotate(0deg)"
+                          : undefined,
+                        animation: stellaAnimFrame === 1
+                          ? "stellaSpin 2.5s cubic-bezier(0.2, 0, 0.6, 1) forwards"
+                          : "none",
+                        filter:"drop-shadow(0 0 20px #ff80ff) drop-shadow(0 0 40px #cc44ff88)",
+                        mixBlendMode:"screen",
+                      }}
+                    />
+                  </>
+                )}
               {/* オルガカットイン */}
               {CUTINAnimFrame !== null && (
                 <img
                   src={CUTIN_ANIM_URLS[CUTINAnimFrame % 2]}
+                  style={{
+                    position:"fixed",
+                    left:0, top:0,
+                    width:`${enemyAreaW}vw`,
+                    height:`${enemyAreaH}vh`,
+                    objectFit:"cover",
+                    pointerEvents:"none", zIndex:400,
+                    mixBlendMode:"screen",
+                  }}
+                  alt=""
+                />
+              )}
+              {/* ドナテロカットイン */}
+              {CUTIN2AnimFrame !== null && (
+                <img
+                  src={CUTIN2_ANIM_URLS[CUTIN2AnimFrame % 2]}
                   style={{
                     position:"fixed",
                     left:0, top:0,
