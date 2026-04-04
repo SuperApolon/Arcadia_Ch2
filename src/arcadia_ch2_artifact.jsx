@@ -1,5 +1,133 @@
 import React, { useState, useEffect, useRef, useCallback,useMemo } from "react";
 
+// @@SECTION:SHARED_UTILS ──────────────────────────────────────────────────────
+// 共通スタイル定数・共通コンポーネント
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** フォント定数 */
+const FONT_MONO = "'Share Tech Mono',monospace";
+const FONT_SERIF = "'Noto Serif JP',serif";
+
+/** Share Tech Mono 用インラインスタイル (よく使うフィールドのみ) */
+const MONO = (extra = {}) => ({ fontFamily: FONT_MONO, ...extra });
+
+/**
+ * ホバー時に背景色・ボーダー色を切り替えるボタン
+ * props: onClick, style, hoverStyle, children, ...rest
+ */
+const HoverButton = ({ onClick, style = {}, hoverStyle = {}, children, ...rest }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      style={{ ...style, ...(hovered ? hoverStyle : {}) }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+};
+
+/**
+ * ラベル＋値 の横並び行（バトルリザルト・ステータス表示に多用）
+ * props: label, value, labelColor, valueColor, labelStyle, valueStyle, style
+ */
+const StatRow = ({ label, value, labelColor, valueColor, labelStyle = {}, valueStyle = {}, style = {}, borderBottom }) => {
+  const C_BORDER_DEFAULT = "#1a4a6a33";
+  return (
+    <div style={{
+      display:"flex", justifyContent:"space-between", alignItems:"center",
+      padding:"7px 0",
+      borderBottom: borderBottom !== false ? `1px solid ${borderBottom || C_BORDER_DEFAULT}` : undefined,
+      ...style,
+    }}>
+      <span style={{ fontSize:11, fontFamily: FONT_MONO, letterSpacing:1, color: labelColor, ...labelStyle }}>{label}</span>
+      <span style={{ fontFamily: FONT_MONO, color: valueColor, ...valueStyle }}>{value}</span>
+    </div>
+  );
+};
+
+/**
+ * グラデーション水平線（透明→C.border→透明）
+ * props: width, margin, style
+ */
+const GradDivider = ({ width = 240, margin = "0 auto", style = {}, color }) => (
+  <div style={{
+    width, height:1,
+    background: `linear-gradient(90deg,transparent,${color || "#1a4a6a"},transparent)`,
+    margin,
+    ...style,
+  }} />
+);
+
+/**
+ * HP/MP バーコンポーネント
+ * props: pct(0-100), color, height, trackColor, borderRadius, style
+ */
+const StatusBar = ({ pct, color, height = 6, trackColor = "#0d2235", borderRadius = 3, style = {} }) => (
+  <div style={{ height, background: trackColor, borderRadius, overflow:"hidden", ...style }}>
+    <div style={{
+      height:"100%", width:`${Math.max(0, Math.min(100, pct))}%`,
+      background: color,
+      transition:"width 0.4s", borderRadius,
+    }} />
+  </div>
+);
+
+/**
+ * スキャンラインオーバーレイ（全画面ページのCRTエフェクト）
+ */
+const ScanlineOverlay = ({ color = "rgba(0,200,255,0.012)", zIndex, style = {} }) => (
+  <div style={{
+    position:"absolute", inset:0, pointerEvents:"none",
+    backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 2px,${color} 2px,${color} 4px)`,
+    ...(zIndex !== undefined ? { zIndex } : {}),
+    ...style,
+  }} />
+);
+
+/**
+ * フルスクリーン固定コンテナ（各フェーズの最外wrapper）
+ * center=true で display:flex / column / center / center を自動付与
+ */
+const FullScreenPage = ({ background, center = false, style = {}, children, ...rest }) => (
+  <div style={{
+    position:"fixed", inset:0, width:"100%", height:"100%",
+    background,
+    ...(center ? { display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" } : {}),
+    ...style,
+  }} {...rest}>
+    {children}
+  </div>
+);
+
+// ─── 頻出インラインstyle定数 ──────────────────────────────────────────────────
+const ST_MONO_MUTED  = { fontSize:10, color:"#4a7a9a", fontFamily:FONT_MONO };              // C.muted 相当
+const ST_MONO_TEXT   = { fontFamily:FONT_MONO, fontSize:12, color:"#c8e8f8" };              // C.text 相当
+
+/**
+ * コンボ数表示オーバーレイ（マルチ敵・単体敵で共通）
+ */
+const ComboOverlay = ({ streak, accentColor }) => {
+  if (streak < 3) return null;
+  return (
+    <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%, -50%)",zIndex:10,pointerEvents:"none",textAlign:"center",animation:"comboPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both"}}>
+      <div style={{fontSize:"clamp(36px, 8vw, 64px)",fontWeight:900,fontFamily:FONT_MONO,color:"#f0c040",letterSpacing:2,lineHeight:1,animation:"comboPulse 1s infinite",WebkitTextStroke:"1px #ffffff44"}}>
+        {streak}
+        <span style={{fontSize:"0.45em",letterSpacing:4,display:"block",marginTop:2,color:"#ffe08a"}}>COMBO</span>
+      </div>
+      <div style={{fontSize:10,color:"#ffe08a",fontFamily:FONT_MONO,letterSpacing:2,marginTop:4,opacity:0.85}}>MP +{5 + streak} / turn</div>
+      {Math.floor(streak / 10) > 0 && (
+        <div style={{fontSize:10,color:accentColor||"#00ffcc",fontFamily:FONT_MONO,letterSpacing:2,marginTop:2}}>
+          ⚔ ATK ×{Math.pow(1.1, Math.floor(streak / 10)).toFixed(2)}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // @@SECTION_MAP ─────────────────────────────────────────────────────────────────
 // arcadia_ch2_artifact.jsx  セクション行番号マップ（@@SECTIONアンカー対応）
 // grep -n "@@SECTION" <ファイル> で最新行番号を即確認できる。
@@ -241,7 +369,7 @@ const INITIAL_BATTLE_DEFS = {
     name:"オルガ", em:"⚔️",
     maxHp:999, atk:[99,99], elk:0, exp:0, lv:23, spd:11,pdef:18, mdef:18,
     bg:["#0a1206","#1a2a0a","#100e04"], isBoss:true, isFloating:false, isGround:true,
-    pattern:["counter","dodge","atk_all","atk","dodge","unavoidable","atk","reverse","takedown","unavoidable","elem_earth","unavoidable","atk_all","counter","dodge","elem_thunder",],
+    pattern:["counter","dodge","atk_all","atk","dodge","unavoidable","atk","reverse","takedown","unavoidable","elem_earth","unavoidable","atk_all","counter","dodge","LightningSlash",],
     unavoidableAtk:[99,99],
     elementCycle:["fire","ice","thunder","earth","none"],
   },
@@ -738,6 +866,17 @@ const SKILL_DEFS = {
     selfBuff:null,
     enrageBreak:false,
     reversePhase:5,  // 継続ターン数（変更したい場合はここを編集）
+  },
+  LightningSlash: {
+    label:"ライトニングスラッシュ", icon:"🔃", color:"#c084fc", cost:0, cooldown:0,
+    isPrephase:false, isEndphase:false,
+    dmgType:"physical", baseDmg:[99,99], weaponMult:true, atkMult:true, dmgMult:10.0,
+    hits:1, target:"all", element:null, pierceCounter:false, comboBonus:1.0,
+    healFlat:0, healTarget:"self",
+    enemyStun:0, enemyForceAction:null, enemyForceActionTurns:0,
+    enemyDebuff:null,
+    selfBuff:null,
+    enrageBreak:false,
   },
 };
 
@@ -1513,12 +1652,11 @@ function VictoryButton({ onFanfareStart, onProceed }) {
   const border = started ? C.accent2 : C.gold;
   const color  = started ? C.accent2 : C.gold;
   return (
-    <button
+    <HoverButton
       onClick={handleClick}
-      style={{padding:"12px 52px",background:"transparent",border:`1px solid ${border}`,color,fontSize:15,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",transition:"all 0.3s"}}
-      onMouseEnter={e => { e.currentTarget.style.background = `${border}22`; }}
-      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-    >{label}</button>
+      style={{padding:"12px 52px",background:"transparent",border:`1px solid ${border}`,color,fontSize:15,letterSpacing:4,fontFamily:FONT_MONO,cursor:"pointer",transition:"all 0.3s"}}
+      hoverStyle={{background:`${border}22`}}
+    >{label}</HoverButton>
   );
 }
 
@@ -1764,6 +1902,41 @@ export default function ArcadiaCh2() {
       }
     }, REVERSE_ANIM_INTERVAL);
   }, []);
+
+    // ── ライトニングスラッシュエフェクト ─────────────────────────────────────────
+    const [lightningAnimFrame, setLightningAnimFrame] = useState(null);
+    const LIGHTNING_ANIM_SEQUENCE = [
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_00.webp", fps:6 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_01.webp", fps:6 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_02.webp", fps:6 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_03.webp", fps:12 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_04.webp", fps:12 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_05.webp", fps:12 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_06.webp", fps:6 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
+    ];
+    const lightningTimerRef = useRef(null);
+  
+    const playLightningEffect = useCallback(() => {
+      if (lightningTimerRef.current) return;
+      let frameIdx = 0;
+      setLightningAnimFrame(0);
+      const advance = () => {
+        frameIdx++;
+        if (frameIdx < LIGHTNING_ANIM_SEQUENCE.length) {
+          setLightningAnimFrame(frameIdx);
+          const ms = Math.round(1000 / LIGHTNING_ANIM_SEQUENCE[frameIdx].fps);
+          lightningTimerRef.current = setTimeout(advance, ms);
+        } else {
+          lightningTimerRef.current = null;
+          setLightningAnimFrame(null);
+        }
+      };
+      const ms = Math.round(1000 / LIGHTNING_ANIM_SEQUENCE[0].fps);
+      lightningTimerRef.current = setTimeout(advance, ms);
+    }, []);
 
   // provokeActive > 0 のとき敵の行動を強制的にatkに変換する（残りターン数）。
   const [provokeActive,   setProvokeActive  ] = useState(0);
@@ -2247,6 +2420,26 @@ export default function ArcadiaCh2() {
       .then(json => { setBbsData(json); setBbsLoading(false); })
       .catch(() => { setBbsError(true); setBbsLoading(false); });
   }, []);
+  // ── バトル状態リセットヘルパー ────────────────────────────────────────────
+  // setGuarding/Victory/Defeat/Turn/NoDmgStreak + BattleResultBonus + EnemyTurnIdx の
+  // セットは毎回のバトル開始で必ず呼ぶ定型処理なのでまとめる
+  const resetBtlCoreStates = useCallback(() => {
+    setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
+    setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
+  }, []);
+  const resetElemState = useCallback(() => {
+    setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+  }, []);
+  const resetInputPhase = useCallback(() => {
+    setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
+  }, []);
+  const resetDebuffs = useCallback(() => {
+    setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);
+    setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setStraightShotActive(0);
+    setWaterSphereActive(0); setslowbladeActive(0); setBikerAtkBonus(0); setPlayerStunActive(0);
+  }, []);
+  // ────────────────────────────────────────────────────────────────────────
+
   // @@SECTION:LOGIC_TYPEWRITER
   const startType = useCallback((text, onDone) => {
     if (typeTimerRef.current) clearTimeout(typeTimerRef.current);
@@ -2513,18 +2706,16 @@ export default function ArcadiaCh2() {
         }));
         setMultiEnemies(initEnemies);
         setBtlLogs([`⚔ ${types.length}体の敵が現れた！`]);
-        setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
-        setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
-        setEnemyTurnIdx(0);
+        resetBtlCoreStates(); setEnemyTurnIdx(0);
         setEnemyNextAction((firstDef.pattern || ["atk"])[0]);
         setBattleNext(dl.battleNext !== undefined ? dl.battleNext : sceneIdx + 1);
-        setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+        resetElemState();
         { const pKeys = BATTLE_PARTY_MAP[types[0]] || DEFAULT_PARTY_KEYS;
           setCurrentPartyKeys(pKeys);
           const pi = buildPartyInit(pKeys);
           setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
-        setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);  setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0);  setWaterSphereActive(0); setslowbladeActive(0); setPlayerStunActive(0);  
+        resetInputPhase();
+        resetDebuffs();
         setPhase("battle");
         return;
       }
@@ -2537,18 +2728,16 @@ export default function ArcadiaCh2() {
       const initEnemiesSingle = [{ slot: 0, type: eKey, def: ed, hp: ed.maxHp, turnIdx: 0, defeated: false }];
       setMultiEnemies(initEnemiesSingle);
       setBtlLogs([`⚔ ${ed.name} との戦闘が始まった！`]);
-      setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
-      setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
-      setEnemyTurnIdx(0);
+      resetBtlCoreStates(); setEnemyTurnIdx(0);
       setEnemyNextAction((ed.pattern || ["atk"])[0]);
       setBattleNext(dl.battleNext !== undefined ? dl.battleNext : sceneIdx + 1);
-      setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+      resetElemState();
       { const pKeys = BATTLE_PARTY_MAP[eKey] || DEFAULT_PARTY_KEYS;
         setCurrentPartyKeys(pKeys);
         const pi = buildPartyInit(pKeys);
         setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
-      setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);setslowbladeActive(0); setPlayerStunActive(0);
+      resetInputPhase();
+      resetDebuffs();
       setPhase("battle");
       return;
     }
@@ -2613,18 +2802,16 @@ export default function ArcadiaCh2() {
         }));
         setMultiEnemies(initEnemies);
         setBtlLogs([`⚔ ${types.length}体の敵が現れた！`]);
-        setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
-        setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
-        setEnemyTurnIdx(0);
+        resetBtlCoreStates(); setEnemyTurnIdx(0);
         setEnemyNextAction((firstDef.pattern || ["atk"])[0]);
         setBattleNext(ch.battleNext !== undefined ? ch.battleNext : sceneIdx + 1);
-        setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+        resetElemState();
         { const pKeys = BATTLE_PARTY_MAP[types[0]] || DEFAULT_PARTY_KEYS;
           setCurrentPartyKeys(pKeys);
           const pi = buildPartyInit(pKeys);
           setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
-        setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-        setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);  setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); ssetStraightShotActive(0); etWaterSphereActive(0);setslowbladeActive(0)
+        resetInputPhase();
+        resetDebuffs();
         setMemberCdMap({});  // 1行でリセット完了
         setPhase("battle");
         return;
@@ -2638,18 +2825,16 @@ export default function ArcadiaCh2() {
       const initEnemiesSingleCh = [{ slot: 0, type: eKey, def: ed, hp: ed.maxHp, turnIdx: 0, defeated: false }];
       setMultiEnemies(initEnemiesSingleCh);
       setBtlLogs([`⚔ ${ed.name} との戦闘が始まった！`]);
-      setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
-      setBattleResultBonus({ comboMult: 1.0, gradeMult: 1.0 });
-      setEnemyTurnIdx(0);
+      resetBtlCoreStates(); setEnemyTurnIdx(0);
       setEnemyNextAction((ed.pattern || ["atk"])[0]);
       setBattleNext(ch.battleNext !== undefined ? ch.battleNext : sceneIdx + 1);
-      setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+      resetElemState();
       { const pKeys = BATTLE_PARTY_MAP[eKey] || DEFAULT_PARTY_KEYS;
         setCurrentPartyKeys(pKeys);
         const pi = buildPartyInit(pKeys);
         setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
-      setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0);setslowbladeActive(0); setPlayerStunActive(0);
+      resetInputPhase();
+      resetDebuffs();
       setMemberCdMap({});  // 1行でリセット完了
       setPhase("battle");
       return;
@@ -3375,6 +3560,7 @@ export default function ArcadiaCh2() {
             }
           } else if (SKILL_DEFS[eAction] && !["atk","counter","dodge","unavoidable","atk_all","enrage"].includes(eAction)) {
             // ── 敵がプレイヤースキルを使用 ──────────────────────────────────
+            if (eAction === "LightningSlash") playLightningEffect();
             const sk_def = SKILL_DEFS[eAction];
             const eAtkBonus = Math.round((e.def.atk[0] + e.def.atk[1]) / 2); // 敵ATKの平均値をatkBonusに
   
@@ -3767,7 +3953,7 @@ export default function ArcadiaCh2() {
     bikerAtkBonus, straightShotActive, waterSphereActive, slowbladeActive, memberCdMap,
     reverseActive, playerStunActive, enemyElementIdx,
     noDmgStreak, turn, lv, showNotif, handleExpGain,
-    fireHitEffect, fireDefeatEffect, playReverseEffect,
+    fireHitEffect, fireDefeatEffect, playReverseEffect,playLightningEffect,
   ]);
 
 
@@ -3904,18 +4090,18 @@ export default function ArcadiaCh2() {
   // シナリオデータ未ロード中はスピナーを表示（早期Hook問題回避のためreturnはここに集約）
   if (scenesLoading) {
     return (
-      <div style={{background:C.bg,color:C.accent,display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"'Share Tech Mono',monospace",letterSpacing:3,fontSize:13}}>
+      <div style={{background:C.bg,color:C.accent,display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:FONT_MONO,letterSpacing:3,fontSize:13}}>
         LOADING SCENARIO...
       </div>
     );
   }
   if (scenesError || scenes.length === 0) {
     return (
-      <div style={{background:C.bg,color:C.red,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,fontSize:13,gap:16}}>
+      <div style={{background:C.bg,color:C.red,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:FONT_MONO,letterSpacing:2,fontSize:13,gap:16}}>
         <div>SCENARIO LOAD FAILED</div>
         <div style={{fontSize:10,color:C.muted}}>scenes_ch2.json が取得できませんでした</div>
         <div style={{fontSize:10,color:C.muted}}>{SCENES_CH2_URL}</div>
-        <button onClick={()=>window.location.reload()} style={{marginTop:8,padding:"8px 24px",background:"transparent",border:`1px solid ${C.muted}`,color:C.muted,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>RETRY</button>
+        <button onClick={()=>window.location.reload()} style={{marginTop:8,padding:"8px 24px",background:"transparent",border:`1px solid ${C.muted}`,color:C.muted,cursor:"pointer",fontFamily:FONT_MONO,letterSpacing:2}}>RETRY</button>
       </div>
     );
   }
@@ -3976,7 +4162,8 @@ export default function ArcadiaCh2() {
     @keyframes rankPlatePulse { 0%,100%{box-shadow:0 0 20px rgba(0,200,255,0.25),inset 0 0 20px rgba(0,200,255,0.05)} 50%{box-shadow:0 0 50px rgba(0,200,255,0.5),inset 0 0 40px rgba(0,200,255,0.12)} }
     @keyframes rankParticle { 0%{opacity:0;transform:translateY(0) scale(0)} 20%{opacity:1;transform:translateY(-20px) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(0.3)} }
     @keyframes rankSlideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-  `;
+    @keyframes lightningShake { 0%{transform:translate(0,0)} 10%{transform:translate(-8px,4px)} 20%{transform:translate(8px,-4px)} 30%{transform:translate(-6px,6px)} 40%{transform:translate(6px,-6px)} 50%{transform:translate(-4px,3px)} 60%{transform:translate(4px,-3px)} 70%{transform:translate(-6px,5px)} 80%{transform:translate(6px,-5px)} 90%{transform:translate(-3px,2px)} 100%{transform:translate(0,0)} }
+    `;
 
   // @@SECTION:RENDER_VICTORY
   if (phase === "victory") {
@@ -4018,7 +4205,7 @@ export default function ArcadiaCh2() {
     const hasComboBonus = comboMult > 1.0;
 
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(180deg,#020608 0%,#050d14 40%,#0a1420 100%)",fontFamily:"'Noto Serif JP',serif",overflow:"hidden",userSelect:"none"}}>
+      <FullScreenPage background="linear-gradient(180deg,#020608 0%,#050d14 40%,#0a1420 100%)" center style={{fontFamily:FONT_SERIF,overflow:"hidden",userSelect:"none"}}>
         <style>{keyframes}</style>
 
         {fade && <div style={{position:"absolute",inset:0,background:"#050d14",zIndex:50}}/>}
@@ -4038,80 +4225,56 @@ export default function ArcadiaCh2() {
           }}/>
         ))}
 
-        <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(240,192,64,0.02) 3px,rgba(240,192,64,0.02) 4px)",pointerEvents:"none",zIndex:1}}/>
+        <ScanlineOverlay color="rgba(240,192,64,0.02)" zIndex={1} style={{backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(240,192,64,0.02) 3px,rgba(240,192,64,0.02) 4px)"}} />
 
         <div style={{position:"relative",zIndex:2,textAlign:"center",padding:"0 24px",width:"100%",maxWidth:"min(460px, 90vw)"}}>
 
           {/* ロゴ */}
-          <div style={{fontSize:11,letterSpacing:10,color:C.muted,marginBottom:10,fontFamily:"'Share Tech Mono',monospace",animation:"fadeIn 0.8s ease"}}>VRMMORPG</div>
+          <div style={{fontSize:11,letterSpacing:10,color:C.muted,marginBottom:10,fontFamily:FONT_MONO,animation:"fadeIn 0.8s ease"}}>VRMMORPG</div>
           <div style={{fontSize:44,fontWeight:700,letterSpacing:12,color:C.white,textShadow:`0 0 30px ${C.accent}88`,lineHeight:1,marginBottom:4,animation:"fadeIn 0.8s ease"}}>ARCADIA</div>
 
           <div style={{width:"100%",height:1,background:`linear-gradient(90deg,transparent,${C.gold}88,transparent)`,margin:"16px auto"}}/>
 
           {/* BATTLE RESULT ヘッダー */}
-          <div style={{fontSize:10,letterSpacing:8,color:C.gold,fontFamily:"'Share Tech Mono',monospace",marginBottom:12,animation:"fadeIn 1s 0.3s ease both"}}>── BATTLE RESULT ──</div>
+          <div style={{fontSize:10,letterSpacing:8,color:C.gold,fontFamily:FONT_MONO,marginBottom:12,animation:"fadeIn 1s 0.3s ease both"}}>── BATTLE RESULT ──</div>
           <div style={{fontSize:52,fontWeight:700,letterSpacing:6,color:C.gold,animation:"victoryRise 0.8s 0.4s cubic-bezier(0.22,1,0.36,1) both, victoryGlow 2.5s 1.2s ease-in-out infinite",lineHeight:1.1,marginBottom:4}}>戦闘勝利</div>
-          <div style={{fontSize:13,letterSpacing:4,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",animation:"fadeIn 1s 1s ease both",marginBottom:20}}>VICTORY</div>
+          <div style={{fontSize:13,letterSpacing:4,color:C.accent2,fontFamily:FONT_MONO,animation:"fadeIn 1s 1s ease both",marginBottom:20}}>VICTORY</div>
 
           {/* ─── リザルトパネル ─── */}
           <div style={{background:"rgba(10,26,38,0.85)",border:`1px solid ${C.border}`,borderRadius:4,padding:"16px 24px",marginBottom:20,animation:"slideUp 0.6s 0.8s ease both",textAlign:"left"}}>
 
             {/* 取得EXP */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}33`}}>
-              <span style={{fontSize:11,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>取得 EXP</span>
-              <span style={{fontSize:14,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>+{gainExp}</span>
-            </div>
+            <StatRow label="取得 EXP" value={`+${gainExp}`} labelColor={C.muted} valueColor={C.accent2} valueStyle={{fontSize:14,fontWeight:700}} />
 
             {/* 格上ボーナス（1.0超のときのみ表示） */}
             {hasGradeBonus && (
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0 5px 12px",borderBottom:`1px solid ${C.border}22`}}>
-                <span style={{fontSize:10,color:C.gold,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>┗ 格上ボーナス</span>
-                <span style={{fontSize:12,color:C.gold,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>×{gradeMult.toFixed(1)}</span>
-              </div>
+              <StatRow label="┗ 格上ボーナス" value={`×${gradeMult.toFixed(1)}`} labelColor={C.gold} valueColor={C.gold} valueStyle={{fontSize:12,fontWeight:700}} />
             )}
 
             {/* コンボボーナス（1.0超のときのみ表示） */}
             {hasComboBonus && (
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0 5px 12px",borderBottom:`1px solid ${C.border}22`}}>
-                <span style={{fontSize:10,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>┗ Combo ボーナス</span>
-                <span style={{fontSize:12,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>×{comboMult.toFixed(2)}</span>
-              </div>
+              <StatRow label="┗ Combo ボーナス" value={`×${comboMult.toFixed(2)}`} labelColor={C.accent2} valueColor={C.accent2} valueStyle={{fontSize:12,fontWeight:700}} />
             )}
 
             {/* 合計倍率（いずれかのボーナスがある場合のみ） */}
             {(hasGradeBonus || hasComboBonus) && (
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0 5px 12px",borderBottom:`1px solid ${C.border}33`}}>
-                <span style={{fontSize:10,color:C.accent,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>┗ 合計倍率</span>
-                <span style={{fontSize:12,color:C.accent,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>×{totalMult.toFixed(2)}</span>
-              </div>
+              <StatRow label="┗ 合計倍率" value={`×${totalMult.toFixed(2)}`} labelColor={C.accent} valueColor={C.accent} valueStyle={{fontSize:12,fontWeight:700}} />
             )}
 
             {/* 取得ELK */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}33`}}>
-              <span style={{fontSize:11,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>取得 ELK</span>
-              <span style={{fontSize:14,color:C.gold,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>+{gainElk}</span>
-            </div>
+            <StatRow label="取得 ELK" value={`+${gainElk}`} labelColor={C.muted} valueColor={C.gold} valueStyle={{fontSize:14,fontWeight:700}} />
 
             {/* 所持ELK */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}33`}}>
-              <span style={{fontSize:11,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>所持 ELK</span>
-              <span style={{fontSize:14,color:C.text,fontFamily:"'Share Tech Mono',monospace"}}>{elk}</span>
-            </div>
+            <StatRow label="所持 ELK" value={elk} labelColor={C.muted} valueColor={C.text} valueStyle={{fontSize:14}} />
 
             {/* 現在EXP / 次のLvまで */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}33`}}>
-              <span style={{fontSize:11,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>現在 EXP</span>
-              <span style={{fontSize:14,color:C.text,fontFamily:"'Share Tech Mono',monospace"}}>{exp}</span>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}33`}}>
-              <span style={{fontSize:11,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>次のLvまで</span>
-              <span style={{fontSize:14,color:C.accent,fontFamily:"'Share Tech Mono',monospace"}}>{expToNext !== null ? expToNext : "MAX"}</span>
-            </div>
+            <StatRow label="現在 EXP" value={exp} labelColor={C.muted} valueColor={C.text} valueStyle={{fontSize:14}} />
+            <StatRow label="次のLvまで" value={expToNext !== null ? expToNext : "MAX"} labelColor={C.muted} valueColor={C.accent} valueStyle={{fontSize:14}} />
 
             {/* ドロップ */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0"}}>
-              <span style={{fontSize:11,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>ドロップ</span>
-              <span style={{fontSize:12,fontFamily:"'Share Tech Mono',monospace",
+              <span style={{fontSize:11,color:C.muted,fontFamily:FONT_MONO,letterSpacing:1}}>ドロップ</span>
+              <span style={{fontSize:12,fontFamily:FONT_MONO,
                 color: dropItems.length > 0 ? (dropItems.some(d=>d.isRare) ? C.gold : C.accent2) : C.muted
               }}>
                 {dropItems.length > 0 ? dropItems.map(d=>d.label).join(" / ") : "なし"}
@@ -4155,16 +4318,15 @@ export default function ArcadiaCh2() {
                     setCurrentEnemyType(_eType);
                     setEnemyHp(_ed.maxHp);
                     setBtlLogs([`⚔ ${_ed.name} との戦闘が始まった！`]);
-                    setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
-                    setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
+                    resetBtlCoreStates();
                     setEnemyTurnIdx(0); setEnemyNextAction((_ed.pattern||["atk"])[0]);
-                    setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+                    resetElemState();
                     const pKeys = BATTLE_PARTY_MAP[_eType] || DEFAULT_PARTY_KEYS;
                     setCurrentPartyKeys(pKeys);
                     const pi = buildPartyInit(pKeys);
                     setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp);
-                    setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-                    setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0);
+                    resetInputPhase();
+                    resetDebuffs();
                     setProvokeActive(0);  setTakedownActive(0);
                     setSleepActive(0); 
                     setBikerAtkBonus(0); 
@@ -4176,9 +4338,8 @@ export default function ArcadiaCh2() {
                     setFade(true);
                     setTimeout(() => { setPhase("battle"); setFade(false); }, 300);
                   }}
-                  style={{padding:"10px 36px",background:"transparent",border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:13,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",transition:"all 0.3s"}}
-                  onMouseEnter={e => { e.currentTarget.style.background = `${C.accent2}22`; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  style={{padding:"10px 36px",background:"transparent",border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:13,letterSpacing:4,fontFamily:FONT_MONO,cursor:"pointer",transition:"all 0.3s"}}
+                  hoverStyle={{background:`${C.accent2}22`}}
                 >
                   {_ed.em} 連戦 ▶
                 </button>
@@ -4187,7 +4348,7 @@ export default function ArcadiaCh2() {
           })()}
 
           </div>
-          </div>
+          </FullScreenPage>
           );
           }
 
@@ -4259,18 +4420,18 @@ export default function ArcadiaCh2() {
 
   if (phase === "load") return (
     <div
-      style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1020 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32,overflow:"hidden"}}
+      style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1020 100%)`,fontFamily:FONT_SERIF,textAlign:"center",padding:32,overflow:"hidden"}}
       onDragOver={e => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0]); }}
     >
       <style>{loadKeyframes}</style>
-      <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
+      <ScanlineOverlay />
       <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"min(640px, 92vw)",animation:"fadeIn 1s ease"}}>
-        <div style={{fontSize:10,letterSpacing:8,color:C.muted,marginBottom:8,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
+        <div style={{fontSize:10,letterSpacing:8,color:C.muted,marginBottom:8,fontFamily:FONT_MONO}}>VRMMORPG · EPISODE 2</div>
         <div style={{fontSize:52,fontWeight:700,letterSpacing:12,color:C.white,textShadow:`0 0 30px ${C.accent}`,marginBottom:4}}>ARCADIA</div>
-        <div style={{fontSize:12,letterSpacing:6,color:C.accent,marginBottom:32,fontFamily:"'Share Tech Mono',monospace"}}>─── Lexia の章 ───</div>
-        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 28px"}}/>
+        <div style={{fontSize:12,letterSpacing:6,color:C.accent,marginBottom:32,fontFamily:FONT_MONO}}>─── Lexia の章 ───</div>
+        <GradDivider width={240} margin="0 auto 28px" />
 
         <div style={{fontSize:12,color:C.text,marginBottom:20,letterSpacing:1,lineHeight:1.9}}>
           第一章のセーブデータを読み込んで<br/>エルツのステータスを引き継ぎます。<br/>
@@ -4282,25 +4443,24 @@ export default function ArcadiaCh2() {
         >
           <input type="file" accept=".json" onChange={e => handleFile(e.target.files?.[0])} style={{display:"none"}} />
           <div style={{fontSize:32,marginBottom:12}}>{dragOver ? "📂" : "💾"}</div>
-          <div style={{fontSize:13,color:dragOver ? C.accent : C.text,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+          <div style={{fontSize:13,color:dragOver ? C.accent : C.text,fontFamily:FONT_MONO,letterSpacing:1}}>
             {dragOver ? "ここにドロップ！" : "クリック or ドラッグ＆ドロップ"}
           </div>
           <div style={{fontSize:11,color:C.muted,marginTop:8}}>arcadia_save_ch1_*.json</div>
         </label>
 
         {saveError && (
-          <div style={{background:"rgba(255,68,102,0.1)",border:`1px solid ${C.red}`,borderRadius:4,padding:"10px 16px",marginBottom:16,fontSize:12,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"shake 0.4s ease"}}>
+          <div style={{background:"rgba(255,68,102,0.1)",border:`1px solid ${C.red}`,borderRadius:4,padding:"10px 16px",marginBottom:16,fontSize:12,color:C.red,fontFamily:FONT_MONO,animation:"shake 0.4s ease"}}>
             ⚠ {saveError}
           </div>
         )}
-        <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 20px"}}/>
-        <button
+        <GradDivider width={240} margin="0 auto 20px" />
+        <HoverButton
           onClick={() => setPhase("title")}
-          style={{width:"100%",padding:"12px 0",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:12,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
-          onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.text; }}
-          onMouseLeave={e => { e.currentTarget.style.color = C.muted; e.currentTarget.style.borderColor = C.border; }}
-        >新規スタート（引き継ぎなし）</button>
-        <div style={{fontSize:10,color:C.muted,marginTop:8,fontFamily:"'Share Tech Mono',monospace",opacity:0.7}}>※ Lv1・初期ステータスで開始します</div>
+          style={{width:"100%",padding:"12px 0",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:12,letterSpacing:4,fontFamily:FONT_MONO,cursor:"pointer",borderRadius:4}}
+          hoverStyle={{color:C.text,borderColor:C.text}}
+        >新規スタート（引き継ぎなし）</HoverButton>
+        <div style={{fontSize:10,color:C.muted,marginTop:8,fontFamily:FONT_MONO,opacity:0.7}}>※ Lv1・初期ステータスで開始します</div>
       </div>
     </div>
   );
@@ -4311,14 +4471,14 @@ export default function ArcadiaCh2() {
     const p = saveFile.player;
     const savedDate = saveFile.savedAt ? new Date(saveFile.savedAt).toLocaleString("ja-JP") : "不明";
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32}}>
+      <FullScreenPage background="linear-gradient(180deg,#020810 0%,#050d14 100%)" center style={{fontFamily:FONT_SERIF,textAlign:"center",padding:32}}>
         <style>{loadKeyframes}</style>
         <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"min(640px, 92vw)",animation:"fadeIn 0.6s ease"}}>
-          <div style={{fontSize:11,letterSpacing:6,color:C.accent2,marginBottom:16,fontFamily:"'Share Tech Mono',monospace"}}>── SAVE DATA LOADED ──</div>
+          <div style={{fontSize:11,letterSpacing:6,color:C.accent2,marginBottom:16,fontFamily:FONT_MONO}}>── SAVE DATA LOADED ──</div>
           <div style={{background:"rgba(10,26,38,0.85)",border:`1px solid ${C.border}`,borderRadius:8,padding:"20px 28px",marginBottom:24,textAlign:"left"}}>
-            <div style={{fontSize:10,letterSpacing:6,color:C.muted,marginBottom:10,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>CHAPTER {saveFile.chapter ?? 1} DATA</div>
-            <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:12,textAlign:"center"}}>{savedDate}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 24px",fontSize:13,color:C.text,fontFamily:"'Share Tech Mono',monospace",lineHeight:1.8}}>
+            <div style={{fontSize:10,letterSpacing:6,color:C.muted,marginBottom:10,fontFamily:FONT_MONO,textAlign:"center"}}>CHAPTER {saveFile.chapter ?? 1} DATA</div>
+            <div style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO,marginBottom:12,textAlign:"center"}}>{savedDate}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 24px",fontSize:13,color:C.text,fontFamily:FONT_MONO,lineHeight:1.8}}>
               <div><span style={{color:C.muted}}>NAME</span>  Eltz</div>
               <div><span style={{color:C.muted}}>Lv</span>    {p.lv}</div>
               <div><span style={{color:C.muted}}>HP</span>    {Math.round(p.hp)}/{p.mhp}</div>
@@ -4335,50 +4495,48 @@ export default function ArcadiaCh2() {
           </div>
           <div style={{fontSize:12,color:C.accent2,marginBottom:24,letterSpacing:1}}>このデータを引き継いで第二章を開始しますか？</div>
           <div style={{display:"flex",gap:12}}>
-            <button onClick={() => { setSaveFile(null); setPhase("load"); }} style={{flex:1,padding:"12px 0",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:12,letterSpacing:2,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}>← 戻る</button>
+            <button onClick={() => { setSaveFile(null); setPhase("load"); }} style={{flex:1,padding:"12px 0",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:12,letterSpacing:2,fontFamily:FONT_MONO,cursor:"pointer",borderRadius:4}}>← 戻る</button>
             <button
               onClick={() => { applySaveData(saveFile); setPhase("title"); }}
-              style={{flex:2,padding:"12px 0",background:`linear-gradient(135deg,rgba(0,200,255,0.2),rgba(0,255,204,0.15))`,border:`1px solid ${C.accent}`,color:C.accent,fontSize:13,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
+              style={{flex:2,padding:"12px 0",background:`linear-gradient(135deg,rgba(0,200,255,0.2),rgba(0,255,204,0.15))`,border:`1px solid ${C.accent}`,color:C.accent,fontSize:13,letterSpacing:4,fontFamily:FONT_MONO,cursor:"pointer",borderRadius:4}}
             >引き継いで開始 ▶</button>
           </div>
         </div>
-      </div>
+      </FullScreenPage>
     );
   }
 
   // @@SECTION:RENDER_TITLE
   if (phase === "title") return (
-    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg_ch2.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
+    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 40%,#0a1828 100%)`,backgroundImage:`url(https://superapolon.github.io/Arcadia_Assets/title/title_bg_ch2.webp)`,backgroundSize:"cover",backgroundPosition:"center",fontFamily:FONT_SERIF,overflow:"hidden"}}>
       <style>{keyframes}</style>
       {/* Scanline effect */}
-      <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.015) 2px,rgba(0,200,255,0.015) 4px)",pointerEvents:"none",zIndex:1}}/>
+      <ScanlineOverlay color="rgba(0,200,255,0.015)" zIndex={1} />
       {/* Stars */}
       {[...Array(30)].map((_,i)=>(
         <div key={i} style={{position:"absolute",width:i%5===0?2:1,height:i%5===0?2:1,borderRadius:"50%",background:"#adf",top:`${Math.random()*100}%`,left:`${Math.random()*100}%`,opacity:0.3+Math.random()*0.5,animation:`blnk ${1.5+Math.random()*2}s ${Math.random()*2}s infinite`}}/>
       ))}
 
       <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 1.5s ease"}}>
-        <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:16,fontFamily:"'Share Tech Mono',monospace"}}>VRMMORPG · EPISODE 2</div>
+        <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:16,fontFamily:FONT_MONO}}>VRMMORPG · EPISODE 2</div>
         <div style={{fontSize:72,fontWeight:700,letterSpacing:16,color:C.white,textShadow:`0 0 40px ${C.accent},0 0 80px ${C.accent}44`,lineHeight:1,marginBottom:8}}>ARCADIA</div>
-        <div style={{fontSize:13,letterSpacing:4,color:C.accent2,marginBottom:48,fontFamily:"'Share Tech Mono',monospace",textShadow:`0 0 10px ${C.accent2}`}}>─── Lexia の章 ───</div>
+        <div style={{fontSize:13,letterSpacing:4,color:C.accent2,marginBottom:48,fontFamily:FONT_MONO,textShadow:`0 0 10px ${C.accent2}`}}>─── Lexia の章 ───</div>
 
-        <div style={{width:280,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 40px"}}/>
+        <GradDivider width={280} margin="0 auto 40px" />
 
-        <button
+        <HoverButton
           onClick={() => { unlockAudio("bgm/title"); setSceneIdx(0); setDlIdx(0); setPhase("movie"); }}
-          style={{padding:"14px 48px",background:"transparent",border:`1px solid ${C.accent}`,color:C.accent,fontSize:16,letterSpacing:6,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",animation:"glow 2s infinite",transition:"all 0.3s"}}
-          onMouseEnter={e => e.target.style.background = `${C.accent}22`}
-          onMouseLeave={e => e.target.style.background = "transparent"}
-        >GAME START</button>
+          style={{padding:"14px 48px",background:"transparent",border:`1px solid ${C.accent}`,color:C.accent,fontSize:16,letterSpacing:6,fontFamily:FONT_MONO,cursor:"pointer",animation:"glow 2s infinite",transition:"all 0.3s"}}
+          hoverStyle={{background:`${C.accent}22`}}
+        >GAME START</HoverButton>
 
-        <div style={{marginTop:24,fontSize:11,color:C.muted,letterSpacing:2,fontFamily:"'Share Tech Mono',monospace"}}>VRS CONNECT ▶</div>
-        <div style={{marginTop:32,width:280,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`}}/>
-        <button
+        <div style={{marginTop:24,fontSize:11,color:C.muted,letterSpacing:2,fontFamily:FONT_MONO}}>VRS CONNECT ▶</div>
+        <GradDivider width={280} style={{marginTop:32}} />
+        <HoverButton
           onClick={() => setPhase("load")}
-          style={{marginTop:20,padding:"8px 32px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:11,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",transition:"all 0.3s"}}
-          onMouseEnter={e => { e.currentTarget.style.color = C.accent2; e.currentTarget.style.borderColor = C.accent2; }}
-          onMouseLeave={e => { e.currentTarget.style.color = C.muted; e.currentTarget.style.borderColor = C.border; }}
-        >💾 セーブデータ読み込み</button>
+          style={{marginTop:20,padding:"8px 32px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:11,letterSpacing:4,fontFamily:FONT_MONO,cursor:"pointer",transition:"all 0.3s"}}
+          hoverStyle={{color:C.accent2,borderColor:C.accent2}}
+        >💾 セーブデータ読み込み</HoverButton>
       </div>
     </div>
   );
@@ -4406,16 +4564,14 @@ export default function ArcadiaCh2() {
         setMultiEnemies(null);
         setBtlLogs([`⚔ ${ed.name} との戦闘が始まった！`]);
       }
-      setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
-      setBattleResultBonus({ comboMult:1.0, gradeMult:1.0 });
-      setEnemyTurnIdx(0);
+      resetBtlCoreStates(); setEnemyTurnIdx(0);
       setEnemyNextAction((ed.pattern || ["atk"])[0]);
       setBattleNext(0); // 勝利後はsceneIdx=0へ戻す
-      setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+      resetElemState();
       setPartyHp({ swift:80, linz:70, chopper:65 });
       setPartyMp({ swift:60, linz:70, chopper:50 });
-      setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-      setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setStraightShotActive(0); setWaterSphereActive(0); setPlayerStunActive(0);
+      resetInputPhase();
+      resetDebuffs();
       setslowbladeActive(0);
       setPhase("battle");
     };
@@ -4427,17 +4583,17 @@ export default function ArcadiaCh2() {
     };
 
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#020810 0%,#050d14 50%,#0a1828 100%)`,fontFamily:"'Noto Serif JP',serif",overflow:"hidden"}}>
+      <FullScreenPage background="linear-gradient(180deg,#020810 0%,#050d14 50%,#0a1828 100%)" center style={{fontFamily:FONT_SERIF,overflow:"hidden"}}>
         <style>{keyframes}</style>
-        <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.012) 2px,rgba(0,200,255,0.012) 4px)",pointerEvents:"none"}}/>
+        <ScanlineOverlay />
 
         <div style={{position:"relative",zIndex:2,textAlign:"center",animation:"fadeIn 0.6s ease",width:"100%",maxWidth:"min(640px, 92vw)",padding:"0 24px"}}>
-          <div style={{fontSize:10,letterSpacing:6,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:8}}>MODE SELECT</div>
+          <div style={{fontSize:10,letterSpacing:6,color:C.muted,fontFamily:FONT_MONO,marginBottom:8}}>MODE SELECT</div>
           <div style={{fontSize:18,color:C.white,fontWeight:700,letterSpacing:3,marginBottom:4}}>モードを選択</div>
-          <div style={{width:200,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 28px"}}/>
+          <GradDivider width={200} margin="0 auto 28px" />
 
           {/* ─ ストーリーモード ─ */}
-          <button
+          <HoverButton
             onClick={startStory}
             style={{
               width:"100%", padding:"18px 20px", marginBottom:14,
@@ -4447,28 +4603,27 @@ export default function ArcadiaCh2() {
               textAlign:"left", transition:"all 0.2s",
               display:"flex", alignItems:"center", gap:16,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background=`${C.accent2}1a`; e.currentTarget.style.borderColor=C.accent2; }}
-            onMouseLeave={e => { e.currentTarget.style.background=`${C.accent2}0a`; e.currentTarget.style.borderColor=`${C.accent2}55`; }}>
+            hoverStyle={{background:`${C.accent2}1a`,borderColor:C.accent2}}>
             <div style={{fontSize:32,lineHeight:1,flexShrink:0}}>📖</div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:14,color:C.accent2,fontWeight:700,letterSpacing:1,marginBottom:2}}>ストーリーモード</div>
-              <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,marginBottom:5}}>─── Lexia の章 ───</div>
+              <div style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO,letterSpacing:1,marginBottom:5}}>─── Lexia の章 ───</div>
               <div style={{fontSize:11,color:C.text,lineHeight:1.5}}>シナリオを最初から読み進める。戦闘もストーリーに組み込まれている</div>
             </div>
             <div style={{fontSize:18,color:`${C.accent2}88`,flexShrink:0}}>▶</div>
-          </button>
+          </HoverButton>
 
           {/* ─ 区切り ─ */}
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
             <div style={{flex:1,height:1,background:`linear-gradient(90deg,transparent,${C.border})`}}/>
-            <div style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>BATTLE SELECT</div>
+            <div style={{fontSize:9,color:C.muted,fontFamily:FONT_MONO,letterSpacing:2}}>BATTLE SELECT</div>
             <div style={{flex:1,height:1,background:`linear-gradient(90deg,${C.border},transparent)`}}/>
           </div>
 
           {/* ─ バトル選択 ─ */}
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {OPTIONS.map(opt => (
-              <button
+              <HoverButton
                 key={opt.key}
                 onClick={() => startBattle(opt.types)}
                 style={{
@@ -4479,29 +4634,27 @@ export default function ArcadiaCh2() {
                   textAlign:"left", transition:"all 0.2s",
                   display:"flex", alignItems:"center", gap:16,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background=`${opt.color}1a`; e.currentTarget.style.borderColor=opt.color; }}
-                onMouseLeave={e => { e.currentTarget.style.background=`${opt.color}0a`; e.currentTarget.style.borderColor=`${opt.color}55`; }}>
+                hoverStyle={{background:`${opt.color}1a`,borderColor:opt.color}}>
                 <div style={{fontSize:32,lineHeight:1,flexShrink:0}}>{opt.em}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:14,color:opt.color,fontWeight:700,letterSpacing:1,marginBottom:2}}>{opt.label}</div>
-                  <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,marginBottom:5}}>{opt.sub}</div>
+                  <div style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO,letterSpacing:1,marginBottom:5}}>{opt.sub}</div>
                   <div style={{fontSize:11,color:C.text,lineHeight:1.5,marginBottom:4}}>{opt.desc}</div>
-                  <div style={{fontSize:9,color:`${opt.color}99`,fontFamily:"'Share Tech Mono',monospace"}}>{opt.lv}</div>
+                  <div style={{fontSize:9,color:`${opt.color}99`,fontFamily:FONT_MONO}}>{opt.lv}</div>
                 </div>
                 <div style={{fontSize:18,color:`${opt.color}88`,flexShrink:0}}>▶</div>
-              </button>
+              </HoverButton>
             ))}
           </div>
 
-          <button
+          <HoverButton
             onClick={() => setPhase("title")}
-            style={{marginTop:24,padding:"8px 28px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:10,letterSpacing:3,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4,transition:"all 0.2s"}}
-            onMouseEnter={e => { e.currentTarget.style.color=C.text; e.currentTarget.style.borderColor=C.muted; }}
-            onMouseLeave={e => { e.currentTarget.style.color=C.muted; e.currentTarget.style.borderColor=C.border; }}>
+            style={{marginTop:24,padding:"8px 28px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:10,letterSpacing:3,fontFamily:FONT_MONO,cursor:"pointer",borderRadius:4,transition:"all 0.2s"}}
+            hoverStyle={{color:C.text,borderColor:C.muted}}>
             ← タイトルへ戻る
-          </button>
+          </HoverButton>
         </div>
-      </div>
+      </FullScreenPage>
     );
   }
 
@@ -4519,7 +4672,7 @@ export default function ArcadiaCh2() {
       setPhase("game");
     };
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",background:"#000",overflow:"hidden"}}>
+      <FullScreenPage background="#000" style={{overflow:"hidden"}}>
         <style>{keyframes}</style>
         <video
           src={url}
@@ -4528,7 +4681,7 @@ export default function ArcadiaCh2() {
           style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}
           onEnded={onMovieEnd}
         />
-        <button
+        <HoverButton
           onClick={onMovieEnd}
           style={{
             position:"absolute", bottom:24, right:24,
@@ -4540,23 +4693,22 @@ export default function ArcadiaCh2() {
             cursor:"pointer",
             fontSize:12,
             letterSpacing:2,
-            fontFamily:"'Share Tech Mono',monospace",
+            fontFamily:FONT_MONO,
             zIndex:10,
           }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.text; }}
+          hoverStyle={{borderColor:C.accent,color:C.accent}}
         >
           SKIP ▶
-        </button>
+        </HoverButton>
         <div style={{
           position:"absolute", bottom:60, left:"50%", transform:"translateX(-50%)",
           fontSize:10, letterSpacing:8, color:"rgba(200,232,248,0.4)",
-          fontFamily:"'Share Tech Mono',monospace",
+          fontFamily:FONT_MONO,
           pointerEvents:"none",
         }}>
           CHAPTER 2 -- Lexia の章
         </div>
-      </div>
+      </FullScreenPage>
     );
   }
 
@@ -4639,7 +4791,7 @@ export default function ArcadiaCh2() {
     // SS/SSS専用：虹色グロー
     const isSS = rankInfo.rank === "SS" || rankInfo.rank === "SSS";
     const rankLetterStyle = {
-      fontFamily:"'Share Tech Mono',monospace",
+      fontFamily:FONT_MONO,
       fontSize:rankFontSize,
       fontWeight:700,
       color: rankInfo.color,
@@ -4657,13 +4809,13 @@ export default function ArcadiaCh2() {
     // ── ランク画面 ──────────────────────────────────────────────────────────
     if (endPhase === "rank") return (
       <div
-        style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`radial-gradient(ellipse at 50% 40%, ${rankInfo.shadow} 0%, #030508 55%, #010205 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:32,overflow:"hidden",cursor:"pointer"}}
+        style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`radial-gradient(ellipse at 50% 40%, ${rankInfo.shadow} 0%, #030508 55%, #010205 100%)`,fontFamily:FONT_SERIF,textAlign:"center",padding:32,overflow:"hidden",cursor:"pointer"}}
         onClick={() => setEndPhase("save")}
       >
         <style>{keyframes}</style>
 
         {/* 背景スキャンライン */}
-        <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.08) 3px,rgba(0,0,0,0.08) 4px)",pointerEvents:"none"}}/>
+        <ScanlineOverlay color="rgba(0,0,0,0.08)" style={{backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.08) 3px,rgba(0,0,0,0.08) 4px)"}} />
 
         {/* パーティクル装飾（ランクA以上） */}
         {["A","AA","AAA","S","SS","SSS"].includes(rankInfo.rank) && [0,1,2,3,4,5,6,7].map(i => (
@@ -4684,10 +4836,10 @@ export default function ArcadiaCh2() {
         <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"min(640px, 92vw)",animation:"fadeIn 0.8s ease"}}>
 
           {/* ヘッダー */}
-          <div style={{fontSize:10,letterSpacing:10,color:"rgba(255,255,255,0.3)",marginBottom:8,fontFamily:"'Share Tech Mono',monospace",animation:"rankSlideIn 0.8s ease"}}>
+          <div style={{fontSize:10,letterSpacing:10,color:"rgba(255,255,255,0.3)",marginBottom:8,fontFamily:FONT_MONO,animation:"rankSlideIn 0.8s ease"}}>
             ─ ADVENTURER RANK ─
           </div>
-          <div style={{fontSize:11,letterSpacing:6,color:"rgba(255,255,255,0.2)",marginBottom:40,fontFamily:"'Share Tech Mono',monospace",animation:"rankSlideIn 0.9s ease"}}>
+          <div style={{fontSize:11,letterSpacing:6,color:"rgba(255,255,255,0.2)",marginBottom:40,fontFamily:FONT_MONO,animation:"rankSlideIn 0.9s ease"}}>
             SCENARIO FULL COMBO : {scenarioFullCombo}
           </div>
 
@@ -4735,7 +4887,7 @@ export default function ArcadiaCh2() {
           </div>
 
           {/* 進行ヒント */}
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.2)",letterSpacing:3,fontFamily:"'Share Tech Mono',monospace",animation:"blnk 1.6s ease-in-out infinite"}}>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.2)",letterSpacing:3,fontFamily:FONT_MONO,animation:"blnk 1.6s ease-in-out infinite"}}>
             TAP TO CONTINUE
           </div>
         </div>
@@ -4744,18 +4896,18 @@ export default function ArcadiaCh2() {
 
     // ── セーブ画面（従来のエンディング） ────────────────────────────────────
     return (
-      <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`linear-gradient(180deg,#030a06 0%,#0a1a0a 50%,#0d2010 100%)`,fontFamily:"'Noto Serif JP',serif",textAlign:"center",padding:40}}>
+      <FullScreenPage background="linear-gradient(180deg,#030a06 0%,#0a1a0a 50%,#0d2010 100%)" center style={{fontFamily:FONT_SERIF,textAlign:"center",padding:40}}>
         <style>{keyframes}</style>
         <div style={{animation:"fadeIn 1.2s ease",maxWidth:"min(640px, 92vw)",width:"100%",overflowY:"auto",maxHeight:"100%",paddingBottom:40}}>
-          <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:20,fontFamily:"'Share Tech Mono',monospace"}}>─ EPISODE 2 END ─</div>
+          <div style={{fontSize:11,letterSpacing:12,color:C.muted,marginBottom:20,fontFamily:FONT_MONO}}>─ EPISODE 2 END ─</div>
           <div style={{fontSize:48,fontWeight:700,color:C.white,textShadow:`0 0 30px ${C.accent2}`,marginBottom:16}}>ARCADIA</div>
           <div style={{fontSize:18,color:C.accent2,letterSpacing:4,marginBottom:40}}>旅立ちの日は明日──</div>
           <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.accent2},transparent)`,margin:"0 auto 32px"}}/>
 
           {/* ── ステータスサマリー ───────────────────────────────────────── */}
           <div style={{background:"rgba(10,26,38,0.7)",border:`1px solid ${C.border}`,borderRadius:8,padding:"20px 28px",marginBottom:32,textAlign:"left"}}>
-            <div style={{fontSize:10,letterSpacing:6,color:C.muted,marginBottom:14,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>PLAYER DATA</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 24px",fontSize:13,color:C.text,fontFamily:"'Share Tech Mono',monospace",lineHeight:1.8}}>
+            <div style={{fontSize:10,letterSpacing:6,color:C.muted,marginBottom:14,fontFamily:FONT_MONO,textAlign:"center"}}>PLAYER DATA</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 24px",fontSize:13,color:C.text,fontFamily:FONT_MONO,lineHeight:1.8}}>
               <div><span style={{color:C.muted}}>NAME</span>  Eltz</div>
               <div><span style={{color:C.muted}}>Lv</span>    {lv}</div>
               <div><span style={{color:C.muted}}>HP</span>    {Math.round(hp)} / {mhp}</div>
@@ -4779,7 +4931,7 @@ export default function ArcadiaCh2() {
           </div>
           <button
             onClick={handleExport}
-            style={{width:"100%",padding:"14px 0",marginBottom:12,background:`linear-gradient(135deg,rgba(0,200,255,0.15),rgba(0,255,204,0.1))`,border:`1px solid ${C.accent}`,color:C.accent,fontSize:14,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
+            style={{width:"100%",padding:"14px 0",marginBottom:12,background:`linear-gradient(135deg,rgba(0,200,255,0.15),rgba(0,255,204,0.1))`,border:`1px solid ${C.accent}`,color:C.accent,fontSize:14,letterSpacing:4,fontFamily:FONT_MONO,cursor:"pointer",borderRadius:4}}
           >
             💾 セーブデータを生成
           </button>
@@ -4788,11 +4940,11 @@ export default function ArcadiaCh2() {
               <a
                 href={dlUrl}
                 download={`arcadia_save_ch2_lv${lv}.json`}
-                style={{display:"block",width:"100%",padding:"12px 0",boxSizing:"border-box",textAlign:"center",background:"rgba(0,255,204,0.12)",border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:13,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4,textDecoration:"none"}}
+                style={{display:"block",width:"100%",padding:"12px 0",boxSizing:"border-box",textAlign:"center",background:"rgba(0,255,204,0.12)",border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:13,letterSpacing:4,fontFamily:FONT_MONO,cursor:"pointer",borderRadius:4,textDecoration:"none"}}
               >
                 ⬇ arcadia_save_ch2_lv{lv}.json
               </a>
-              <div style={{fontSize:11,color:C.muted,marginTop:8,fontFamily:"'Share Tech Mono',monospace",opacity:0.7}}>
+              <div style={{fontSize:11,color:C.muted,marginTop:8,fontFamily:FONT_MONO,opacity:0.7}}>
                 上のリンクをタップ / 長押しして保存してください
               </div>
             </div>
@@ -4800,15 +4952,15 @@ export default function ArcadiaCh2() {
             <div style={{height:32,marginBottom:24}}/>
           )}
 
-          <div style={{width:240,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"0 auto 24px"}}/>
+          <GradDivider width={240} margin="0 auto 24px" />
           <button
             onClick={resetToTitle}
-            style={{padding:"10px 40px",background:"transparent",border:`1px solid ${C.muted}`,color:C.muted,fontSize:12,letterSpacing:4,fontFamily:"'Share Tech Mono',monospace",cursor:"pointer",borderRadius:4}}
+            style={{padding:"10px 40px",background:"transparent",border:`1px solid ${C.muted}`,color:C.muted,fontSize:12,letterSpacing:4,fontFamily:FONT_MONO,cursor:"pointer",borderRadius:4}}
           >
             TITLE へ戻る
           </button>
         </div>
-      </div>
+      </FullScreenPage>
     );
   }
 
@@ -4876,8 +5028,10 @@ export default function ArcadiaCh2() {
     const effectiveEnemySpdDisp = Math.max(1, 12 - (enemySpdDebuff > 0 ? 5 : 0));
 
     return (
-      <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:battleBg,fontFamily:"'Noto Serif JP',serif",userSelect:"none",overflow:"hidden",
-        animation: showAtkAllAnim ? "dragonApproach 0.18s linear infinite" : "none",
+      <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:battleBg,fontFamily:FONT_SERIF,userSelect:"none",overflow:"hidden",
+        animation: lightningAnimFrame !== null
+          ? "lightningShake 0.08s linear infinite"
+          : (showAtkAllAnim ? "dragonApproach 0.18s linear infinite" : "none"),
       }}>
         <style>{keyframes}</style>
         {/* ── ドラゴン突進フラッシュ（末尾に白く大フラッシュ） ── */}
@@ -4899,7 +5053,7 @@ export default function ArcadiaCh2() {
             }} />
           </>
         )}
-        {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease"}}>{notif}</div>}
+        {notif && <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(10,26,38,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:13,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:FONT_MONO,animation:"notifIn 0.3s ease"}}>{notif}</div>}
 
 
 
@@ -4954,7 +5108,7 @@ export default function ArcadiaCh2() {
                     left:`${cx}vw`, top:`${cy}vh`,
                     transform:"translate(-50%,-50%)",
                     pointerEvents:"none", zIndex:300,
-                    fontFamily:"'Share Tech Mono',monospace",fontWeight:900,letterSpacing:2,
+                    fontFamily:FONT_MONO,fontWeight:900,letterSpacing:2,
                     fontSize: isWeak
                       ? (multiEnemies ? "clamp(26px,4.5vw,40px)" : "clamp(38px,7vw,62px)")
                       : (multiEnemies ? "clamp(20px,3.5vw,32px)" : "clamp(30px,6vw,52px)"),
@@ -4989,7 +5143,7 @@ export default function ArcadiaCh2() {
                       left:`${cx}vw`, top:`${cy}vh`,
                       transform:"translate(-50%,-50%)",
                       pointerEvents:"none", zIndex:300,
-                      fontFamily:"'Share Tech Mono',monospace",fontWeight:900,
+                      fontFamily:FONT_MONO,fontWeight:900,
                       letterSpacing: multiEnemies ? 3 : 6,
                       fontSize: multiEnemies ? "clamp(11px,2vw,18px)" : "clamp(20px,4vw,34px)",
                       color:C.gold, whiteSpace:"nowrap",
@@ -5015,6 +5169,31 @@ export default function ArcadiaCh2() {
                   }}
                   alt=""
                 />
+              )}
+                {/* ライトニングスラッシュエフェクト */}
+                {lightningAnimFrame !== null && (
+                <>
+                  {/* 画面振動レイヤー（透明・全画面・animationで振動） */}
+                  <div style={{
+                    position:"fixed", left:0, top:0, width:"100vw", height:"100vh",
+                    pointerEvents:"none", zIndex:400,
+                    animation:"lightningShake 0.08s linear infinite",
+                  }} />
+                  <img
+                    src={LIGHTNING_ANIM_SEQUENCE[lightningAnimFrame].url}
+                    style={{
+                      position:"fixed",
+                      left:0, top:0,
+                      width:`${enemyAreaW}vw`,
+                      height:`${enemyAreaH}vh`,
+                      objectFit:"cover",
+                      pointerEvents:"none", zIndex:401,
+                      mixBlendMode:"screen",
+                      filter:"drop-shadow(0 0 6px #ffffff) drop-shadow(0 0 12px #ffffffcc) drop-shadow(0 0 20px #aaddffaa)",
+                    }}
+                    alt=""
+                  />
+                </>
               )}
               {/* オルガカットイン */}
               {CUTINAnimFrame !== null && (
@@ -5050,7 +5229,7 @@ export default function ArcadiaCh2() {
               isScenarioBattleRef.current = false;
               setVictory(true);
             }}
-            style={{position:"absolute",top:6,right:8,zIndex:200,padding:"3px 10px",fontSize:10,letterSpacing:2,fontFamily:"'Share Tech Mono',monospace",background:"rgba(5,13,20,0.7)",border:`1px solid ${C.muted}`,color:C.muted,borderRadius:3,cursor:"pointer",opacity:0.6}}
+            style={{position:"absolute",top:6,right:8,zIndex:200,padding:"3px 10px",fontSize:10,letterSpacing:2,fontFamily:FONT_MONO,background:"rgba(5,13,20,0.7)",border:`1px solid ${C.muted}`,color:C.muted,borderRadius:3,cursor:"pointer",opacity:0.6}}
           >
             SKIP
           </button>
@@ -5067,7 +5246,7 @@ export default function ArcadiaCh2() {
         {/* ── 属性破壊エフェクト ────────────────────────────────────────────── */}
         {elemBreakAnim && (
           <div style={{position:"absolute",inset:0,zIndex:50,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",background:"rgba(100,200,255,0.08)"}}>
-            <div style={{fontSize:"clamp(24px,6vw,48px)",fontWeight:900,color:"#88ddff",textAlign:"center",fontFamily:"'Share Tech Mono',monospace",animation:"victoryRise 0.6s ease both",textShadow:"0 0 40px #88ddffcc, 0 0 80px #88ddff88"}}>
+            <div style={{fontSize:"clamp(24px,6vw,48px)",fontWeight:900,color:"#88ddff",textAlign:"center",fontFamily:FONT_MONO,animation:"victoryRise 0.6s ease both",textShadow:"0 0 40px #88ddffcc, 0 0 80px #88ddff88"}}>
               💫 属性破壊！<br/>
               <span style={{fontSize:"0.5em",letterSpacing:4,color:"#ccf4ff"}}>ELEMENT BREAK</span>
             </div>
@@ -5092,7 +5271,7 @@ export default function ArcadiaCh2() {
             <>
               {/* ターゲット選択モード中ヘッダー */}
               {pendingTargetSelect && (
-                <div style={{position:"absolute",top:6,left:"50%",transform:"translateX(-50%)",zIndex:5,background:"rgba(5,13,20,0.9)",border:`1px solid ${C.accent}`,borderRadius:5,padding:"4px 16px",fontSize:10,color:C.accent,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,whiteSpace:"nowrap",animation:"glow 1.5s infinite"}}>
+                <div style={{position:"absolute",top:6,left:"50%",transform:"translateX(-50%)",zIndex:5,background:"rgba(5,13,20,0.9)",border:`1px solid ${C.accent}`,borderRadius:5,padding:"4px 16px",fontSize:10,color:C.accent,fontFamily:FONT_MONO,letterSpacing:2,whiteSpace:"nowrap",animation:"glow 1.5s infinite"}}>
                   👆 攻撃対象を選択
                 </div>
               )}
@@ -5141,18 +5320,18 @@ export default function ArcadiaCh2() {
                       {/* ── 上部：BOSSラベル + 属性インジケーター（シングルと同スタイル） or 倒れ ── */}
                       <div style={{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0,minHeight:14}}>
                         {meIsBoss && !me.defeated && (
-                          <div style={{fontSize:8,letterSpacing:3,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite"}}>BOSS</div>
+                          <div style={{fontSize:8,letterSpacing:3,color:C.red,fontFamily:FONT_MONO,animation:"dngr 1s infinite"}}>BOSS</div>
                         )}
                         {meElemInfo && !me.defeated && (
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,background:"rgba(5,13,20,0.84)",border:`1px solid ${meElemInfo.color}88`,borderRadius:5,padding:"3px 10px",minWidth:meIsBoss?120:80,width:"94%"}}>
-                            <div style={{fontSize:7,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,whiteSpace:"nowrap"}}>CURRENT ELEMENT</div>
-                            <div style={{fontSize:meIsBoss?13:11,fontWeight:900,color:meElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,textShadow:`0 0 10px ${meElemInfo.color}`,whiteSpace:"nowrap"}}>
+                            <div style={{fontSize:7,color:C.muted,fontFamily:FONT_MONO,letterSpacing:2,whiteSpace:"nowrap"}}>CURRENT ELEMENT</div>
+                            <div style={{fontSize:meIsBoss?13:11,fontWeight:900,color:meElemInfo.color,fontFamily:FONT_MONO,letterSpacing:1,textShadow:`0 0 10px ${meElemInfo.color}`,whiteSpace:"nowrap"}}>
                               {meElemInfo.icon} {meElemInfo.label}
                             </div>
                             <div style={{width:"90%",height:3,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden"}}>
                               <div style={{height:"100%",width:`${elemBarPct}%`,background:`linear-gradient(90deg,${meElemInfo.color}88,${meElemInfo.color})`,transition:"width 0.3s",borderRadius:2}}/>
                             </div>
-                            <div style={{fontSize:7,color:meElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,whiteSpace:"nowrap"}}>
+                            <div style={{fontSize:7,color:meElemInfo.color,fontFamily:FONT_MONO,letterSpacing:1,whiteSpace:"nowrap"}}>
                               蓄積 {elemDmgAccum}/{ELEMENT_BREAK_THRESHOLD}
                             </div>
                           </div>
@@ -5206,18 +5385,16 @@ export default function ArcadiaCh2() {
                       {!me.defeated && (
                         <div style={{width:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0,background:"rgba(5,13,20,0.72)",borderRadius:"0 0 6px 6px",padding:"4px 2px 2px"}}>
                           {/* 敵名 */}
-                          <div style={{fontSize:8,color:C.white,fontFamily:"'Share Tech Mono',monospace",textAlign:"center",lineHeight:1.2,width:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 2px"}}>
+                          <div style={{fontSize:8,color:C.white,fontFamily:FONT_MONO,textAlign:"center",lineHeight:1.2,width:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 2px"}}>
                             {meDef.name.replace("Simuluu ─ ","").replace("シャメロット ","Lv").replace(" 試練の主","")}
                           </div>
                           {/* HPバー */}
-                          <div style={{width:"92%",height:4,background:C.panel2,borderRadius:2,overflow:"hidden"}}>
-                            <div style={{height:"100%",width:`${meHpPct}%`,background: meIsBoss ? `linear-gradient(90deg,${C.red},#ff8844)` : `linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:2}}/>
-                          </div>
-                          <div style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>{Math.round(me.hp)}/{meDef.maxHp}</div>
+                          <StatusBar pct={meHpPct} color={meIsBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`} height={4} borderRadius={2} style={{width:"92%"}} />
+                          <div style={{fontSize:8,color:C.muted,fontFamily:FONT_MONO}}>{Math.round(me.hp)}/{meDef.maxHp}</div>
                           {/* NEXT行動バッジ */}
                           {!victory && !defeat && (
                             <div style={{width:"94%",padding:"2px 3px",background:`${meColor}11`,border:`1px solid ${meColor}44`,borderRadius:3,textAlign:"center"}}>
-                              <span style={{fontSize:8,color:meColor,fontFamily:"'Share Tech Mono',monospace",animation:meIsUnavoidable?"dngr 0.8s infinite":"none",whiteSpace:"nowrap"}}>
+                              <span style={{fontSize:8,color:meColor,fontFamily:FONT_MONO,animation:meIsUnavoidable?"dngr 0.8s infinite":"none",whiteSpace:"nowrap"}}>
                                 {meLabel?.icon} {meLabel?.text}
                               </span>
                             </div>
@@ -5238,26 +5415,13 @@ export default function ArcadiaCh2() {
 
               {/* キャンセルボタン（ターゲット選択中） */}
               {pendingTargetSelect && (
-                <button onClick={onCancelCommand} style={{marginTop:16,padding:"5px 24px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:9,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+                <button onClick={onCancelCommand} style={{marginTop:16,padding:"5px 24px",background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:9,cursor:"pointer",borderRadius:4,fontFamily:FONT_MONO,letterSpacing:1}}>
                   ← スキル選択に戻る
                 </button>
               )}
 
               {/* コンボ（マルチ敵・絶対配置オーバーレイ） */}
-              {noDmgStreak >= 3 && (
-                <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%, -50%)",zIndex:10,pointerEvents:"none",textAlign:"center",animation:"comboPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-                  <div style={{fontSize:"clamp(36px, 8vw, 64px)",fontWeight:900,fontFamily:"'Share Tech Mono',monospace",color:C.gold,letterSpacing:2,lineHeight:1,animation:"comboPulse 1s infinite",WebkitTextStroke:`1px #ffffff44`}}>
-                    {noDmgStreak}
-                    <span style={{fontSize:"0.45em",letterSpacing:4,display:"block",marginTop:2,color:"#ffe08a"}}>COMBO</span>
-                  </div>
-                  <div style={{fontSize:10,color:"#ffe08a",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:4,opacity:0.85}}>MP +{5 + noDmgStreak} / turn</div>
-                  {Math.floor(noDmgStreak / 10) > 0 && (
-                    <div style={{fontSize:10,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:2}}>
-                      ⚔ ATK ×{Math.pow(1.1, Math.floor(noDmgStreak / 10)).toFixed(2)}
-                    </div>
-                  )}
-                </div>
-              )}
+              <ComboOverlay streak={noDmgStreak} accentColor={C.accent2} />
             </>
           ) : (
             /* ── 単体敵表示（縦フル3段） ─────────────────────────────────── */
@@ -5266,20 +5430,7 @@ export default function ArcadiaCh2() {
              <div style={{position:"absolute",inset:0,overflow:"hidden"}}>
 
             {/* コンボ（絶対配置オーバーレイ） */}
-            {noDmgStreak >= 3 && (
-              <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%, -50%)",zIndex:10,pointerEvents:"none",textAlign:"center",animation:"comboPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-                <div style={{fontSize:"clamp(36px, 8vw, 64px)",fontWeight:900,fontFamily:"'Share Tech Mono',monospace",color:C.gold,letterSpacing:2,lineHeight:1,animation:"comboPulse 1s infinite",WebkitTextStroke:`1px #ffffff44`}}>
-                  {noDmgStreak}
-                  <span style={{fontSize:"0.45em",letterSpacing:4,display:"block",marginTop:2,color:"#ffe08a"}}>COMBO</span>
-                </div>
-                <div style={{fontSize:10,color:"#ffe08a",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:4,opacity:0.85}}>MP +{5 + noDmgStreak} / turn</div>
-                {Math.floor(noDmgStreak / 10) > 0 && (
-                  <div style={{fontSize:10,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginTop:2}}>
-                    ⚔ ATK ×{Math.pow(1.1, Math.floor(noDmgStreak / 10)).toFixed(2)}
-                  </div>
-                )}
-              </div>
-            )}
+            <ComboOverlay streak={noDmgStreak} accentColor={C.accent2} />
 
                {/* 背面：エネミー画像 */}
                <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",
@@ -5319,18 +5470,18 @@ export default function ArcadiaCh2() {
                {/* 前面上段：BOSSラベル + 属性インジケーター（top固定） */}
                <div style={{position:"absolute",top:4,left:0,right:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,zIndex:2,pointerEvents:"none"}}>
                  {isBoss && (
-                   <div style={{fontSize:11,letterSpacing:6,color:C.red,fontFamily:"'Share Tech Mono',monospace",animation:"dngr 1s infinite",whiteSpace:"nowrap"}}>─── BOSS ───</div>
+                   <div style={{fontSize:11,letterSpacing:6,color:C.red,fontFamily:FONT_MONO,animation:"dngr 1s infinite",whiteSpace:"nowrap"}}>─── BOSS ───</div>
                  )}
                  {currentElemInfo && (
                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(5,13,20,0.84)",border:`1px solid ${currentElemInfo.color}88`,borderRadius:6,padding:"4px 14px",minWidth:130}}>
-                     <div style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>CURRENT ELEMENT</div>
-                     <div style={{fontSize:15,fontWeight:900,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,textShadow:`0 0 12px ${currentElemInfo.color}`}}>
+                     <div style={{fontSize:9,color:C.muted,fontFamily:FONT_MONO,letterSpacing:2}}>CURRENT ELEMENT</div>
+                     <div style={{fontSize:15,fontWeight:900,color:currentElemInfo.color,fontFamily:FONT_MONO,letterSpacing:2,textShadow:`0 0 12px ${currentElemInfo.color}`}}>
                        {currentElemInfo.icon} {currentElemInfo.label}
                      </div>
                      <div style={{width:"100%",height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden"}}>
                        <div style={{height:"100%",width:`${elemBarPct}%`,background:`linear-gradient(90deg,${currentElemInfo.color}88,${currentElemInfo.color})`,transition:"width 0.3s",borderRadius:2}}/>
                      </div>
-                     <div style={{fontSize:8,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+                     <div style={{fontSize:8,color:currentElemInfo.color,fontFamily:FONT_MONO,letterSpacing:1}}>
                        蓄積 {elemDmgAccum}/{ELEMENT_BREAK_THRESHOLD}
                      </div>
                    </div>
@@ -5344,7 +5495,7 @@ export default function ArcadiaCh2() {
                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,flexWrap:"wrap"}}>
                        <span style={{color:C.white,fontSize:13,fontWeight:700,letterSpacing:1,textShadow:"0 1px 4px #000"}}>{ed.name}</span>
                        {enrageCount > 0 && (
-                         <span style={{fontSize:9,color:C.red,fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,50,50,0.18)",border:`1px solid ${C.red}66`,borderRadius:3,padding:"1px 5px",animation:"dngr 0.8s infinite",whiteSpace:"nowrap"}}>
+                         <span style={{fontSize:9,color:C.red,fontFamily:FONT_MONO,background:"rgba(255,50,50,0.18)",border:`1px solid ${C.red}66`,borderRadius:3,padding:"1px 5px",animation:"dngr 0.8s infinite",whiteSpace:"nowrap"}}>
                            🔴 怒り×2 残{enrageCount}T
                          </span>
                        )}
@@ -5352,21 +5503,19 @@ export default function ArcadiaCh2() {
                      {(enemyAtkDebuff > 0 || partySpdBuff > 0) && (
                        <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap"}}>
                          {enemyAtkDebuff > 0 && (
-                           <span style={{fontSize:8,color:"#ff9944",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,120,50,0.15)",border:"1px solid #ff994466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
+                           <span style={{fontSize:8,color:"#ff9944",fontFamily:FONT_MONO,background:"rgba(255,120,50,0.15)",border:"1px solid #ff994466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
                              🔥 ATK½ 残{enemyAtkDebuff}T
                            </span>
                          )}
                          {partySpdBuff > 0 && (
-                           <span style={{fontSize:8,color:"#ffee44",fontFamily:"'Share Tech Mono',monospace",background:"rgba(255,238,50,0.12)",border:"1px solid #ffee4466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
+                           <span style={{fontSize:8,color:"#ffee44",fontFamily:FONT_MONO,background:"rgba(255,238,50,0.12)",border:"1px solid #ffee4466",borderRadius:3,padding:"1px 5px",whiteSpace:"nowrap"}}>
                              ⚡ 味方SPD+3 残{partySpdBuff}T
                            </span>
                          )}
                        </div>
                      )}
-                     <div style={{width:"100%",height:8,background:C.panel2,borderRadius:4,overflow:"hidden"}}>
-                       <div style={{height:"100%",width:`${enemyPct}%`,background:isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`,transition:"width 0.4s",borderRadius:4,boxShadow:enrageCount>0?`0 0 8px ${C.red}`:"none"}}/>
-                     </div>
-                     <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>{Math.round(enemyHp)} / {ed.maxHp}</div>
+                     <StatusBar pct={enemyPct} color={isBoss?`linear-gradient(90deg,${C.red},#ff8844)`:`linear-gradient(90deg,${C.accent2},${C.accent})`} height={8} borderRadius={4} style={{boxShadow:enrageCount>0?`0 0 8px ${C.red}`:"none"}} />
+                     <div style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO,textAlign:"center"}}>{Math.round(enemyHp)} / {ed.maxHp}</div>
                    </div>
                    {!victory && !defeat && enemyNextAction && (() => {
                      const eLabel = getEnemyActionLabel(enemyNextAction);
@@ -5374,8 +5523,8 @@ export default function ArcadiaCh2() {
                      const previewColor = isUnavoidable ? C.red : enemyNextAction === "counter" ? "#f97316" : enemyNextAction === "dodge" ? C.muted : "#60a5fa";
                      return (
                        <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:`${previewColor}11`,border:`1px solid ${previewColor}44`,borderRadius:5}}>
-                         <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}>NEXT</span>
-                         <span style={{fontSize:10,color:previewColor,fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:isUnavoidable?"dngr 0.8s infinite":"none",flex:1,textAlign:"center"}}>
+                         <span style={{fontSize:8,color:C.muted,fontFamily:FONT_MONO,whiteSpace:"nowrap"}}>NEXT</span>
+                         <span style={{fontSize:10,color:previewColor,fontFamily:FONT_MONO,fontWeight:700,animation:isUnavoidable?"dngr 0.8s infinite":"none",flex:1,textAlign:"center"}}>
                            {eLabel?.icon} {eLabel?.text}
                          </span>
                          {isUnavoidable && <span style={{fontSize:8,color:C.red,whiteSpace:"nowrap"}}>⚠ 必中</span>}
@@ -5425,10 +5574,10 @@ export default function ArcadiaCh2() {
 
             {/* すくみガイド */}
             <div style={{padding:"3px 8px",borderBottom:`1px solid ${C.border}33`,display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center",flexShrink:0}}>
-              <span style={{fontSize:8,color:"#00ffcc88",fontFamily:"'Share Tech Mono',monospace"}}>⚔→🔄負 </span>
-              <span style={{fontSize:8,color:"#f9731688",fontFamily:"'Share Tech Mono',monospace"}}>🔄→💨負 </span>
-              <span style={{fontSize:8,color:"#a78bfa88",fontFamily:"'Share Tech Mono',monospace"}}>💨→⚔負 </span>
-              <span style={{fontSize:8,color:"#ff446688",fontFamily:"'Share Tech Mono',monospace"}}>💥回避不能</span>
+              <span style={{fontSize:8,color:"#00ffcc88",fontFamily:FONT_MONO}}>⚔→🔄負 </span>
+              <span style={{fontSize:8,color:"#f9731688",fontFamily:FONT_MONO}}>🔄→💨負 </span>
+              <span style={{fontSize:8,color:"#a78bfa88",fontFamily:FONT_MONO}}>💨→⚔負 </span>
+              <span style={{fontSize:8,color:"#ff446688",fontFamily:FONT_MONO}}>💥回避不能</span>
             </div>
 
             {/* バトルログ */}
@@ -5436,8 +5585,8 @@ export default function ArcadiaCh2() {
               {/* ── シナリオフルコンボ（ログ1行目・枠区切り） ── */}
               {isScenarioBattleRef.current && (
                 <div style={{display:"flex",alignItems:"baseline",gap:6,borderBottom:`1px solid ${C.border}55`,marginBottom:3,flexWrap:"nowrap",overflow:"hidden"}}>
-                  <span style={{fontSize:8,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,flexShrink:0,whiteSpace:"nowrap"}}>SCENARIO FULL COMBO</span>
-                  <span style={{fontSize:13,fontWeight:700,fontFamily:"'Share Tech Mono',monospace",
+                  <span style={{fontSize:8,color:C.muted,fontFamily:FONT_MONO,letterSpacing:1,flexShrink:0,whiteSpace:"nowrap"}}>SCENARIO FULL COMBO</span>
+                  <span style={{fontSize:13,fontWeight:700,fontFamily:FONT_MONO,
                     color: scenarioFullCombo === 0 ? C.muted : C.gold,
                     textShadow: scenarioFullCombo > 0 ? `0 0 8px ${C.gold}88` : "none",
                     letterSpacing:1,flexShrink:0,
@@ -5498,23 +5647,19 @@ export default function ArcadiaCh2() {
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:6}}>
                           <span style={{color:C.accent,fontSize:10}}>▶</span>
-                          <span style={{fontSize:13,color:C.white,fontFamily:"'Noto Serif JP',serif",fontWeight:700}}>{cm.name}</span>
-                          <span style={{fontSize:9,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginLeft:"auto"}}>T{turn} {cmdInputIdx+1}/{PARTY_DEFS.length}</span>
+                          <span style={{fontSize:13,color:C.white,fontFamily:FONT_SERIF,fontWeight:700}}>{cm.name}</span>
+                          <span style={{fontSize:9,color:C.muted,fontFamily:FONT_MONO,marginLeft:"auto"}}>T{turn} {cmdInputIdx+1}/{PARTY_DEFS.length}</span>
                         </div>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                          <span style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>HP</span>
-                          <span style={{fontSize:12,color:cmHpColor,fontFamily:"'Share Tech Mono',monospace",animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{Math.round(cm.hp)}<span style={{fontSize:10,color:C.muted}}>/{cm.mhp}</span></span>
+                          <span style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO}}>HP</span>
+                          <span style={{fontSize:12,color:cmHpColor,fontFamily:FONT_MONO,animation:cmHpPct<=25?"dngr 0.8s infinite":"none"}}>{Math.round(cm.hp)}<span style={{fontSize:10,color:C.muted}}>/{cm.mhp}</span></span>
                         </div>
-                        <div style={{height:6,background:C.panel2,borderRadius:3,marginBottom:6,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:`${cmHpPct}%`,background:`linear-gradient(90deg,${cmHpColor}99,${cmHpColor})`,transition:"width 0.4s",borderRadius:3}}/>
-                        </div>
+                        <StatusBar pct={cmHpPct} color={`linear-gradient(90deg,${cmHpColor}99,${cmHpColor})`} style={{marginBottom:6}} />
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                          <span style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>MP</span>
-                          <span style={{fontSize:12,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>{Math.round(cm.mp)}<span style={{fontSize:10,color:C.muted}}>/{cm.mmp}</span></span>
+                          <span style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO}}>MP</span>
+                          <span style={{fontSize:12,color:"#60a5fa",fontFamily:FONT_MONO}}>{Math.round(cm.mp)}<span style={{fontSize:10,color:C.muted}}>/{cm.mmp}</span></span>
                         </div>
-                        <div style={{height:5,background:C.panel2,borderRadius:3,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:`${cmMpPct}%`,background:"linear-gradient(90deg,#2255cc,#60a5fa)",transition:"width 0.4s",borderRadius:3}}/>
-                        </div>
+                        <StatusBar pct={cmMpPct} color={"linear-gradient(90deg,#2255cc,#60a5fa)"} height={5} />
                       </div>
                     </div>
                   );
@@ -5543,13 +5688,13 @@ export default function ArcadiaCh2() {
                       const sorted = [...enemyEntries, ...partyEntries].sort((a, b) => b.spd - a.spd);
                       return (
                         <div style={{display:"flex",alignItems:"center",gap:3,marginBottom:5,padding:"3px 6px",background:"rgba(5,13,20,0.7)",border:`1px solid ${C.border}44`,borderRadius:4,flexWrap:"wrap"}}>
-                          <span style={{fontSize:7,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,flexShrink:0,marginRight:2}}>SPD</span>
+                          <span style={{fontSize:7,color:C.muted,fontFamily:FONT_MONO,letterSpacing:2,flexShrink:0,marginRight:2}}>SPD</span>
                           {sorted.map((e, i) => {
                             const col = e.isEnemy ? (e.debuffed ? C.gold : C.red) : (e.buffed ? C.accent2 : C.accent);
                             return (
                               <React.Fragment key={i}>
                                 {i > 0 && <span style={{fontSize:7,color:C.muted,flexShrink:0}}>{"'"}</span>}
-                                <span style={{fontSize:9,fontFamily:"'Share Tech Mono',monospace",color:col,flexShrink:0,whiteSpace:"nowrap"}}>
+                                <span style={{fontSize:9,fontFamily:FONT_MONO,color:col,flexShrink:0,whiteSpace:"nowrap"}}>
                                   {e.icon}{e.spd}{e.debuffed?"⬇":e.buffed?"⚡":""}
                                 </span>
                               </React.Fragment>
@@ -5617,7 +5762,7 @@ export default function ArcadiaCh2() {
                           <div>
                             {/* ヘッダー：敵属性情報（属性スキル持ちのみ表示） */}
                             {currentElemInfo && subSkillIds.some(id => ELEM_SKILL_DEF_MAP[id]) && (
-                              <div style={{fontSize:9,color:currentElemInfo.color,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,textAlign:"center",marginBottom:4}}>
+                              <div style={{fontSize:9,color:currentElemInfo.color,fontFamily:FONT_MONO,letterSpacing:2,textAlign:"center",marginBottom:4}}>
                                 {`敵属性: ${currentElemInfo.icon}${currentElemInfo.label} ─ 弱点を突け！`}
                               </div>
                             )}
@@ -5638,12 +5783,12 @@ export default function ArcadiaCh2() {
                                   const bgColor = isEffective ? `${esk.color}22` : C.panel;
                                   const extraEffect = extraEffectMap[esk.id];
                                   const btnSt = canUse
-                                    ? { padding:"5px 4px", background:bgColor, border:`1px solid ${borderColor}`, color:esk.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:"'Noto Serif JP',serif", position:"relative" }
-                                    : { padding:"5px 4px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:"'Noto Serif JP',serif", opacity:0.5, position:"relative" };
+                                    ? { padding:"5px 4px", background:bgColor, border:`1px solid ${borderColor}`, color:esk.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:FONT_SERIF, position:"relative" }
+                                    : { padding:"5px 4px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:FONT_SERIF, opacity:0.5, position:"relative" };
                                   return (
                                     <button key={skillId} onClick={() => canUse && onSelectCommand(skillId)} style={btnSt}>
-                                      {isEffective && <div style={{position:"absolute",top:-2,right:-2,fontSize:7,background:esk.color,color:"#000",borderRadius:2,padding:"0 3px",fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>有効!</div>}
-                                      {isIceWithEnrage && <div style={{position:"absolute",top:-2,left:-2,fontSize:7,background:C.red,color:"#fff",borderRadius:2,padding:"0 3px",fontFamily:"'Share Tech Mono',monospace",fontWeight:700,animation:"dngr 0.6s infinite"}}>解除!</div>}
+                                      {isEffective && <div style={{position:"absolute",top:-2,right:-2,fontSize:7,background:esk.color,color:"#000",borderRadius:2,padding:"0 3px",fontFamily:FONT_MONO,fontWeight:700}}>有効!</div>}
+                                      {isIceWithEnrage && <div style={{position:"absolute",top:-2,left:-2,fontSize:7,background:C.red,color:"#fff",borderRadius:2,padding:"0 3px",fontFamily:FONT_MONO,fontWeight:700,animation:"dngr 0.6s infinite"}}>解除!</div>}
                                       <div style={{fontSize:16}}>{esk.icon}</div>
                                       <div style={{fontSize:9,marginTop:1}}>{esk.label}</div>
                                       <div style={{fontSize:7,color:canAfford?C.muted:"#553333"}}>MP {esk.cost}</div>
@@ -5656,11 +5801,11 @@ export default function ArcadiaCh2() {
                                   const cd = spDef.cd;
                                   const canUse = cd === 0;
                                   const stl = canUse
-                                    ? { padding:"6px 4px", background:C.panel, border:`1px solid ${spDef.color}66`, color:spDef.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:"'Noto Serif JP',serif", position:"relative" }
-                                    : { padding:"6px 4px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:"'Noto Serif JP',serif", opacity:0.5, position:"relative" };
+                                    ? { padding:"6px 4px", background:C.panel, border:`1px solid ${spDef.color}66`, color:spDef.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:FONT_SERIF, position:"relative" }
+                                    : { padding:"6px 4px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:FONT_SERIF, opacity:0.5, position:"relative" };
                                   return (
                                     <button key={skillId} onClick={() => canUse && onSelectCommand(skillId)} style={stl}>
-                                      {cd > 0 && <div style={{position:"absolute",top:-2,right:-2,fontSize:7,background:C.red,color:"#fff",borderRadius:2,padding:"0 3px",fontFamily:"'Share Tech Mono',monospace"}}>CD{cd}</div>}
+                                      {cd > 0 && <div style={{position:"absolute",top:-2,right:-2,fontSize:7,background:C.red,color:"#fff",borderRadius:2,padding:"0 3px",fontFamily:FONT_MONO}}>CD{cd}</div>}
                                       <div style={{fontSize:18}}>{spDef.icon}</div>
                                       <div style={{fontSize:9,marginTop:2,fontWeight:700}}>{spDef.label}</div>
                                       <div style={{fontSize:7,color:canUse?`${spDef.color}bb`:C.muted,marginTop:2,lineHeight:1.3}}>{spDef.desc}</div>
@@ -5669,7 +5814,7 @@ export default function ArcadiaCh2() {
                                 }
                               })}
                             </div>
-                            <button onClick={() => setShowSkillMenu(false)} style={{width:"100%",padding:"4px",background:"transparent",border:`1px solid ${C.border}44`,color:C.muted,fontSize:9,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+                            <button onClick={() => setShowSkillMenu(false)} style={{width:"100%",padding:"4px",background:"transparent",border:`1px solid ${C.border}44`,color:C.muted,fontSize:9,cursor:"pointer",borderRadius:4,fontFamily:FONT_MONO,letterSpacing:1}}>
                               ← 戻る
                             </button>
                           </div>
@@ -5693,8 +5838,8 @@ export default function ArcadiaCh2() {
                               || ELTZ_BASE_SKILLS.includes(sk.id)
                               || (equippedWeapon && (WEAPON_SKILL_MAP[equippedWeapon.id] ?? []).includes(sk.id));
                             const btnStyle = (canAfford && !disabled && weaponAllowed)
-                              ? { padding:"5px 3px", background:C.panel, border:`1px solid ${sk.color}44`, color:sk.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:"'Noto Serif JP',serif" }
-                              : { padding:"5px 3px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:"'Noto Serif JP',serif", opacity:0.5 };
+                              ? { padding:"5px 3px", background:C.panel, border:`1px solid ${sk.color}44`, color:sk.color, fontSize:10, cursor:"pointer", borderRadius:4, fontFamily:FONT_SERIF }
+                              : { padding:"5px 3px", background:C.panel, border:`1px solid ${C.border}`, color:C.muted, fontSize:10, cursor:"not-allowed", borderRadius:4, fontFamily:FONT_SERIF, opacity:0.5 };
                             return (
                               <button key={sk.id} onClick={() => canAfford && !disabled && weaponAllowed && onSelectCommand(sk.id)} style={btnStyle}>
                                 <div style={{fontSize:16}}>{sk.icon}</div>
@@ -5717,7 +5862,7 @@ export default function ArcadiaCh2() {
                             return (
                               <button
                                 onClick={() => canOpen && setShowSkillMenu(true)}
-                                style={{padding:"5px 3px",background:C.panel,border:`1px solid ${hasCdAll||!canOpen?"#55555566":"#00ffcc44"}`,color:canOpen?(hasCdAll?C.muted:C.accent2):C.muted,fontSize:10,cursor:canOpen?"pointer":"not-allowed",borderRadius:4,fontFamily:"'Noto Serif JP',serif",opacity:canOpen?1:0.5}}>
+                                style={{padding:"5px 3px",background:C.panel,border:`1px solid ${hasCdAll||!canOpen?"#55555566":"#00ffcc44"}`,color:canOpen?(hasCdAll?C.muted:C.accent2):C.muted,fontSize:10,cursor:canOpen?"pointer":"not-allowed",borderRadius:4,fontFamily:FONT_SERIF,opacity:canOpen?1:0.5}}>
                                 <div style={{fontSize:16}}>⚡</div>
                                 <div style={{fontSize:9,marginTop:2}}>スキル</div>
                               </button>
@@ -5728,7 +5873,7 @@ export default function ArcadiaCh2() {
                         })()}
                         {/* キャンセルボタン */}
                         {cmdInputIdx > 0 && inputPhase === "command" && (
-                          <button onClick={onCancelCommand} style={{width:"100%",padding:"3px",background:"transparent",border:`1px solid ${C.border}44`,color:C.muted,fontSize:8,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+                          <button onClick={onCancelCommand} style={{width:"100%",padding:"3px",background:"transparent",border:`1px solid ${C.border}44`,color:C.muted,fontSize:8,cursor:"pointer",borderRadius:4,fontFamily:FONT_MONO,letterSpacing:1}}>
                             ← 前のコマンドに戻る
                           </button>
                         )}
@@ -5740,7 +5885,7 @@ export default function ArcadiaCh2() {
                     <div style={{fontSize:15,color:victory?C.gold:C.red,fontWeight:700,marginBottom:10,animation:"fadeIn 0.5s"}}>
                       {victory ? "🏆 Victory！" : "💀 Defeat..."}
                     </div>
-                    <button onClick={exitBattle} style={{padding:"7px 32px",background:"transparent",border:`1px solid ${victory?C.gold:C.muted}`,color:victory?C.gold:C.muted,fontSize:13,cursor:"pointer",letterSpacing:2,fontFamily:"'Share Tech Mono',monospace"}}>
+                    <button onClick={exitBattle} style={{padding:"7px 32px",background:"transparent",border:`1px solid ${victory?C.gold:C.muted}`,color:victory?C.gold:C.muted,fontSize:13,cursor:"pointer",letterSpacing:2,fontFamily:FONT_MONO}}>
                       {victory ? "続ける ▶" : "戻る ▶"}
                     </button>
                   </div>
@@ -5759,30 +5904,30 @@ export default function ArcadiaCh2() {
   const isHpLow = hp / mhp <= 0.25;
 
   return (
-    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",...bgStyle,fontFamily:"'Noto Serif JP',serif",userSelect:"none",overflow:"hidden",transition:"background 1s"}}>
+    <div style={{position:"fixed",inset:0,width:"100%",height:"100%",display:"flex",flexDirection:"column",...bgStyle,fontFamily:FONT_SERIF,userSelect:"none",overflow:"hidden",transition:"background 1s"}}>
       <style>{keyframes}</style>
 
       {/* Overlay fade */}
       {fade && <div style={{position:"absolute",inset:0,background:"#050d14",opacity:1,zIndex:50,transition:"opacity 0.3s"}}/>}
 
       {/* Notification */}
-      {notif && <div style={{position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",background:"rgba(5,13,20,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:12,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:"'Share Tech Mono',monospace",animation:"notifIn 0.3s ease",borderRadius:2}}>{notif}</div>}
+      {notif && <div style={{position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",background:"rgba(5,13,20,0.95)",border:`1px solid ${C.accent}`,color:C.accent,padding:"8px 20px",fontSize:12,letterSpacing:1,zIndex:100,whiteSpace:"nowrap",fontFamily:FONT_MONO,animation:"notifIn 0.3s ease",borderRadius:2}}>{notif}</div>}
 
       {/* Scanlines */}
-      <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,200,255,0.01) 3px,rgba(0,200,255,0.01) 4px)",pointerEvents:"none",zIndex:1}}/>
+      <ScanlineOverlay color="rgba(0,200,255,0.01)" zIndex={1} style={{backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,200,255,0.01) 3px,rgba(0,200,255,0.01) 4px)"}} />
 
       {/* HUD top */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 14px",background:"rgba(5,13,20,0.7)",borderBottom:`1px solid ${C.border}`,zIndex:10,position:"relative"}}>
-        <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>{activeLoc}</div>
+        <div style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO,letterSpacing:1}}>{activeLoc}</div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
-          <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>
+          <div style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO}}>
             <span style={{color:isHpLow?C.red:C.accent2,animation:isHpLow?"dngr 0.8s infinite":"none"}}>HP {Math.round(hp)}</span>
             <span style={{color:C.muted}}> / </span>
             <span style={{color:C.muted}}>{mhp}</span>
           </div>
-          <div style={{fontSize:10,color:"#60a5fa",fontFamily:"'Share Tech Mono',monospace"}}>MP {Math.round(mp)}</div>
-          <div style={{fontSize:10,color:C.gold,fontFamily:"'Share Tech Mono',monospace"}}>💰 {elk}</div>
-          <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace"}}>Lv.{lv}</div>
+          <div style={{fontSize:10,color:"#60a5fa",fontFamily:FONT_MONO}}>MP {Math.round(mp)}</div>
+          <div style={{fontSize:10,color:C.gold,fontFamily:FONT_MONO}}>💰 {elk}</div>
+          <div style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO}}>Lv.{lv}</div>
         </div>
       </div>
 
@@ -5819,7 +5964,7 @@ export default function ArcadiaCh2() {
                 <polygon key={i} points={`${cx},${cy-3} ${cx+2},${cy} ${cx},${cy+3} ${cx-2},${cy}`} fill={overlay==="pb"?C.accent:C.border} opacity="0.8"/>
               ))}
               {/* P.B テキスト */}
-              <text x="26" y="29" textAnchor="middle" fill={overlay==="pb"?C.accent:C.muted} fontSize="7" fontFamily="'Share Tech Mono',monospace" letterSpacing="1" opacity="0.9">P.B</text>
+              <text x="26" y="29" textAnchor="middle" fill={overlay==="pb"?C.accent:C.muted} fontSize="7" fontFamily={FONT_MONO} letterSpacing="1" opacity="0.9">P.B</text>
             </svg>
           </button>
         )}
@@ -5836,7 +5981,7 @@ export default function ArcadiaCh2() {
               {/* 星形 */}
               <polygon points="26,7 29.5,19.5 42.5,19.5 32,27.5 35.5,40 26,32 16.5,40 20,27.5 9.5,19.5 22.5,19.5" fill={C.gold} opacity="0.85"/>
               {/* LV テキスト */}
-              <text x="26" y="30" textAnchor="middle" fill={C.bg} fontSize="7" fontFamily="'Share Tech Mono',monospace" letterSpacing="0.5" fontWeight="bold">LV!</text>
+              <text x="26" y="30" textAnchor="middle" fill={C.bg} fontSize="7" fontFamily={FONT_MONO} letterSpacing="0.5" fontWeight="bold">LV!</text>
             </svg>
           </button>
         )}
@@ -5909,7 +6054,7 @@ export default function ArcadiaCh2() {
         <div style={{position:"absolute",inset:0,background:"rgba(5,13,20,0.92)",border:`1px solid ${C.border}`,borderTop:`1px solid ${C.accent}44`,padding:"14px 18px 16px",cursor:"pointer",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           {/* Speaker + Auto toggle */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexShrink:0}}>
-            <div style={{fontSize:11,color:spColor,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,borderLeft:`2px solid ${spColor}`,paddingLeft:8}}>
+            <div style={{fontSize:11,color:spColor,fontFamily:FONT_MONO,letterSpacing:2,borderLeft:`2px solid ${spColor}`,paddingLeft:8}}>
               {dl.sp}
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
@@ -5953,9 +6098,8 @@ export default function ArcadiaCh2() {
                       }
                     }
                   }}
-                  style={{padding:"2px 8px",fontSize:9,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,cursor:"pointer",borderRadius:2,transition:"all 0.2s",flexShrink:0}}
-                  onMouseEnter={e => { e.currentTarget.style.color=C.gold; e.currentTarget.style.borderColor=C.gold; }}
-                  onMouseLeave={e => { e.currentTarget.style.color=C.muted; e.currentTarget.style.borderColor=C.border; }}
+                  style={{padding:"2px 8px",fontSize:9,fontFamily:FONT_MONO,letterSpacing:1,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,cursor:"pointer",borderRadius:2,transition:"all 0.2s",flexShrink:0}}
+                  hoverStyle={{color:C.gold,borderColor:C.gold}}
                   title="次の戦闘シーンまでスキップ"
                 >
                   ⚔ SKIP
@@ -5995,20 +6139,19 @@ export default function ArcadiaCh2() {
                   }, 1800);
                 }
               }}
-              style={{padding:"2px 8px",fontSize:9,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,border:`1px solid ${autoAdvance ? C.accent : C.border}`,background:autoAdvance ? `${C.accent}22` : "transparent",color:autoAdvance ? C.accent : C.muted,cursor:"pointer",borderRadius:2,transition:"all 0.2s",flexShrink:0}}
+              style={{padding:"2px 8px",fontSize:9,fontFamily:FONT_MONO,letterSpacing:1,border:`1px solid ${autoAdvance ? C.accent : C.border}`,background:autoAdvance ? `${C.accent}22` : "transparent",color:autoAdvance ? C.accent : C.muted,cursor:"pointer",borderRadius:2,transition:"all 0.2s",flexShrink:0}}
             >
               {autoAdvance ? "AUTO ●" : "AUTO ○"}
             </button>
-            <button
+            <HoverButton
               onPointerDown={e => e.stopPropagation()}
               onPointerUp={e => e.stopPropagation()}
               onClick={e => { e.stopPropagation(); setOverlay("novel"); }}
-              style={{padding:"2px 8px",fontSize:9,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,cursor:"pointer",borderRadius:2,transition:"all 0.2s",flexShrink:0}}
-              onMouseEnter={e => { e.currentTarget.style.color=C.accent2; e.currentTarget.style.borderColor=C.accent2; }}
-              onMouseLeave={e => { e.currentTarget.style.color=C.muted;   e.currentTarget.style.borderColor=C.border; }}
+              style={{padding:"2px 8px",fontSize:9,fontFamily:FONT_MONO,letterSpacing:1,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,cursor:"pointer",borderRadius:2,transition:"all 0.2s",flexShrink:0}}
+              hoverStyle={{color:C.accent2,borderColor:C.accent2}}
             >
               📖 NOVELIZE
-            </button>
+            </HoverButton>
             </div>
           </div>
           {/* Text -- スクロールエリア */}
@@ -6022,7 +6165,7 @@ export default function ArcadiaCh2() {
           </div>
           {/* Advance indicator */}
           {!typing && !choices && (
-            <div style={{position:"absolute",bottom:10,right:16,fontSize:10,color:C.accent,animation:"blnk 1s infinite",fontFamily:"'Share Tech Mono',monospace"}}>▼</div>
+            <div style={{position:"absolute",bottom:10,right:16,fontSize:10,color:C.accent,animation:"blnk 1s infinite",fontFamily:FONT_MONO}}>▼</div>
           )}
         </div>
 
@@ -6030,15 +6173,14 @@ export default function ArcadiaCh2() {
         {choices && !typing && (
           <div style={{position:"absolute",inset:0,background:"rgba(5,13,20,0.97)",border:`1px solid ${C.border}`,borderTop:`1px solid ${C.accent}44`,display:"flex",flexDirection:"column",justifyContent:"center",gap:8,padding:"12px 10px",backdropFilter:"blur(4px)",animation:"slideUp 0.3s ease"}}>
             {choices.map((ch, i) => (
-              <button key={i}
+              <HoverButton key={i}
                 onPointerDown={e => e.stopPropagation()}
                 onPointerUp={e => { e.stopPropagation(); onChoice(ch); }}
                 onClick={e => e.stopPropagation()}
-                style={{flex:1,padding:"0 16px",background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:13,textAlign:"left",cursor:"pointer",transition:"all 0.2s",fontFamily:"'Noto Serif JP',serif",letterSpacing:0.5,display:"flex",alignItems:"center"}}
-                onMouseEnter={e => { e.currentTarget.style.background = C.panel2; e.currentTarget.style.borderColor = C.accent; }}
-                onMouseLeave={e => { e.currentTarget.style.background = C.panel; e.currentTarget.style.borderColor = C.border; }}>
+                style={{flex:1,padding:"0 16px",background:C.panel,border:`1px solid ${C.border}`,color:C.text,fontSize:13,textAlign:"left",cursor:"pointer",transition:"all 0.2s",fontFamily:FONT_SERIF,letterSpacing:0.5,display:"flex",alignItems:"center"}}
+                hoverStyle={{background:C.panel2,borderColor:C.accent}}>
                 {ch.t}
-              </button>
+              </HoverButton>
             ))}
           </div>
         )}
@@ -6050,20 +6192,20 @@ export default function ArcadiaCh2() {
       {overlay === "pb" && (
         <div style={{position:"absolute",inset:0,background:"rgba(5,13,20,0.97)",zIndex:30,display:"flex",flexDirection:"column",animation:"fadeIn 0.2s"}}>
           <div style={{display:"flex",alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"10px 16px"}}>
-            <div style={{fontSize:11,letterSpacing:4,color:C.accent,fontFamily:"'Share Tech Mono',monospace",flex:1}}>P.BOOK</div>
-            <button onClick={() => setOverlay(null)} style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"4px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace"}}>✕</button>
+            <div style={{fontSize:11,letterSpacing:4,color:C.accent,fontFamily:FONT_MONO,flex:1}}>P.BOOK</div>
+            <button onClick={() => setOverlay(null)} style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"4px 12px",fontSize:11,cursor:"pointer",fontFamily:FONT_MONO}}>✕</button>
           </div>
           {/* Tabs */}
           <div style={{display:"flex",borderBottom:`1px solid ${C.border}`}}>
             {["STATUS","MAIL","MAP","ANALYSIS","Shop","Inventory",...(hasBbs ? ["CityBBS"] : [])].map((tab,i) => (
-              <button key={i} onClick={() => setPbTab(i)} style={{flex:1,padding:"8px 4px",background:"transparent",border:"none",borderBottom:pbTab===i?`2px solid ${C.accent}`:"2px solid transparent",color:pbTab===i?C.accent:C.muted,fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+              <button key={i} onClick={() => setPbTab(i)} style={{flex:1,padding:"8px 4px",background:"transparent",border:"none",borderBottom:pbTab===i?`2px solid ${C.accent}`:"2px solid transparent",color:pbTab===i?C.accent:C.muted,fontSize:11,cursor:"pointer",fontFamily:FONT_MONO,letterSpacing:1}}>
                 {tab}
               </button>
             ))}
           </div>
           <div style={{flex:1,padding:16,overflowY:"auto"}}>
             {pbTab === 0 && (
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,lineHeight:2}}>
+              <div style={{fontFamily:FONT_MONO,fontSize:12,lineHeight:2}}>
                 <div style={{color:C.accent2,fontSize:14,marginBottom:12,letterSpacing:2}}>Eltz</div>
                 {[
                   ["Lv", lv],
@@ -6091,14 +6233,14 @@ export default function ArcadiaCh2() {
                   </div>
                 ))}
                 {statPoints > 0 && (
-                  <button onClick={() => setOverlay("stat")} style={{marginTop:16,width:"100%",padding:"10px",background:C.panel,border:`1px solid ${C.gold}`,color:C.gold,fontSize:12,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>
+                  <button onClick={() => setOverlay("stat")} style={{marginTop:16,width:"100%",padding:"10px",background:C.panel,border:`1px solid ${C.gold}`,color:C.gold,fontSize:12,cursor:"pointer",fontFamily:FONT_MONO,letterSpacing:2}}>
                     ⭐ ステータス振り分け ({statPoints} pt)
                   </button>
                 )}
               </div>
             )}
              {pbTab === 1 && (
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.muted}}>
+              <div style={{fontFamily:FONT_MONO,fontSize:12,color:C.muted}}>
                 <div style={{color:C.accent,marginBottom:12,letterSpacing:2,fontSize:11}}>── MAIL ──</div>
                 {hasPb ? (
                   <div style={{color:C.text,lineHeight:2}}>
@@ -6112,7 +6254,7 @@ export default function ArcadiaCh2() {
                       <div style={{background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"10px 14px"}}>
                         <div style={{color:C.accent2,marginBottom:6,fontSize:11,borderBottom:`1px solid ${C.border}44`,paddingBottom:6}}>ユミルより</div>
                         <div style={{color:C.muted,fontSize:11,lineHeight:1.8,marginBottom:12}}>{"White Garden へようこそ！\n一緒に頑張ろうね。🌸\n\nSinさんからの入団状が届いているよ。\n必ず読んでね！"}</div>
-                        <button
+                        <HoverButton
                           onClick={() => {
                             setShowWGInvite(true);
                             if (!wgInviteData && !wgInviteLoading) {
@@ -6124,40 +6266,38 @@ export default function ArcadiaCh2() {
                                 .catch(err => { setWgInviteError(`読み込み失敗 (${err})`); setWgInviteLoading(false); });
                             }
                           }}
-                          style={{width:"100%",padding:"9px 0",background:`${C.accent2}11`,border:`1px solid ${C.accent2}55`,color:C.accent2,fontSize:11,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,transition:"all 0.2s"}}
-                          onMouseEnter={e=>{e.currentTarget.style.background=`${C.accent2}22`;e.currentTarget.style.borderColor=C.accent2;}}
-                          onMouseLeave={e=>{e.currentTarget.style.background=`${C.accent2}11`;e.currentTarget.style.borderColor=`${C.accent2}55`;}}
-                        >🌸 WHITE GARDEN 入団状を開く</button>
+                          style={{width:"100%",padding:"9px 0",background:`${C.accent2}11`,border:`1px solid ${C.accent2}55`,color:C.accent2,fontSize:11,cursor:"pointer",borderRadius:4,fontFamily:FONT_MONO,letterSpacing:2,transition:"all 0.2s"}}
+                          hoverStyle={{background:`${C.accent2}22`,borderColor:C.accent2}}
+                        >🌸 WHITE GARDEN 入団状を開く</HoverButton>
                       </div>
                     )}
                   </div>
                 ) : <div>メールなし</div>}
                 {/* ─ フルスクリーン入団状オーバーレイ ─ */}
                 {showWGInvite && (
-                  <div style={{position:"fixed",inset:0,background:"rgba(5,13,20,0.98)",zIndex:200,display:"flex",flexDirection:"column",animation:"fadeIn 0.25s",fontFamily:"'Noto Serif JP',serif"}}>
+                  <div style={{position:"fixed",inset:0,background:"rgba(5,13,20,0.98)",zIndex:200,display:"flex",flexDirection:"column",animation:"fadeIn 0.25s",fontFamily:FONT_SERIF}}>
                     <style>{`.wg-scroll::-webkit-scrollbar{width:4px}.wg-scroll::-webkit-scrollbar-track{background:transparent}.wg-scroll::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}.wg-scroll{scrollbar-width:thin;scrollbar-color:${C.border} transparent}`}</style>
                     {/* ヘッダー */}
                     <div style={{padding:"12px 18px",borderBottom:`1px solid ${C.border}`,background:"rgba(5,13,20,0.97)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
                       <div style={{flex:1}}>
-                        <div style={{fontSize:9,letterSpacing:5,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:2}}>WHITE GARDEN</div>
+                        <div style={{fontSize:9,letterSpacing:5,color:C.muted,fontFamily:FONT_MONO,marginBottom:2}}>WHITE GARDEN</div>
                         <div style={{fontSize:13,color:C.accent2,fontWeight:"bold",letterSpacing:2}}>🌸 入団状</div>
                       </div>
-                      <button
+                      <HoverButton
                         onClick={() => setShowWGInvite(false)}
-                        style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",borderRadius:2,transition:"all 0.2s"}}
-                        onMouseEnter={e=>{e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=C.accent2;}}
-                        onMouseLeave={e=>{e.currentTarget.style.color=C.muted;e.currentTarget.style.borderColor=C.border;}}
-                      >✕ 閉じる</button>
+                        style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:FONT_MONO,borderRadius:2,transition:"all 0.2s"}}
+                        hoverStyle={{color:C.white,borderColor:C.accent2}}
+                      >✕ 閉じる</HoverButton>
                     </div>
                     {/* 本文スクロールエリア */}
                     <div className="wg-scroll" style={{flex:1,overflowY:"auto",padding:"28px 24px 40px",maxWidth:640,margin:"0 auto",width:"100%",boxSizing:"border-box"}}>
                       {wgInviteLoading && (
-                        <div style={{textAlign:"center",marginTop:80,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,animation:"arcadiaBlnk 1s step-end infinite"}}>
+                        <div style={{textAlign:"center",marginTop:80,color:C.muted,fontFamily:FONT_MONO,letterSpacing:2,animation:"arcadiaBlnk 1s step-end infinite"}}>
                           <div style={{fontSize:20,marginBottom:12}}>🌸</div>読み込み中...
                         </div>
                       )}
                       {wgInviteError && (
-                        <div style={{textAlign:"center",marginTop:80,color:C.red,fontFamily:"'Share Tech Mono',monospace",fontSize:12,letterSpacing:1}}>
+                        <div style={{textAlign:"center",marginTop:80,color:C.red,fontFamily:FONT_MONO,fontSize:12,letterSpacing:1}}>
                           <div style={{fontSize:20,marginBottom:12}}>⚠</div>{wgInviteError}
                         </div>
                       )}
@@ -6166,20 +6306,20 @@ export default function ArcadiaCh2() {
                         return (
                           <>
                             {d.title && <div style={{fontSize:18,fontWeight:"bold",color:C.white,letterSpacing:2,marginBottom:6,textAlign:"center"}}>{d.title}</div>}
-                            {d.subtitle && <div style={{fontSize:11,color:C.accent2,letterSpacing:4,marginBottom:24,textAlign:"center",fontFamily:"'Share Tech Mono',monospace"}}>{d.subtitle}</div>}
+                            {d.subtitle && <div style={{fontSize:11,color:C.accent2,letterSpacing:4,marginBottom:24,textAlign:"center",fontFamily:FONT_MONO}}>{d.subtitle}</div>}
                             <div style={{width:200,height:1,background:`linear-gradient(90deg,transparent,${C.accent2},transparent)`,margin:"0 auto 28px"}}/>
                             {Array.isArray(d.sections) && d.sections.map((sec, i) => (
                               <div key={i} style={{marginBottom:24}}>
                                 {sec.heading && (
-                                  <div style={{fontSize:11,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginBottom:10,borderLeft:`2px solid ${C.accent2}`,paddingLeft:8}}>{sec.heading}</div>
+                                  <div style={{fontSize:11,color:C.accent2,fontFamily:FONT_MONO,letterSpacing:2,marginBottom:10,borderLeft:`2px solid ${C.accent2}`,paddingLeft:8}}>{sec.heading}</div>
                                 )}
                                 {sec.body && (
-                                  <p style={{color:C.text,fontSize:13,lineHeight:2.15,margin:"0 0 10px 0",whiteSpace:"pre-wrap",letterSpacing:0.4,fontFamily:"'Noto Serif JP',serif"}}>{sec.body}</p>
+                                  <p style={{color:C.text,fontSize:13,lineHeight:2.15,margin:"0 0 10px 0",whiteSpace:"pre-wrap",letterSpacing:0.4,fontFamily:FONT_SERIF}}>{sec.body}</p>
                                 )}
                                 {Array.isArray(sec.items) && (
                                   <div style={{paddingLeft:8}}>
                                     {sec.items.map((item,j) => (
-                                      <div key={j} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:`1px solid ${C.border}22`,color:C.text,fontSize:12,lineHeight:1.7,fontFamily:"'Noto Serif JP',serif"}}>
+                                      <div key={j} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:`1px solid ${C.border}22`,color:C.text,fontSize:12,lineHeight:1.7,fontFamily:FONT_SERIF}}>
                                         <span style={{color:C.accent2,flexShrink:0}}>●</span>
                                         <span>{item}</span>
                                       </div>
@@ -6190,8 +6330,8 @@ export default function ArcadiaCh2() {
                             ))}
                             {d.from && (
                               <>
-                                <div style={{width:200,height:1,background:`linear-gradient(90deg,transparent,${C.border},transparent)`,margin:"28px auto 20px"}}/>
-                                <div style={{textAlign:"right",color:C.muted,fontSize:11,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>{d.from}</div>
+                                <GradDivider width={200} margin="28px auto 20px" />
+                                <div style={{textAlign:"right",color:C.muted,fontSize:11,fontFamily:FONT_MONO,letterSpacing:1}}>{d.from}</div>
                               </>
                             )}
                           </>
@@ -6200,19 +6340,18 @@ export default function ArcadiaCh2() {
                     </div>
                     {/* フッター */}
                     <div style={{padding:"10px 18px 14px",borderTop:`1px solid ${C.border}`,background:"rgba(5,13,20,0.97)",flexShrink:0,display:"flex",justifyContent:"flex-end"}}>
-                      <button
+                      <HoverButton
                         onClick={() => setShowWGInvite(false)}
-                        style={{padding:"8px 28px",background:`${C.accent2}1a`,border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,borderRadius:2,transition:"all 0.2s"}}
-                        onMouseEnter={e=>{e.currentTarget.style.background=`${C.accent2}33`;}}
-                        onMouseLeave={e=>{e.currentTarget.style.background=`${C.accent2}1a`;}}
-                      >← メールに戻る</button>
+                        style={{padding:"8px 28px",background:`${C.accent2}1a`,border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:11,cursor:"pointer",fontFamily:FONT_MONO,letterSpacing:2,borderRadius:2,transition:"all 0.2s"}}
+                        hoverStyle={{background:`${C.accent2}33`}}
+                      >← メールに戻る</HoverButton>
                     </div>
                   </div>
                 )}
               </div>
             )}
             {pbTab === 2 && (
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.muted}}>
+              <div style={{fontFamily:FONT_MONO,fontSize:12,color:C.muted}}>
                 <div style={{color:C.accent,marginBottom:8,letterSpacing:2,fontSize:11}}>── MAP SCAN ──</div>
                 {hasMapScan ? (
                   <div>
@@ -6254,21 +6393,21 @@ export default function ArcadiaCh2() {
                             {dropTable && (
                               <div style={{marginTop:3,display:"flex",flexDirection:"column",gap:1}}>
                                 {/* 通常ドロップ（毎回） */}
-                                <div style={{fontSize:8,fontFamily:"'Share Tech Mono',monospace",display:"flex",gap:4,alignItems:"center"}}>
+                                <div style={{fontSize:8,fontFamily:FONT_MONO,display:"flex",gap:4,alignItems:"center"}}>
                                   <span style={{color:C.muted}}>毎回:</span>
                                   <span style={{color:C.accent2}}>
                                     {dropTable.normal.type==="elk" ? `💰 ${dropTable.normal.amount} ELK` : `📦 ${dropTable.normal.item.name}`}
                                   </span>
                                 </div>
                                 {/* レアドロップ（3回ごと） */}
-                                <div style={{fontSize:8,fontFamily:"'Share Tech Mono',monospace",display:"flex",gap:4,alignItems:"center"}}>
+                                <div style={{fontSize:8,fontFamily:FONT_MONO,display:"flex",gap:4,alignItems:"center"}}>
                                   <span style={{color:C.muted}}>3回毎:</span>
                                   <span style={{color:C.gold}}>
                                     {dropTable.rare.type==="elk" ? `💎 ${dropTable.rare.amount} ELK` : `💎 ${dropTable.rare.item.name}`}
                                   </span>
                                 </div>
                                 {/* 次回ドロップ予告 */}
-                                <div style={{fontSize:8,fontFamily:"'Share Tech Mono',monospace",display:"flex",gap:4,alignItems:"center"}}>
+                                <div style={{fontSize:8,fontFamily:FONT_MONO,display:"flex",gap:4,alignItems:"center"}}>
                                   <span style={{color:C.muted}}>次回:</span>
                                   <span style={{color: nextIsRare ? C.gold : C.accent2}}>
                                     {nextIsRare ? "💎 " : "💰 "}{nextDropLabel}
@@ -6290,8 +6429,7 @@ export default function ArcadiaCh2() {
                             const initEnemiesMs = [{ slot: 0, type: key, def: ed, hp: ed.maxHp, turnIdx: 0, defeated: false }];
                             setMultiEnemies(initEnemiesMs);
                             setBtlLogs([`⚔ ${ed.name} との戦闘が始まった！`]);
-                            setGuarding(false); setVictory(false); setDefeat(false); setTurn(0); setNoDmgStreak(0);
-                            setBattleResultBonus({ comboMult: 1.0, gradeMult: 1.0 });
+                            resetBtlCoreStates();
                             setEnemyTurnIdx(0); setEnemyNextAction((ed.pattern||["atk"])[0]);
                             const _curWins = (mapScanWinCount[key] ?? 0) + 1;
                             setMapScanWinCount(prev => ({ ...prev, [key]: _curWins }));
@@ -6301,10 +6439,10 @@ export default function ArcadiaCh2() {
                               setCurrentPartyKeys(pKeys);
                               const pi = buildPartyInit(pKeys);
                               setPartyHp(pi.hp); setPartyMhp(pi.mhp); setPartyMp(pi.mp); setPartyMmp(pi.mmp); }
-                            setInputPhase("command"); setPendingCommands({}); setPendingTargets({}); setPendingTargetSelect(null); setCmdInputIdx(0);
-                            setEnemySpdDebuff(0); setEnrageCount(0); setEnemyAtkDebuff(0); setPartySpdBuff(0); setProvokeActive(0); setTakedownActive(0); setSleepActive(0); setBikerAtkBonus(0); setStraightShotActive(0); setWaterSphereActive(0); setslowbladeActive(0); setPlayerStunActive(0);
+                            resetInputPhase();
+                            resetDebuffs();
                             setMemberCdMap({});
-                            setEnemyElementIdx(0); setElemDmgAccum(0); setShowElemMenu(false); setShowSpecMenu(false); setElemBreakAnim(false);
+                            resetElemState();
                             setPhase("battle");
                           }} style={{padding:"4px 10px",background:`${C.accent}11`,border:`1px solid ${C.accent}44`,color:C.accent,fontSize:10,cursor:"pointer",letterSpacing:1,flexShrink:0}}>
                             戦う
@@ -6317,7 +6455,7 @@ export default function ArcadiaCh2() {
               </div>
             )}
             {pbTab === 3 && (
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
+            <div style={{fontFamily:FONT_MONO,fontSize:12,color:C.text}}>
                <div style={{color:C.accent,marginBottom:12,letterSpacing:2,fontSize:11}}>── PLAYING ANALYSIS ──</div>
 
                {/* ── パワーキャンディ：コンボ100%達成戦闘 ── */}
@@ -6338,29 +6476,26 @@ export default function ArcadiaCh2() {
                     <div key={idx} style={{background:C.panel,border:`1px solid ${isPerfect ? C.gold : C.border}`,borderRadius:4,padding:"8px 10px",marginBottom:6}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                         <span style={{fontSize:11,color:C.white}}>Battle {idx + 1}｜{b.battleType}</span>
-                        <span style={{fontSize:13,color:isPerfect ? C.gold : C.muted,fontWeight:700,fontFamily:"'Share Tech Mono',monospace"}}>{pct}%</span>
+                        <span style={{fontSize:13,color:isPerfect ? C.gold : C.muted,fontWeight:700,fontFamily:FONT_MONO}}>{pct}%</span>
                         </div>
                        {/* コンボ率バー */}
                           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                             <span style={{fontSize:9,color:C.muted,flexShrink:0}}>コンボ率</span>
-                            <div style={{flex:1,height:6,background:C.panel2,borderRadius:3,overflow:"hidden"}}>
-                              <div style={{height:"100%",width:`${pct}%`,background:isPerfect?`linear-gradient(90deg,${C.gold},${C.accent2})`:`linear-gradient(90deg,${C.accent},${C.accent2})`,    borderRadius:3,transition:"width 0.4s"}}/>
-                              </div>
-                              <span style={{fontSize:10,color:isPerfect?C.gold:C.muted,minWidth:52,textAlign:"right",fontFamily:"'Share Tech Mono',monospace"}}>
+                            <StatusBar pct={pct} color={isPerfect?`linear-gradient(90deg,${C.gold},${C.accent2})`:`linear-gradient(90deg,${C.accent},${C.accent2})`} style={{flex:1}} />
+                              <span style={{fontSize:10,color:isPerfect?C.gold:C.muted,minWidth:52,textAlign:"right",fontFamily:FONT_MONO}}>
                                {b.comboTurns}/{b.totalTurns}T
                              </span>
                            </div>
                            {isPerfect && !used && (
-                            <button
+                            <HoverButton
                             onClick={() => {
                             setStatAlloc(sa => ({ ...sa, patk: sa.patk + 1 }));
                             setPowerCandyUsed(prev => ({ ...prev, [idx]: true }));
                             showNotif("🍬 パワーキャンディ！ 物理ATK +1！");
                            }}
-                            style={{width:"100%",padding:"7px",background:`${C.gold}1a`,border:`1px solid ${C.gold}`,color:C.gold,fontSize:11,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,transition:"all 0.2s"}}
-                            onMouseEnter={e => { e.currentTarget.style.background = `${C.gold}33`; }}
-                           onMouseLeave={e => { e.currentTarget.style.background = `${C.gold}1a`; }}
-                           >🍬 パワーキャンディを受け取る（物理ATK +1）</button>
+                            style={{width:"100%",padding:"7px",background:`${C.gold}1a`,border:`1px solid ${C.gold}`,color:C.gold,fontSize:11,cursor:"pointer",borderRadius:4,fontFamily:FONT_MONO,letterSpacing:2,transition:"all 0.2s"}}
+                            hoverStyle={{background:`${C.gold}33`}}
+                           >🍬 パワーキャンディを受け取る（物理ATK +1）</HoverButton>
                            )}
                             {used && (
                             <div style={{textAlign:"center",fontSize:10,color:C.muted,padding:"4px 0"}}>✅ 受け取り済み</div>
@@ -6383,7 +6518,7 @@ export default function ArcadiaCh2() {
                 </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,padding:"8px 12px"}}>
                    <span style={{fontSize:10,color:C.muted,flex:1}}>累計属性ブレイク数</span>
-                    <span style={{fontSize:18,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",fontWeight:700}}>{totalElemBreaks}</span>
+                    <span style={{fontSize:18,color:C.accent2,fontFamily:FONT_MONO,fontWeight:700}}>{totalElemBreaks}</span>
                     <span style={{fontSize:10,color:C.muted}}>回</span>
                  </div>
               {[1,2,3].map(threshold => {
@@ -6400,16 +6535,15 @@ export default function ArcadiaCh2() {
                       </div>
                     </div>
                     {achieved && !used2 && (
-                      <button
+                      <HoverButton
                         onClick={() => {
                           setEltzSpdBonus(prev => prev + 1);
                           setSpeedCandyUsed(prev => ({ ...prev, [threshold]: true }));
                           showNotif("🍬 スピードキャンディ！ SPD +1！");
                         }}
-                        style={{padding:"6px 14px",background:`${C.accent2}1a`,border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:10,cursor:"pointer",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,whiteSpace:"nowrap",flexShrink:0,transition:"all 0.2s"}}
-                        onMouseEnter={e => { e.currentTarget.style.background = `${C.accent2}33`; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = `${C.accent2}1a`; }}
-                      >🍬 SPD +1</button>
+                        style={{padding:"6px 14px",background:`${C.accent2}1a`,border:`1px solid ${C.accent2}`,color:C.accent2,fontSize:10,cursor:"pointer",borderRadius:4,fontFamily:FONT_MONO,letterSpacing:1,whiteSpace:"nowrap",flexShrink:0,transition:"all 0.2s"}}
+                        hoverStyle={{background:`${C.accent2}33`}}
+                      >🍬 SPD +1</HoverButton>
                     )}
                     {used2 && <span style={{fontSize:10,color:C.muted,flexShrink:0}}>✅ 受取済</span>}
                     {!achieved && <span style={{fontSize:10,color:`${C.muted}66`,flexShrink:0}}>未達成</span>}
@@ -6417,7 +6551,7 @@ export default function ArcadiaCh2() {
                 );
               })}
               {eltzSpdBonus > 0 && (
-                <div style={{marginTop:10,padding:"6px 12px",background:`${C.accent2}11`,border:`1px solid ${C.accent2}44`,borderRadius:4,fontSize:10,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}}>
+                <div style={{marginTop:10,padding:"6px 12px",background:`${C.accent2}11`,border:`1px solid ${C.accent2}44`,borderRadius:4,fontSize:10,color:C.accent2,fontFamily:FONT_MONO,textAlign:"center"}}>
                   現在のSPDボーナス: +{eltzSpdBonus}（エルツ SPD {12 + eltzSpdBonus}）
                 </div>
               )}
@@ -6448,7 +6582,7 @@ const isUnlocked = (unlock) => {
 
 // ── ローディング ──
 if (shopLoading) return (
-  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.muted,textAlign:"center",marginTop:40,letterSpacing:2,lineHeight:2}}>
+  <div style={{fontFamily:FONT_MONO,fontSize:12,color:C.muted,textAlign:"center",marginTop:40,letterSpacing:2,lineHeight:2}}>
     <div style={{fontSize:20,marginBottom:10,animation:"arcadiaBlnk 1s step-end infinite"}}>🏪</div>
     SHOP DATA LOADING...
   </div>
@@ -6456,7 +6590,7 @@ if (shopLoading) return (
 
 // ── エラー ──
 if (shopError) return (
-  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.red,textAlign:"center",marginTop:40,letterSpacing:2,lineHeight:2}}>
+  <div style={{fontFamily:FONT_MONO,fontSize:12,color:C.red,textAlign:"center",marginTop:40,letterSpacing:2,lineHeight:2}}>
     <div style={{fontSize:18,marginBottom:10}}>⚠</div>
     データ取得に失敗しました<br/>
     <span style={{fontSize:10,color:C.muted}}>{shopError}</span>
@@ -6470,7 +6604,7 @@ const shops   = (shopData.shops ?? []).filter(s => isUnlocked(s.unlock));
 const curShop = shops.find(s => s.id === activeShop) ?? null;
 
 return (
-  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
+  <div style={{fontFamily:FONT_MONO,fontSize:12,color:C.text}}>
 
     {/* ── ヘッダー ── */}
     <div style={{color:C.accent,marginBottom:8,letterSpacing:2,fontSize:11}}>── SHOP ──</div>
@@ -6497,7 +6631,7 @@ return (
                   border:`1px solid ${active ? C.accent : C.border}`,
                   background: active ? `${C.accent}22` : "transparent",
                   color: active ? C.accent : C.muted,
-                  borderRadius:3, fontFamily:"'Share Tech Mono',monospace", transition:"all 0.15s",
+                  borderRadius:3, fontFamily:FONT_MONO, transition:"all 0.15s",
                 }}
                 onMouseEnter={e=>{ if(!active) e.currentTarget.style.color=C.white; }}
                 onMouseLeave={e=>{ if(!active) e.currentTarget.style.color=C.muted; }}
@@ -6554,7 +6688,7 @@ return (
                         border:    `1px solid ${canAfford ? C.accent2 : C.border}`,
                         color:      canAfford ? C.accent2 : C.muted,
                         fontSize:11, cursor: canAfford ? "pointer" : "not-allowed",
-                        borderRadius:3, fontFamily:"'Share Tech Mono',monospace", transition:"all 0.2s",
+                        borderRadius:3, fontFamily:FONT_MONO, transition:"all 0.2s",
                       }}
                       onMouseEnter={e=>{ if(canAfford) e.currentTarget.style.background=`${C.accent2}33`; }}
                       onMouseLeave={e=>{ if(canAfford) e.currentTarget.style.background=`${C.accent2}1a`; }}
@@ -6624,7 +6758,7 @@ return (
                 };
 
                 return (
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.text}}>
+                  <div style={{fontFamily:FONT_MONO,fontSize:12,color:C.text}}>
                     <div style={{color:C.accent,marginBottom:8,letterSpacing:2,fontSize:11}}>── INVENTORY ──</div>
 
                     {/* 品質個数サマリー */}
@@ -6667,7 +6801,7 @@ return (
                               <span style={{fontSize:9,color:"#000",background:Q_COLOR[q],border:`1px solid ${Q_COLOR[q]}`,borderRadius:2,padding:"1px 6px",flexShrink:0,fontWeight:"bold"}}>【{q}】</span>
                                 <span style={{fontSize:12,color:C.white,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</span>
                                 {/* 個数 */}
-                                <span style={{fontSize:10,color:C.gold,fontFamily:"'Share Tech Mono',monospace",flexShrink:0,marginLeft:2}}>×{item.quantity ?? 1}</span>
+                                <span style={{fontSize:10,color:C.gold,fontFamily:FONT_MONO,flexShrink:0,marginLeft:2}}>×{item.quantity ?? 1}</span>
                               </div>
                               <div style={{fontSize:9,color:C.muted,lineHeight:1.5}}>{descOf(item)}</div>
                             </div>
@@ -6677,7 +6811,7 @@ return (
                               <button
                                 onClick={() => refine(item, idx)}
                                 disabled={!canRefine}
-                                style={{flexShrink:0,padding:"4px 8px",background:canRefine?`${C.gold}22`:"transparent",border:`1px solid ${canRefine?C.gold:C.border}55`,color:canRefine?C.gold:C.muted,fontSize:9,cursor:canRefine?"pointer":"default",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",whiteSpace:"nowrap"}}
+                                style={{flexShrink:0,padding:"4px 8px",background:canRefine?`${C.gold}22`:"transparent",border:`1px solid ${canRefine?C.gold:C.border}55`,color:canRefine?C.gold:C.muted,fontSize:9,cursor:canRefine?"pointer":"default",borderRadius:3,fontFamily:FONT_MONO,whiteSpace:"nowrap"}}
                                 onMouseEnter={e=>{ if(canRefine) e.currentTarget.style.background=`${C.gold}44`; }}
                                 onMouseLeave={e=>{ if(canRefine) e.currentTarget.style.background=`${C.gold}22`; }}
                                 title={canRefine?`2個→【${Q_NEXT[q]}】に精錬`:`精錬には×2必要`}
@@ -6685,18 +6819,17 @@ return (
                             )}
 
                             {/* 装備ボタン */}
-                            <button
+                            <HoverButton
                               onClick={() => {
                                 setFn(isEquipped ? null : item);
                                 showNotif(isEquipped ? `${item.name}【${q}】を外した` : `${item.name}【${q}】を装備した！`);
                               }}
-                              style={{flexShrink:0,padding:"4px 10px",background:isEquipped?`${C.accent2}22`:"transparent",border:`1px solid ${isEquipped?C.accent2:C.border}`,color:isEquipped?C.accent2:C.muted,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:"'Share Tech Mono',monospace"}}
-                              onMouseEnter={e=>{ e.currentTarget.style.background=`${C.accent2}22`; }}
-                              onMouseLeave={e=>{ e.currentTarget.style.background=isEquipped?`${C.accent2}22`:"transparent"; }}
-                            >{isEquipped ? "装備中" : "装備"}</button>
+                              style={{flexShrink:0,padding:"4px 10px",background:isEquipped?`${C.accent2}22`:"transparent",border:`1px solid ${isEquipped?C.accent2:C.border}`,color:isEquipped?C.accent2:C.muted,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:FONT_MONO}}
+                              hoverStyle={{background:`${C.accent2}22`}}
+                            >{isEquipped ? "装備中" : "装備"}</HoverButton>
 
                             {/* 捨てるボタン */}
-                            <button
+                            <HoverButton
                               onClick={() => {
                                 if (!window.confirm(`「${item.name}【${q}】」を1個捨てますか？`)) return;
                                 if (isEquipped) setFn(null);
@@ -6707,10 +6840,9 @@ return (
                                   return prev.map((i, ii) => ii === idx ? { ...i, quantity: (i.quantity ?? 1) - 1 } : i);
                                 });
                               }}
-                              style={{flexShrink:0,padding:"4px 10px",background:"transparent",border:`1px solid ${C.red}55`,color:C.red,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:"'Share Tech Mono',monospace"}}
-                              onMouseEnter={e=>{ e.currentTarget.style.background=`${C.red}22`; }}
-                              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; }}
-                            >捨てる</button>
+                              style={{flexShrink:0,padding:"4px 10px",background:"transparent",border:`1px solid ${C.red}55`,color:C.red,fontSize:10,cursor:"pointer",borderRadius:3,fontFamily:FONT_MONO}}
+                              hoverStyle={{background:`${C.red}22`}}
+                            >捨てる</HoverButton>
                           </div>
                         );
                       })
@@ -6736,7 +6868,7 @@ return (
   const selPost   = selThread ? selThread.posts.find(p => p.id === bbsSelectedPost) : null;
 
   return (
-    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: C.text }}>
+    <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: C.text }}>
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 9, letterSpacing: 5, color: C.muted, marginBottom: 4 }}>CITY BBS</div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -6823,17 +6955,17 @@ return (
       {overlay === "lvup" && lvUpInfo && (
         <div style={{position:"absolute",inset:0,background:"rgba(5,13,20,0.97)",zIndex:30,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",animation:"fadeIn 0.3s"}}>
           <div style={{textAlign:"center",padding:32,border:`1px solid ${C.gold}`,background:C.panel,maxWidth:280}}>
-            <div style={{fontSize:11,letterSpacing:6,color:C.gold,fontFamily:"'Share Tech Mono',monospace",marginBottom:16}}>LEVEL UP!</div>
+            <div style={{fontSize:11,letterSpacing:6,color:C.gold,fontFamily:FONT_MONO,marginBottom:16}}>LEVEL UP!</div>
             <div style={{fontSize:48,color:C.gold,textShadow:`0 0 20px ${C.gold}`,marginBottom:8}}>⭐</div>
-            <div style={{fontSize:24,color:C.white,fontFamily:"'Share Tech Mono',monospace",marginBottom:20}}>Lv.{lvUpInfo.oldLv} → Lv.{lvUpInfo.newLv}</div>
-            <div style={{fontSize:12,color:C.muted,lineHeight:2,fontFamily:"'Share Tech Mono',monospace",marginBottom:20}}>
+            <div style={{fontSize:24,color:C.white,fontFamily:FONT_MONO,marginBottom:20}}>Lv.{lvUpInfo.oldLv} → Lv.{lvUpInfo.newLv}</div>
+            <div style={{fontSize:12,color:C.muted,lineHeight:2,fontFamily:FONT_MONO,marginBottom:20}}>
               <div style={{color:C.accent2}}>MAX HP +10</div>
               <div style={{color:"#60a5fa"}}>MAX MP +5</div>
               <div style={{color:C.gold}}>ステータスポイント +3</div>
               <div style={{color:C.muted,fontSize:10,marginTop:4}}>物理ATK / 物理DEF に振り分け可</div>
             </div>
             <button onClick={() => { setOverlay(null); setLvUpInfo(null); }}
-              style={{padding:"10px 32px",background:"transparent",border:`1px solid ${C.gold}`,color:C.gold,fontSize:12,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>OK</button>
+              style={{padding:"10px 32px",background:"transparent",border:`1px solid ${C.gold}`,color:C.gold,fontSize:12,cursor:"pointer",fontFamily:FONT_MONO,letterSpacing:2}}>OK</button>
           </div>
         </div>
       )}
@@ -6842,24 +6974,24 @@ return (
       {overlay === "stat" && (
         <div style={{position:"absolute",inset:0,background:"rgba(5,13,20,0.97)",zIndex:30,display:"flex",flexDirection:"column",animation:"fadeIn 0.2s"}}>
           <div style={{display:"flex",alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"10px 16px"}}>
-            <div style={{fontSize:11,letterSpacing:4,color:C.gold,fontFamily:"'Share Tech Mono',monospace",flex:1}}>ステータス振り分け</div>
-            <button onClick={() => setOverlay("pb")} style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"4px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace"}}>戻る</button>
+            <div style={{fontSize:11,letterSpacing:4,color:C.gold,fontFamily:FONT_MONO,flex:1}}>ステータス振り分け</div>
+            <button onClick={() => setOverlay("pb")} style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"4px 12px",fontSize:11,cursor:"pointer",fontFamily:FONT_MONO}}>戻る</button>
           </div>
           <div style={{flex:1,padding:16}}>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:12,color:C.gold,marginBottom:16}}>残りポイント: {statPoints}</div>
+            <div style={{fontFamily:FONT_MONO,fontSize:12,color:C.gold,marginBottom:16}}>残りポイント: {statPoints}</div>
             {[
               {key:"patk",label:"物理攻撃力",color:C.accent2},
               {key:"pdef",label:"物理防御力",color:"#a78bfa"},
             ].map(({key,label,color}) => (
               <div key={key} style={{display:"flex",alignItems:"center",marginBottom:12,gap:8}}>
-                <div style={{flex:1,fontSize:12,color:C.text,fontFamily:"'Share Tech Mono',monospace"}}>{label}</div>
-                <div style={{fontSize:14,color,fontFamily:"'Share Tech Mono',monospace",minWidth:32,textAlign:"center"}}>{statAlloc[key]}</div>
+                <div style={{flex:1,fontSize:12,color:C.text,fontFamily:FONT_MONO}}>{label}</div>
+                <div style={{fontSize:14,color,fontFamily:FONT_MONO,minWidth:32,textAlign:"center"}}>{statAlloc[key]}</div>
                 <button disabled={statPoints<=0} onClick={() => { if(statPoints>0){ setStatPoints(sp=>sp-1); setStatAlloc(sa=>({...sa,[key]:sa[key]+1})); }}}
-                  style={{padding:"4px 12px",background:statPoints>0?`${color}22`:"transparent",border:`1px solid ${statPoints>0?color:C.border}`,color:statPoints>0?color:C.muted,cursor:statPoints>0?"pointer":"not-allowed",fontSize:12,fontFamily:"'Share Tech Mono',monospace"}}>
+                  style={{padding:"4px 12px",background:statPoints>0?`${color}22`:"transparent",border:`1px solid ${statPoints>0?color:C.border}`,color:statPoints>0?color:C.muted,cursor:statPoints>0?"pointer":"not-allowed",fontSize:12,fontFamily:FONT_MONO}}>
                   ＋
                 </button>
                 <button disabled={statAlloc[key]<=10} onClick={() => { if(statAlloc[key]>10){ setStatPoints(sp=>sp+1); setStatAlloc(sa=>({...sa,[key]:sa[key]-1})); }}}
-                  style={{padding:"4px 12px",background:statAlloc[key]>10?`${C.muted}22`:"transparent",border:`1px solid ${statAlloc[key]>10?C.muted:C.border}`,color:statAlloc[key]>10?C.muted:C.border,cursor:statAlloc[key]>10?"pointer":"not-allowed",fontSize:12,fontFamily:"'Share Tech Mono',monospace"}}>
+                  style={{padding:"4px 12px",background:statAlloc[key]>10?`${C.muted}22`:"transparent",border:`1px solid ${statAlloc[key]>10?C.muted:C.border}`,color:statAlloc[key]>10?C.muted:C.border,cursor:statAlloc[key]>10?"pointer":"not-allowed",fontSize:12,fontFamily:FONT_MONO}}>
                   ─
                 </button>
               </div>
@@ -6941,7 +7073,7 @@ return (
         const selScene = NOVEL_CHAPTERS.flatMap(c => c.scenes).find(s => s.idx === novelSelScene);
 
         return (
-          <div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,#020810 0%,${C.bg} 100%)`,zIndex:30,display:"flex",flexDirection:"column",animation:"fadeIn 0.2s",fontFamily:"'Noto Serif JP',serif"}}>
+          <div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,#020810 0%,${C.bg} 100%)`,zIndex:30,display:"flex",flexDirection:"column",animation:"fadeIn 0.2s",fontFamily:FONT_SERIF}}>
             <style>{`
               .nv-scroll::-webkit-scrollbar{width:4px}
               .nv-scroll::-webkit-scrollbar-track{background:transparent}
@@ -6952,14 +7084,13 @@ return (
             {/* ヘッダー */}
             <div style={{padding:"12px 18px 10px",borderBottom:`1px solid ${C.border}`,background:"rgba(5,13,20,0.97)",flexShrink:0,display:"flex",alignItems:"center",gap:10}}>
               <div style={{flex:1}}>
-                <div style={{fontSize:9,letterSpacing:5,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:2}}>ARCADIA -- SCENARIO LOG</div>
+                <div style={{fontSize:9,letterSpacing:5,color:C.muted,fontFamily:FONT_MONO,marginBottom:2}}>ARCADIA -- SCENARIO LOG</div>
                 <div style={{fontSize:13,color:C.white,fontWeight:"bold",letterSpacing:2}}>小説ログ / NOVELIZE</div>
               </div>
-              <button onClick={() => setOverlay(null)}
-                style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:1,borderRadius:2,flexShrink:0}}
-                onMouseEnter={e=>{e.currentTarget.style.color=C.white;e.currentTarget.style.borderColor=C.accent;}}
-                onMouseLeave={e=>{e.currentTarget.style.color=C.muted;e.currentTarget.style.borderColor=C.border;}}
-              >✕ 閉じる</button>
+              <HoverButton onClick={() => setOverlay(null)}
+                style={{background:"transparent",border:`1px solid ${C.border}`,color:C.muted,padding:"5px 12px",fontSize:11,cursor:"pointer",fontFamily:FONT_MONO,letterSpacing:1,borderRadius:2,flexShrink:0}}
+                hoverStyle={{color:C.white,borderColor:C.accent}}
+              >✕ 閉じる</HoverButton>
             </div>
 
             {/* 本体 -- 左ペイン（目次） + 右ペイン（本文） */}
@@ -6973,7 +7104,7 @@ return (
                     <div key={ch.id}>
                       {/* チャプターヘッダー */}
                       <div style={{padding:"8px 12px 5px",borderTop: ch.id>1 ? `1px solid ${C.border}44` : "none"}}>
-                        <div style={{fontSize:8,letterSpacing:3,color: anyVisited ? C.accent : C.muted+"66",fontFamily:"'Share Tech Mono',monospace"}}>{ch.sub}</div>
+                        <div style={{fontSize:8,letterSpacing:3,color: anyVisited ? C.accent : C.muted+"66",fontFamily:FONT_MONO}}>{ch.sub}</div>
                         <div style={{fontSize:11,color: anyVisited ? C.accent2 : C.muted+"66",fontWeight:"bold",letterSpacing:1,marginTop:1}}>{ch.label}</div>
                       </div>
                       {/* シーンボタン */}
@@ -7010,7 +7141,7 @@ return (
                                   .finally(() => setNovelLoading(false));
                               }
                             }}
-                            style={{display:"block",width:"100%",textAlign:"left",padding:"5px 14px 5px 18px",background:btnBg,border:"none",borderLeft: selected ? `3px solid ${C.accent}` : `3px solid transparent`,color:btnColor,fontSize:10,cursor: visited ? "pointer" : "default",fontFamily:"'Noto Serif JP',serif",letterSpacing:0.3,lineHeight:1.5,transition:"all 0.15s"}}
+                            style={{display:"block",width:"100%",textAlign:"left",padding:"5px 14px 5px 18px",background:btnBg,border:"none",borderLeft: selected ? `3px solid ${C.accent}` : `3px solid transparent`,color:btnColor,fontSize:10,cursor: visited ? "pointer" : "default",fontFamily:FONT_SERIF,letterSpacing:0.3,lineHeight:1.5,transition:"all 0.15s"}}
                             onMouseEnter={e=>{ if(visited && !selected){ e.currentTarget.style.background=`${C.accent}11`; e.currentTarget.style.color=C.white; }}}
                             onMouseLeave={e=>{ if(visited && !selected){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.text; }}}
                           >
@@ -7041,7 +7172,7 @@ return (
                       return (
                         <button key={tab.id}
                           onClick={() => setNovelTab(tab.id)}
-                          style={{padding:"9px 20px",fontSize:10,cursor:"pointer",border:"none",letterSpacing:2,fontFamily:"'Share Tech Mono',monospace",transition:"all 0.15s",...tabStyle}}
+                          style={{padding:"9px 20px",fontSize:10,cursor:"pointer",border:"none",letterSpacing:2,fontFamily:FONT_MONO,transition:"all 0.15s",...tabStyle}}
                           onMouseEnter={e=>{ if(!active){ e.currentTarget.style.color=C.white; }}}
                           onMouseLeave={e=>{ if(!active){ e.currentTarget.style.color=C.muted; }}}
                         >{tab.label}</button>
@@ -7052,7 +7183,7 @@ return (
 
                 <div className="nv-scroll" style={{flex:1,overflowY:"auto",padding:"22px 24px 32px"}}>
                 {novelSelScene === null ? (
-                  <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,lineHeight:2}}>
+                  <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:FONT_MONO,letterSpacing:2,lineHeight:2}}>
                     <div style={{fontSize:20,marginBottom:12}}>📖</div>
                     左のリストからシーンを選択してください<br/>
                     <span style={{fontSize:10}}>訪問済みのシーンのみ閲覧できます</span>
@@ -7063,7 +7194,7 @@ return (
                     // ローディング中
                     if (novelLoading && !(novelSelScene in novelCache)) {
                       return (
-                        <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,lineHeight:2}}>
+                        <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:FONT_MONO,letterSpacing:2,lineHeight:2}}>
                           <div style={{fontSize:20,marginBottom:12,animation:"arcadiaBlnk 1s step-end infinite"}}>📖</div>
                           読み込み中...
                         </div>
@@ -7075,7 +7206,7 @@ return (
                     return novelText ? (
                       <>
                         <div style={{marginBottom:24,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
-                          <div style={{fontSize:9,letterSpacing:4,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:4}}>
+                          <div style={{fontSize:9,letterSpacing:4,color:C.muted,fontFamily:FONT_MONO,marginBottom:4}}>
                             {NOVEL_CHAPTERS.find(c=>c.scenes.some(s=>s.idx===novelSelScene))?.sub ?? ""}
                           </div>
                           <div style={{fontSize:15,color:C.white,fontWeight:"bold",letterSpacing:1}}>
@@ -7085,12 +7216,12 @@ return (
                             {scenes[novelSelScene]?.loc ?? ""}
                           </div>
                         </div>
-                        <p style={{color:C.text,fontSize:13,lineHeight:2.2,margin:0,whiteSpace:"pre-wrap",letterSpacing:0.5,fontFamily:"'Noto Serif JP',serif"}}>
+                        <p style={{color:C.text,fontSize:13,lineHeight:2.2,margin:0,whiteSpace:"pre-wrap",letterSpacing:0.5,fontFamily:FONT_SERIF}}>
                           {novelText}
                         </p>
                       </>
                     ) : (
-                      <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,lineHeight:2}}>
+                      <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:FONT_MONO,letterSpacing:2,lineHeight:2}}>
                         <div style={{fontSize:20,marginBottom:12}}>✏️</div>
                         {isFetchErr
                           ? <>読み込みに失敗しました<br/><span style={{fontSize:10}}>ネットワーク接続を確認してください</span></>
@@ -7101,7 +7232,7 @@ return (
                   })()
                 ) : selEntries.length === 0 ? (
                   /* ── LOG タブ（エントリなし） ── */
-                  <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2}}>
+                  <div style={{color:C.muted,fontSize:12,textAlign:"center",marginTop:60,fontFamily:FONT_MONO,letterSpacing:2}}>
                     ── ログがありません ──
                   </div>
                 ) : (
@@ -7109,7 +7240,7 @@ return (
                   <>
                     {/* シーンタイトル */}
                     <div style={{marginBottom:24,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
-                      <div style={{fontSize:9,letterSpacing:4,color:C.muted,fontFamily:"'Share Tech Mono',monospace",marginBottom:4}}>
+                      <div style={{fontSize:9,letterSpacing:4,color:C.muted,fontFamily:FONT_MONO,marginBottom:4}}>
                         {NOVEL_CHAPTERS.find(c=>c.scenes.some(s=>s.idx===novelSelScene))?.sub ?? ""}
                       </div>
                       <div style={{fontSize:15,color:C.white,fontWeight:"bold",letterSpacing:1}}>
@@ -7129,8 +7260,8 @@ return (
                           {isSystem ? (
                             // SYSTEMメッセージ -- モノスペース・シアン枠
                             <div style={{background:`${C.accent}0d`,border:`1px solid ${C.accent}44`,borderLeft:`3px solid ${C.accent}`,padding:"10px 14px",borderRadius:2}}>
-                              <div style={{fontSize:8,letterSpacing:4,color:C.accent,fontFamily:"'Share Tech Mono',monospace",marginBottom:6}}>── SYSTEM ──</div>
-                              <p style={{color:C.accent,fontSize:12,lineHeight:1.9,margin:0,whiteSpace:"pre-wrap",fontFamily:"'Share Tech Mono',monospace",letterSpacing:0.3}}>
+                              <div style={{fontSize:8,letterSpacing:4,color:C.accent,fontFamily:FONT_MONO,marginBottom:6}}>── SYSTEM ──</div>
+                              <p style={{color:C.accent,fontSize:12,lineHeight:1.9,margin:0,whiteSpace:"pre-wrap",fontFamily:FONT_MONO,letterSpacing:0.3}}>
                                 {entry.t}
                               </p>
                             </div>
@@ -7140,7 +7271,7 @@ return (
                             </p>
                           ) : (
                             <div>
-                              <div style={{fontSize:9,color:C.accent2,fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,marginBottom:4,borderLeft:`2px solid ${C.accent2}`,paddingLeft:7,display:"inline-block"}}>
+                              <div style={{fontSize:9,color:C.accent2,fontFamily:FONT_MONO,letterSpacing:2,marginBottom:4,borderLeft:`2px solid ${C.accent2}`,paddingLeft:7,display:"inline-block"}}>
                                 {entry.sp}
                               </div>
                               <p style={{color:C.white,fontSize:13,lineHeight:2.0,margin:"4px 0 0 0",paddingLeft:9,whiteSpace:"pre-wrap",letterSpacing:0.4,borderLeft:`1px solid ${C.border}`}}>
@@ -7159,14 +7290,13 @@ return (
 
             {/* フッター */}
             <div style={{padding:"9px 18px 12px",borderTop:`1px solid ${C.border}`,background:"rgba(5,13,20,0.97)",flexShrink:0,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{fontSize:10,color:C.muted,fontFamily:"'Share Tech Mono',monospace",letterSpacing:1}}>
+              <div style={{fontSize:10,color:C.muted,fontFamily:FONT_MONO,letterSpacing:1}}>
                 {visitedSet.size} / {NOVEL_CHAPTERS.flatMap(c=>c.scenes).length} シーン解放済み
               </div>
-              <button onClick={() => setOverlay(null)}
-                style={{padding:"7px 22px",background:`${C.accent}1a`,border:`1px solid ${C.accent}`,color:C.accent,fontSize:11,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",letterSpacing:2,borderRadius:2}}
-                onMouseEnter={e=>{e.currentTarget.style.background=`${C.accent}33`;}}
-                onMouseLeave={e=>{e.currentTarget.style.background=`${C.accent}1a`;}}
-              >ゲームに戻る ▶</button>
+              <HoverButton onClick={() => setOverlay(null)}
+                style={{padding:"7px 22px",background:`${C.accent}1a`,border:`1px solid ${C.accent}`,color:C.accent,fontSize:11,cursor:"pointer",fontFamily:FONT_MONO,letterSpacing:2,borderRadius:2}}
+                hoverStyle={{background:`${C.accent}33`}}
+              >ゲームに戻る ▶</HoverButton>
             </div>
           </div>
         );
