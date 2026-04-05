@@ -2174,6 +2174,7 @@ export default function ArcadiaCh2() {
   const [atkAllAnimKey, setAtkAllAnimKey] = useState(0); // 再マウント用キー
   const [atkAllScale, setAtkAllScale] = useState(1);    // JS制御スケール値
   const atkAllRafRef = useRef(null);
+  const olgaJumpCallbackRef = useRef(null); // ドラゴンアニメ完了後のリターンコールバック
   useEffect(() => {
     if (!showAtkAllAnim) {
       if (atkAllRafRef.current) { cancelAnimationFrame(atkAllRafRef.current); atkAllRafRef.current = null; }
@@ -2195,6 +2196,12 @@ export default function ArcadiaCh2() {
       } else {
         atkAllRafRef.current = null;
         setShowAtkAllAnim(false);
+        // オルガバックステップのリターンシーケンスを起動
+        if (olgaJumpCallbackRef.current) {
+          const cb = olgaJumpCallbackRef.current;
+          olgaJumpCallbackRef.current = null;
+          cb();
+        }
       }
     };
     atkAllRafRef.current = requestAnimationFrame(step);
@@ -2202,6 +2209,92 @@ export default function ArcadiaCh2() {
       if (atkAllRafRef.current) { cancelAnimationFrame(atkAllRafRef.current); atkAllRafRef.current = null; }
     };
   }, [showAtkAllAnim, atkAllAnimKey]);
+
+  // ── オルガバックステップ（Jump）アニメーション ──────────────────────────────
+  const OLGA_JUMP_URL = "https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Attack/Olga_Jump.webp";
+  const [olgaJumpState, setOlgaJumpState] = useState(null);
+  // null | { phase:"backstep"|"wait"|"rise"|"return", scale:number, translateY:number, opacity:number }
+  const olgaJumpRafRef = useRef(null);
+
+  // 画像プリロード
+  useEffect(() => { const img = new Image(); img.src = OLGA_JUMP_URL; }, []);
+
+  // 完全初期化ヘルパー（2回目以降も確実にリセット）
+  const resetOlgaJump = useCallback(() => {
+    if (olgaJumpRafRef.current) { cancelAnimationFrame(olgaJumpRafRef.current); olgaJumpRafRef.current = null; }
+    olgaJumpCallbackRef.current = null;
+    setOlgaJumpState(null);
+  }, []);
+
+  // バックステップ→上昇シーケンス（Promise）
+  const playOlgaBackstep = useCallback(() => new Promise(resolve => {
+    // 前回アニメが残っていれば強制リセット
+    if (olgaJumpRafRef.current) { cancelAnimationFrame(olgaJumpRafRef.current); olgaJumpRafRef.current = null; }
+    const shrinkDur = 400;  // 縮小 0.4秒
+    const waitDur   = 500;  // 静止 0.5秒
+    const riseDur   = 600;  // 上昇 0.6秒
+    let start = null;
+    setOlgaJumpState({ phase:"backstep", scale:1, translateY:0, opacity:1 });
+    // フェーズ1: scale 1 → 0.5
+    const shrink = (ts) => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / shrinkDur, 1);
+      setOlgaJumpState({ phase:"backstep", scale: 1 - 0.5 * p, translateY: 0, opacity:1 });
+      if (p < 1) { olgaJumpRafRef.current = requestAnimationFrame(shrink); return; }
+      // フェーズ2: 静止
+      start = null;
+      const wait = (ts2) => {
+        if (!start) start = ts2;
+        const p2 = Math.min((ts2 - start) / waitDur, 1);
+        if (p2 < 1) { olgaJumpRafRef.current = requestAnimationFrame(wait); return; }
+        // フェーズ3: 上昇（ease-in 加速）
+        start = null;
+        const rise = (ts3) => {
+          if (!start) start = ts3;
+          const p3 = Math.min((ts3 - start) / riseDur, 1);
+          const ease = p3 * p3; // ease-in
+          setOlgaJumpState({ phase:"rise", scale:0.5, translateY: -130 * ease, opacity:1 });
+          if (p3 < 1) { olgaJumpRafRef.current = requestAnimationFrame(rise); return; }
+          olgaJumpRafRef.current = null;
+          resolve();
+        };
+        olgaJumpRafRef.current = requestAnimationFrame(rise);
+      };
+      olgaJumpRafRef.current = requestAnimationFrame(wait);
+    };
+    olgaJumpRafRef.current = requestAnimationFrame(shrink);
+  }), []);
+
+  // リターンシーケンス: 画面外上(scale=1)→元位置にease-outで降下
+  // → 着地後0.4秒かけてopacity 1→0でフェードアウト→スプライト復帰
+  const playOlgaReturn = useCallback(() => new Promise(resolve => {
+    if (olgaJumpRafRef.current) { cancelAnimationFrame(olgaJumpRafRef.current); olgaJumpRafRef.current = null; }
+    const returnDur = 600;  // 降下 0.6秒
+    const fadeDur   = 400;  // フェードアウト 0.4秒
+    let start = null;
+    // scale=1（スプライトと同サイズ）・translateY=-130から降下開始
+    setOlgaJumpState({ phase:"return", scale:1, translateY:-130, opacity:1 });
+    const ret = (ts) => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / returnDur, 1);
+      const ease = 1 - (1 - p) * (1 - p); // ease-out
+      setOlgaJumpState({ phase:"return", scale:1, translateY: -130 * (1 - ease), opacity:1 });
+      if (p < 1) { olgaJumpRafRef.current = requestAnimationFrame(ret); return; }
+      // 着地完了 → フェードアウト開始、同時にスプライトをフェードイン
+      start = null;
+      const fade = (ts2) => {
+        if (!start) start = ts2;
+        const pf = Math.min((ts2 - start) / fadeDur, 1);
+        setOlgaJumpState({ phase:"fadeout", scale:1, translateY:0, opacity: 1 - pf });
+        if (pf < 1) { olgaJumpRafRef.current = requestAnimationFrame(fade); return; }
+        olgaJumpRafRef.current = null;
+        setOlgaJumpState(null); // 完全に消えたらnullにしてスプライト完全表示
+        resolve();
+      };
+      olgaJumpRafRef.current = requestAnimationFrame(fade);
+    };
+    olgaJumpRafRef.current = requestAnimationFrame(ret);
+  }), []);
 
   // ── ヒット・討伐エフェクト ─────────────────────────────────────────────────
   // hitEffects:   [{ id, slotIdx, dmg, type }]  type="normal"|"weak"|"elem_break"|"heal"
@@ -3690,8 +3783,20 @@ export default function ArcadiaCh2() {
               memberDmg[k] = (memberDmg[k] ?? 0) + mDmg;
               logs.push(`  → ${ALL_CHAR_DEFS[k]?.icon ?? ""}${ALL_CHAR_DEFS[k]?.name ?? k} ${mDmg}ダメージ！`);
             }
-            setShowAtkAllAnim(false); // 一旦リセットして再マウントを強制
-            setTimeout(() => { setAtkAllAnimKey(k => k + 1); setShowAtkAllAnim(true); }, 0);
+            // オルガが全体攻撃ならバックステップアニメを挟む
+            if (e.type === "olga") {
+              resetOlgaJump(); // 2回目以降も確実に初期化
+              playOlgaBackstep().then(() => {
+                // バックステップ完了後にドラゴン突進開始
+                // ドラゴン完了時にリターンシーケンスを起動するコールバックをセット
+                olgaJumpCallbackRef.current = () => { playOlgaReturn(); };
+                setShowAtkAllAnim(false);
+                setTimeout(() => { setAtkAllAnimKey(k => k + 1); setShowAtkAllAnim(true); }, 0);
+              });
+            } else {
+              setShowAtkAllAnim(false); // 一旦リセットして再マウントを強制
+              setTimeout(() => { setAtkAllAnimKey(k => k + 1); setShowAtkAllAnim(true); }, 0);
+            }
           } else if (eAction === "unavoidable") {
             // 回避不能：counter/dodge両方無効、ターゲット単体に直撃
             const [minD, maxD] = e.def.unavoidableAtk ?? [30,45];
@@ -4180,8 +4285,9 @@ export default function ArcadiaCh2() {
       // ── 組み込みアクション ──
       // atk：プレイヤーが counter を選んでいたら相殺されてオルガはダメージを与えない
       if (action === "atk") return lowestSpdCmd !== "counter";
-      // unavoidable / atk_all：無条件でダメージあり
-      if (action === "unavoidable" || action === "atk_all") return true;
+      // unavoidable：無条件でダメージあり（atk_allはbackstepアニメで別管理するためここでは除外）
+      if (action === "unavoidable") return true;
+      if (action === "atk_all") return false; // backstepアニメ側で制御するためplayOlgaAtkEffectを切る
       // counter：プレイヤーが atk を選んでいたら反撃ダメージあり（dodge/counter→無効）
       if (action === "counter") return lowestSpdCmd === "atk";
       // dodge：プレイヤーが counter を選んでいたら反撃ダメージあり
@@ -5586,6 +5692,44 @@ export default function ArcadiaCh2() {
                   />
                 );
               })()}
+
+              {/* ── オルガバックステップ（Jump）アニメーション ── */}
+              {olgaJumpState !== null && (() => {
+                const olgaSlotIdx = multiEnemies ? multiEnemies.findIndex(e => e.type === "olga") : -1;
+                if (olgaSlotIdx < 0) return null;
+                const slotCount = multiEnemies.length;
+                const bossCount = multiEnemies.filter(e => e.def.isBoss).length;
+                const normalCount = slotCount - bossCount;
+                const totalFlex = bossCount * 2 + normalCount * 1;
+                const olgaFlex = (multiEnemies[olgaSlotIdx].def.isBoss) ? 2 : 1;
+                const olgaSlotWvw = enemyAreaW * olgaFlex / totalFlex;
+                let offsetVw = 0;
+                for (let i = 0; i < olgaSlotIdx; i++) {
+                  offsetVw += enemyAreaW * (multiEnemies[i].def.isBoss ? 2 : 1) / totalFlex;
+                }
+                const cx = offsetVw + olgaSlotWvw * 0.5;
+                const cy = isPortrait ? enemyAreaH * 0.5 : 50;
+                const animH = `${enemyAreaH * 0.99}vh`;
+                const animW = `${olgaSlotWvw}vw`;
+                const { scale, translateY, opacity = 1 } = olgaJumpState;
+                return (
+                  <img
+                    src={OLGA_JUMP_URL}
+                    style={{
+                      position:"fixed",
+                      left:`${cx}vw`, top:`${cy}vh`,
+                      transform:`translate(-50%, calc(-50% + ${translateY}vh)) scale(${scale})`,
+                      transformOrigin:"center center",
+                      width:animW, height:animH,
+                      objectFit:"contain",
+                      opacity,
+                      pointerEvents:"none", zIndex:411,
+                      imageRendering:"auto",
+                    }}
+                    alt=""
+                  />
+                );
+              })()}
             </>
           );
         })()}
@@ -5748,9 +5892,12 @@ export default function ArcadiaCh2() {
                                         ? "drop-shadow(0 0 16px #ff4466cc) drop-shadow(0 0 4px #ff000088)"
                                         : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")),
                                 transform: (!me.defeated && btlAnimEnemy) ? "scale(1.07)" : "scale(1)",
-                                transition: me.defeated ? "none" : "transform 0.1s",
-                                // オルガ攻撃アニメーション中はスプライトを非表示
-                                opacity: (me.type === "olga" && olgaAtkAnimFrame !== null) ? 0 : 1,
+                                // オルガ攻撃アニメーション中・バックステップ中はスプライトを非表示
+                                // リターンフェードアウト時はジャンプ画像と逆相でクロスフェード
+                                opacity: (me.type === "olga" && (olgaAtkAnimFrame !== null || olgaJumpState !== null))
+                                  ? (olgaJumpState?.phase === "fadeout" ? 1 - (olgaJumpState.opacity ?? 0) : 0)
+                                  : 1,
+                                transition: (me.type === "olga" && olgaJumpState?.phase === "fadeout") ? "none" : (me.defeated ? "none" : "transform 0.1s"),
                               }} />
                             : <div style={{
                                 fontSize: meIsBoss ? "clamp(64px,10vw,120px)" : "clamp(40px,6vw,80px)",
