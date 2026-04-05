@@ -4162,15 +4162,34 @@ export default function ArcadiaCh2() {
     const lowestSpdMemberId = spdSortedForAnim[0];
     const lowestSpdCmd = exec.cmds[lowestSpdMemberId] ?? "atk";
 
-    const hasOlgaAttack = !!(multiEnemies && multiEnemies.some(e => {
+    // 既存ステートによる行動不能（前ターン以前に付与済み）
+    const isOlgaStunnedByState = takedownActive > 0 || sleepActive > 0
+      || straightShotActive > 0 || slowbladeActive > 0;
+
+    // プリフェイズスタン：このターンのコマンドに isPrephase+enemyStun>=1+hits>0 のスキルが含まれるか
+    const isOlgaStunnedByPrephase = Object.values(exec.cmds).some(skillId => {
+      const sk = SKILL_DEFS[skillId];
+      return sk && sk.isPrephase && (sk.enemyStun ?? 0) >= 1 && (sk.hits ?? 0) > 0;
+    });
+
+    const isOlgaStunned = isOlgaStunnedByState || isOlgaStunnedByPrephase;
+
+    const hasOlgaAttack = !isOlgaStunned && !!(multiEnemies && multiEnemies.some(e => {
       if (e.type !== "olga" || e.defeated) return false;
       const action = e.def.pattern[e.turnIdx % e.def.pattern.length];
-      // 純粋な攻撃行動
-      if (["atk", "unavoidable", "atk_all"].includes(action)) return true;
-      // counter → プレイヤーが atk を選んでいたら反撃ダメージあり
-      if (action === "counter" && lowestSpdCmd === "atk") return true;
-      // dodge → プレイヤーが counter を選んでいたら反撃ダメージあり
-      if (action === "dodge" && lowestSpdCmd === "counter") return true;
+      // ── 組み込みアクション ──
+      // atk：プレイヤーが counter を選んでいたら相殺されてオルガはダメージを与えない
+      if (action === "atk") return lowestSpdCmd !== "counter";
+      // unavoidable / atk_all：無条件でダメージあり
+      if (action === "unavoidable" || action === "atk_all") return true;
+      // counter：プレイヤーが atk を選んでいたら反撃ダメージあり（dodge/counter→無効）
+      if (action === "counter") return lowestSpdCmd === "atk";
+      // dodge：プレイヤーが counter を選んでいたら反撃ダメージあり
+      if (action === "dodge") return lowestSpdCmd === "counter";
+      // ── SKILL_DEFS スキル（LightningSlash / elem_earth 等）──
+      // hits > 0 であれば単体・全体問わずダメージあり
+      const sk = SKILL_DEFS[action];
+      if (sk && (sk.hits ?? 0) > 0) return true;
       return false;
     }));
 
@@ -4182,7 +4201,8 @@ export default function ArcadiaCh2() {
     } else {
       executeMultiTurn(exec.cmds, exec.targets);
     }
-  }, [pendingExecution, executeMultiTurn, multiEnemies, playOlgaAtkEffect]);
+  }, [pendingExecution, executeMultiTurn, multiEnemies, playOlgaAtkEffect,
+      takedownActive, sleepActive, straightShotActive, slowbladeActive]);
 
   // ── プレイヤースタン中：コマンドフェーズ開始時に全員 heal を自動セットして即実行 ──
   useEffect(() => {
