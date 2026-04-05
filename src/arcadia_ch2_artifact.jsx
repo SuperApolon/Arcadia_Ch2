@@ -2050,13 +2050,6 @@ export default function ArcadiaCh2() {
       const ms = Math.round(1000 / LIGHTNING_ANIM_SEQUENCE[0].fps);
       lightningTimerRef.current = setTimeout(advance, ms);
     }, []);
-    // ── ライトニングスラッシュ画像プリロード ─────────────────────────────────
-    useEffect(() => {
-      LIGHTNING_ANIM_SEQUENCE.forEach(frame => {
-        const img = new Image();
-        img.src = frame.url;
-      });
-    }, []);
     // ── ステラフリッツエフェクト ─────────────────────────────────────────
     const [stellaAnimFrame, setStellaAnimFrame] = useState(null);
     // 0 = 静止表示フェーズ、1 = 回転フェーズ、null = 非表示
@@ -2106,11 +2099,6 @@ export default function ArcadiaCh2() {
     };
     olgaAtkTimerRef.current = setTimeout(advance, OLGA_ATK_INTERVALS[0]);
   }), []);
-
-  // 画像プリロード
-  useEffect(() => {
-    OLGA_ATK_URLS.forEach(url => { const img = new Image(); img.src = url; });
-  }, []);
 
   // provokeActive > 0 のとき敵の行動を強制的にatkに変換する（残りターン数）。
   const [provokeActive,   setProvokeActive  ] = useState(0);
@@ -2216,8 +2204,34 @@ export default function ArcadiaCh2() {
   // null | { phase:"backstep"|"wait"|"rise"|"return", scale:number, translateY:number, opacity:number }
   const olgaJumpRafRef = useRef(null);
 
-  // 画像プリロード
-  useEffect(() => { const img = new Image(); img.src = OLGA_JUMP_URL; }, []);
+  // ── 統合プリロード ──────────────────────────────────────────────────────────
+  // StellaFritz / LightningSlash / dragon_rush（showAtkAllAnim）/ Reverse /
+  // オルガカットイン / ドナテロカットイン / オルガ通常攻撃 / オルガJump
+  // をコンポーネントマウント直後に一括プリロードする
+  useEffect(() => {
+    const urls = [
+      // ── ステラフリッツ ──
+      "https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Eff_stellaflitz.webp",
+      // ── ライトニングスラッシュ ──
+      ...LIGHTNING_ANIM_SEQUENCE.map(f => f.url),
+      // ── 全体攻撃ドラゴン突進 ──
+      "https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/dragon_rush.webp",
+      // ── リバース ──
+      ...REVERSE_ANIM_URLS,
+      // ── カットイン（オルガ・ドナテロ） ──
+      ...CUTIN_ANIM_URLS,
+      ...CUTIN2_ANIM_URLS,
+      // ── オルガ通常攻撃 ──
+      ...OLGA_ATK_URLS,
+      // ── オルガバックステップJump ──
+      OLGA_JUMP_URL,
+    ];
+    // 重複URLを排除してプリロード
+    [...new Set(urls)].forEach(url => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 完全初期化ヘルパー（2回目以降も確実にリセット）
   const resetOlgaJump = useCallback(() => {
