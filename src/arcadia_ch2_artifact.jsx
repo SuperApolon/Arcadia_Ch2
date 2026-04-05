@@ -2076,6 +2076,42 @@ export default function ArcadiaCh2() {
       }, 500);
     }, []);
     
+  // ── オルガ通常攻撃アニメーション ─────────────────────────────────────────
+  // frame: 0,1 = 12fps(NormalAttack00/01), 2 = 1fps(NormalAttack02), null = 非表示
+  const [olgaAtkAnimFrame, setOlgaAtkAnimFrame] = useState(null);
+  const OLGA_ATK_URLS = [
+    "https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Attack/Olga_NormalAttack00.webp",
+    "https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Attack/Olga_NormalAttack01.webp",
+    "https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Attack/Olga_NormalAttack02.webp",
+  ];
+  // フレーム0,1: 12fps(≒83ms)  フレーム2: 1fps(1000ms)
+  const OLGA_ATK_INTERVALS = [Math.round(1000/12), Math.round(1000/12), Math.round(1000/3)];
+  const olgaAtkTimerRef = useRef(null);
+
+  // Promise を返す：アニメーション完了後に resolve
+  const playOlgaAtkEffect = useCallback(() => new Promise(resolve => {
+    if (olgaAtkTimerRef.current) { resolve(); return; }
+    let frame = 0;
+    setOlgaAtkAnimFrame(0);
+    const advance = () => {
+      frame++;
+      if (frame < OLGA_ATK_URLS.length) {
+        setOlgaAtkAnimFrame(frame);
+        olgaAtkTimerRef.current = setTimeout(advance, OLGA_ATK_INTERVALS[frame]);
+      } else {
+        olgaAtkTimerRef.current = null;
+        setOlgaAtkAnimFrame(null);
+        resolve();
+      }
+    };
+    olgaAtkTimerRef.current = setTimeout(advance, OLGA_ATK_INTERVALS[0]);
+  }), []);
+
+  // 画像プリロード
+  useEffect(() => {
+    OLGA_ATK_URLS.forEach(url => { const img = new Image(); img.src = url; });
+  }, []);
+
   // provokeActive > 0 のとき敵の行動を強制的にatkに変換する（残りターン数）。
   const [provokeActive,   setProvokeActive  ] = useState(0);
 
@@ -4113,9 +4149,40 @@ export default function ArcadiaCh2() {
   // stateにキューイングしてuseEffectで実行することで常に最新のexecute*を使う。
   useEffect(() => {
     if (!pendingExecution) return;
+    const exec = pendingExecution;
     setPendingExecution(null);
-    executeMultiTurn(pendingExecution.cmds, pendingExecution.targets);
-  }, [pendingExecution, executeMultiTurn]);
+
+    // ── オルガがプレイヤーにダメージを与えるターンか判定 ──────────────────
+    // SPD最低メンバー（実際の攻撃対象）のコマンドを取得
+    const spdSortedForAnim = [...Object.keys(exec.cmds)].sort((a, b) => {
+      const sa = (PARTY_DEFS.find(p => p.id === a)?.spd ?? 0);
+      const sb = (PARTY_DEFS.find(p => p.id === b)?.spd ?? 0);
+      return sa - sb;
+    });
+    const lowestSpdMemberId = spdSortedForAnim[0];
+    const lowestSpdCmd = exec.cmds[lowestSpdMemberId] ?? "atk";
+
+    const hasOlgaAttack = !!(multiEnemies && multiEnemies.some(e => {
+      if (e.type !== "olga" || e.defeated) return false;
+      const action = e.def.pattern[e.turnIdx % e.def.pattern.length];
+      // 純粋な攻撃行動
+      if (["atk", "unavoidable", "atk_all"].includes(action)) return true;
+      // counter → プレイヤーが atk を選んでいたら反撃ダメージあり
+      if (action === "counter" && lowestSpdCmd === "atk") return true;
+      // dodge → プレイヤーが counter を選んでいたら反撃ダメージあり
+      if (action === "dodge" && lowestSpdCmd === "counter") return true;
+      return false;
+    }));
+
+    if (hasOlgaAttack) {
+      // アニメーション再生 → 完了後にターン実行
+      playOlgaAtkEffect().then(() => {
+        executeMultiTurn(exec.cmds, exec.targets);
+      });
+    } else {
+      executeMultiTurn(exec.cmds, exec.targets);
+    }
+  }, [pendingExecution, executeMultiTurn, multiEnemies, playOlgaAtkEffect]);
 
   // ── プレイヤースタン中：コマンドフェーズ開始時に全員 heal を自動セットして即実行 ──
   useEffect(() => {
@@ -5451,6 +5518,54 @@ export default function ArcadiaCh2() {
                   alt=""
                 />
               )}
+
+              {/* ── オルガ通常攻撃アニメーション ── */}
+              {olgaAtkAnimFrame !== null && (() => {
+                // オルガスロットの位置を特定
+                const olgaSlotIdx = multiEnemies
+                  ? multiEnemies.findIndex(e => e.type === "olga")
+                  : -1;
+                const slotCount = multiEnemies ? multiEnemies.length : 1;
+                // オルガは isBoss=true で flex:"2 0 0"、他は "1 0 0"
+                // 合計flex = (boss分 2) + (残り各1) で比率を計算
+                const bossCount = multiEnemies ? multiEnemies.filter(e => e.def.isBoss).length : 0;
+                const normalCount = slotCount - bossCount;
+                const totalFlex = bossCount * 2 + normalCount * 1;
+                // オルガスロットのflex値（bossなら2、それ以外1）
+                const olgaFlex = (multiEnemies && multiEnemies[olgaSlotIdx]?.def.isBoss) ? 2 : 1;
+                // gap=5px、padding=8px（両端）を差し引いた実効幅vw
+                // 厳密計算は複雑なのでvw比率で近似
+                const olgaSlotWvw = enemyAreaW * olgaFlex / totalFlex;
+                // スロット左端vw
+                let offsetVw = 0;
+                if (olgaSlotIdx > 0 && multiEnemies) {
+                  for (let i = 0; i < olgaSlotIdx; i++) {
+                    const f = multiEnemies[i].def.isBoss ? 2 : 1;
+                    offsetVw += enemyAreaW * f / totalFlex;
+                  }
+                }
+                const cx = offsetVw + olgaSlotWvw * 0.5;
+                const cy = isPortrait ? enemyAreaH * 0.5 : 50;
+                // 高さはエネミーエリアの99%（ENEMY_IMG_SIZE olga: pct:99）
+                const animH = `${enemyAreaH * 0.99}vh`;
+                const animW = `${olgaSlotWvw}vw`;
+                return (
+                  <img
+                    src={OLGA_ATK_URLS[olgaAtkAnimFrame]}
+                    style={{
+                      position:"fixed",
+                      left:`${cx}vw`, top:`${cy}vh`,
+                      transform:"translate(-50%,-50%)",
+                      width:animW,
+                      height:animH,
+                      objectFit:"contain",
+                      pointerEvents:"none", zIndex:410,
+                      imageRendering:"auto",
+                    }}
+                    alt=""
+                  />
+                );
+              })()}
             </>
           );
         })()}
@@ -5614,6 +5729,8 @@ export default function ArcadiaCh2() {
                                         : "drop-shadow(0 2px 8px rgba(0,0,0,0.8))")),
                                 transform: (!me.defeated && btlAnimEnemy) ? "scale(1.07)" : "scale(1)",
                                 transition: me.defeated ? "none" : "transform 0.1s",
+                                // オルガ攻撃アニメーション中はスプライトを非表示
+                                opacity: (me.type === "olga" && olgaAtkAnimFrame !== null) ? 0 : 1,
                               }} />
                             : <div style={{
                                 fontSize: meIsBoss ? "clamp(64px,10vw,120px)" : "clamp(40px,6vw,80px)",
