@@ -5748,7 +5748,7 @@ export default function ArcadiaCh2() {
                           opacity: opacity * trailOpacities[ti],
                           pointerEvents:"none", zIndex:410,
                           imageRendering:"auto",
-                          filter:"blur(1.5px)",
+                          filter:"blur(1.5px) sepia(1) saturate(12) hue-rotate(310deg) brightness(1.4)",
                           mixBlendMode:"screen",
                         }}
                         alt=""
