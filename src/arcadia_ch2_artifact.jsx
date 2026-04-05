@@ -4313,19 +4313,19 @@ export default function ArcadiaCh2() {
     @keyframes rankParticle { 0%{opacity:0;transform:translateY(0) scale(0)} 20%{opacity:1;transform:translateY(-20px) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(0.3)} }
     @keyframes rankSlideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
     @keyframes lightningShake { 0%{transform:translate(0,0)} 10%{transform:translate(-8px,4px)} 20%{transform:translate(8px,-4px)} 30%{transform:translate(-6px,6px)} 40%{transform:translate(6px,-6px)} 50%{transform:translate(-4px,3px)} 60%{transform:translate(4px,-3px)} 70%{transform:translate(-6px,5px)} 80%{transform:translate(6px,-5px)} 90%{transform:translate(-3px,2px)} 100%{transform:translate(0,0)} }
-    @-webkit-keyframes stellaSpin {
-      0%   { -webkit-transform: translate(calc(-50% + 0px),   -50%) rotate(0deg)    scaleX(1)    scaleY(1)    skewY(0deg)  skewX(0deg); }
-      25%  { -webkit-transform: translate(calc(-50% + 15vw),  -50%) rotate(465deg)  scaleX(0.55) scaleY(1) skewY(90deg)  skewX(0deg); }
-      50%  { -webkit-transform: translate(calc(-50% + 0px),   -50%) rotate(885deg)  scaleX(1)    scaleY(1)    skewY(0deg)  skewX(0deg); }
-      75%  { -webkit-transform: translate(calc(-50% - 15vw),  -50%) rotate(1365deg) scaleX(0.55) scaleY(1) skewY(-90deg) skewX(0deg); }
-      100% { -webkit-transform: translate(calc(-50% + 0px),   -50%) rotate(1800deg) scaleX(1)    scaleY(1)    skewY(0deg)  skewX(0deg); }
-    }
     @keyframes stellaSpin {
-      0%   { transform: translate(calc(-50% + 0px),   -50%) rotate(0deg)    scaleX(1)    scaleY(1)    skewY(0deg)  skewX(0deg); }
-      25%  { transform: translate(calc(-50% + 15vw),  -50%) rotate(465deg)  scaleX(0.55) scaleY(1) skewY(90deg)  skewX(0deg); }
-      50%  { transform: translate(calc(-50% + 0px),   -50%) rotate(885deg)  scaleX(1)    scaleY(1)    skewY(0deg)  skewX(0deg); }
-      75%  { transform: translate(calc(-50% - 15vw),  -50%) rotate(1365deg) scaleX(0.55) scaleY(1) skewY(-90deg) skewX(0deg); }
-      100% { transform: translate(calc(-50% + 0px),   -50%) rotate(1800deg) scaleX(1)    scaleY(1)    skewY(0deg)  skewX(0deg); }
+      0%   { transform: translate(-50%, -50%) rotate(0deg)    scale(1.0); }
+      25%  { transform: translate(-50%, -50%) rotate(465deg)  scale(1.8); }
+      50%  { transform: translate(-50%, -50%) rotate(885deg)  scale(1.01); }
+      75%  { transform: translate(-50%, -50%) rotate(1365deg) scale(2.4); }
+      100% { transform: translate(-50%, -50%) rotate(1800deg) scale(1.02); }
+    }
+    @keyframes stellaYWave {
+      0%   { transform: rotateX(0deg); }
+      25%  { transform: rotateX(40deg); }
+      50%  { transform: rotateX(0deg); }
+      75%  { transform: rotateX(75deg); }
+      100% { transform: rotateX(0deg); }
     }
     `;
 
@@ -5371,7 +5371,8 @@ export default function ArcadiaCh2() {
                       opacity: stellaAnimFrame === 0 ? 1 : 0.6,
                       transition:"opacity 0.3s",
                     }} />
-                    {/* 画像：stellaSpin全効果統合 */}
+                    {/* 画像：フェーズ0=静止、フェーズ1=高速回転＋Y/Z揺らぎ */}
+                    {/* ラッパー：Y軸揺らぎ（stellaYWave）を担当 */}
                     <div style={{
                       position:"fixed",
                       left:`${enemyAreaW/2}vw`,
@@ -5380,7 +5381,12 @@ export default function ArcadiaCh2() {
                       height:`${enemyAreaH}vh`,
                       pointerEvents:"none",
                       zIndex:403,
-                      filter:"drop-shadow(0 0 20px #ff80ff) drop-shadow(0 0 40px #cc44ff88)",
+                      transformOrigin:"center center",
+                      perspective:"600px",
+                      transformStyle:"preserve-3d",
+                      animation: stellaAnimFrame === 1
+                        ? "stellaYWave 2.5s ease-in-out forwards"
+                        : "none",
                     }}>
                       <img
                         src="https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/Eff_stellaflitz.webp"
@@ -5390,19 +5396,14 @@ export default function ArcadiaCh2() {
                           height:"100%",
                           objectFit:"contain",
                           transformOrigin:"center center",
-                          WebkitTransformOrigin:"center center",
+                          transformStyle:"preserve-3d",
                           transform: stellaAnimFrame === 0
                             ? "translate(-50%, -50%) rotate(0deg)"
                             : undefined,
-                          WebkitTransform: stellaAnimFrame === 0
-                            ? "translate(-50%, -50%) rotate(0deg)"
-                            : undefined,
                           animation: stellaAnimFrame === 1
-                            ? "stellaSpin 2.5s ease-in-out forwards"
+                            ? "stellaSpin 2.5s cubic-bezier(0.2, 0, 0.6, 1) forwards"
                             : "none",
-                          WebkitAnimation: stellaAnimFrame === 1
-                            ? "stellaSpin 2.5s ease-in-out forwards"
-                            : "none",
+                          filter:"drop-shadow(0 0 20px #ff80ff) drop-shadow(0 0 40px #cc44ff88)",
                           mixBlendMode:"screen",
                         }}
                       />
