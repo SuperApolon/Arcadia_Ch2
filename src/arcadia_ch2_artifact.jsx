@@ -4317,12 +4317,12 @@ export default function ArcadiaCh2() {
       0%   { transform: translate(-50%, -50%) rotate(100deg)    scale(1.0); }
       1%   { transform: translate(-50%, -50%) rotate(360deg)    scale(1.1); }
       12%   { transform: translate(-50%, -50%) rotate(0deg)    scale(1.0); }
-      25%  { transform: translate(-75%, 0%) rotate(465deg)  scale(1.8); }
-      37%   { transform: translate(-75%, 0%) rotate(0deg)    scale(1.0); }
+      25%  { transform: translate(-75%, -25%) rotate(465deg)  scale(1.8); }
+      37%   { transform: translate(-75%, -25%) rotate(0deg)    scale(1.0); }
       50%  { transform: translate(-25%, -50%) rotate(885deg)  scale(1.01); }
       62%   { transform: translate(-25%, -50%) rotate(0deg)    scale(1.0); }
-      75%  { transform: translate(-75%, 0%) rotate(1365deg) scale(2.4); }
-      87%   { transform: translate(-75%, -50%) rotate(0deg)    scale(1.0); }
+      75%  { transform: translate(-75%, -90%) rotate(1365deg) scale(2.4); }
+      87%   { transform: translate(-75%, -90%) rotate(0deg)    scale(1.0); }
       100% { transform: translate(-50%, -50%) rotate(1800deg) scale(4.0); }
     }
     @keyframes stellaYWave {
@@ -4333,7 +4333,7 @@ export default function ArcadiaCh2() {
       50%  { transform: rotateX(0deg); }
       62%  { transform: rotateX(0deg); }
       75%  { transform: rotateX(60deg); }
-      87%  { transform: rotateX(75deg); }
+      87%  { transform: rotateX(60deg); }
       100% { transform: rotateX(25deg); }
     }
     `;
