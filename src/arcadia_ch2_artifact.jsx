@@ -5726,22 +5726,50 @@ export default function ArcadiaCh2() {
                 const animH = `${enemyAreaH * 0.99}vh`;
                 const animW = `${olgaSlotWvw}vw`;
                 const { scale, translateY, opacity = 1 } = olgaJumpState;
+                // 残像：translateY と scale 両方にラグをかける（全フェーズで有効）
+                const trailOffsets   = [0.72, 0.48, 0.24];
+                const trailOpacities = [0.10, 0.14, 0.18];
+                // backstep: scale 1→0.5 変化中は残像が「遅れて縮む」= scaleBase=1.0 方向へ引き戻す
+                // rise/return: translateY が主変化。scale は 0.5 固定なので scaleBase=0.5
+                const scaleBase = olgaJumpState.phase === "backstep" ? 1.0 : 0.5;
                 return (
-                  <img
-                    src={OLGA_JUMP_URL}
-                    style={{
-                      position:"fixed",
-                      left:`${cx}vw`, top:`${cy}vh`,
-                      transform:`translate(-50%, calc(-50% + ${translateY}vh)) scale(${scale})`,
-                      transformOrigin:"center center",
-                      width:animW, height:animH,
-                      objectFit:"contain",
-                      opacity,
-                      pointerEvents:"none", zIndex:411,
-                      imageRendering:"auto",
-                    }}
-                    alt=""
-                  />
+                  <>
+                    {trailOffsets.map((lag, ti) => (
+                      <img
+                        key={`olga-trail-${ti}`}
+                        src={OLGA_JUMP_URL}
+                        style={{
+                          position:"fixed",
+                          left:`${cx}vw`, top:`${cy}vh`,
+                          transform:`translate(-50%, calc(-50% + ${translateY * (1 - lag)}vh)) scale(${scale + (scaleBase - scale) * lag})`,
+                          transformOrigin:"center center",
+                          width:animW, height:animH,
+                          objectFit:"contain",
+                          opacity: opacity * trailOpacities[ti],
+                          pointerEvents:"none", zIndex:410,
+                          imageRendering:"auto",
+                          filter:"blur(1.5px)",
+                          mixBlendMode:"screen",
+                        }}
+                        alt=""
+                      />
+                    ))}
+                    <img
+                      src={OLGA_JUMP_URL}
+                      style={{
+                        position:"fixed",
+                        left:`${cx}vw`, top:`${cy}vh`,
+                        transform:`translate(-50%, calc(-50% + ${translateY}vh)) scale(${scale})`,
+                        transformOrigin:"center center",
+                        width:animW, height:animH,
+                        objectFit:"contain",
+                        opacity,
+                        pointerEvents:"none", zIndex:411,
+                        imageRendering:"auto",
+                      }}
+                      alt=""
+                    />
+                  </>
                 );
               })()}
             </>
