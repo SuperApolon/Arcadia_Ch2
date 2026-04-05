@@ -4314,18 +4314,27 @@ export default function ArcadiaCh2() {
     @keyframes rankSlideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
     @keyframes lightningShake { 0%{transform:translate(0,0)} 10%{transform:translate(-8px,4px)} 20%{transform:translate(8px,-4px)} 30%{transform:translate(-6px,6px)} 40%{transform:translate(6px,-6px)} 50%{transform:translate(-4px,3px)} 60%{transform:translate(4px,-3px)} 70%{transform:translate(-6px,5px)} 80%{transform:translate(6px,-5px)} 90%{transform:translate(-3px,2px)} 100%{transform:translate(0,0)} }
     @keyframes stellaSpin {
-      0%   { transform: translate(-50%, -50%) rotate(0deg)    scale(1.0); }
-      25%  { transform: translate(-50%, -50%) rotate(465deg)  scale(1.8); }
-      50%  { transform: translate(-50%, -50%) rotate(885deg)  scale(1.01); }
-      75%  { transform: translate(-50%, -50%) rotate(1365deg) scale(2.4); }
-      100% { transform: translate(-50%, -50%) rotate(1800deg) scale(1.02); }
+      0%   { transform: translate(-50%, -50%) rotate(100deg)    scale(1.0); }
+      1%   { transform: translate(-50%, -50%) rotate(360deg)    scale(1.1); }
+      12%   { transform: translate(-50%, -50%) rotate(0deg)    scale(1.0); }
+      25%  { transform: translate(-75%, 0%) rotate(465deg)  scale(1.8); }
+      37%   { transform: translate(-75%, 0%) rotate(0deg)    scale(1.0); }
+      50%  { transform: translate(-25%, -50%) rotate(885deg)  scale(1.01); }
+      62%   { transform: translate(-25%, -50%) rotate(0deg)    scale(1.0); }
+      75%  { transform: translate(-75%, 0%) rotate(1365deg) scale(2.4); }
+      87%   { transform: translate(-75%, -50%) rotate(0deg)    scale(1.0); }
+      100% { transform: translate(-50%, -50%) rotate(1800deg) scale(4.0); }
     }
     @keyframes stellaYWave {
       0%   { transform: rotateX(0deg); }
+      12%  { transform: rotateX(0deg); }
       25%  { transform: rotateX(40deg); }
+      37%  { transform: rotateX(40deg); }
       50%  { transform: rotateX(0deg); }
-      75%  { transform: rotateX(75deg); }
-      100% { transform: rotateX(0deg); }
+      62%  { transform: rotateX(0deg); }
+      75%  { transform: rotateX(60deg); }
+      87%  { transform: rotateX(75deg); }
+      100% { transform: rotateX(25deg); }
     }
     `;
 
