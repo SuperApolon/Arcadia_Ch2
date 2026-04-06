@@ -2019,23 +2019,40 @@ export default function ArcadiaCh2() {
     // ── ライトニングスラッシュエフェクト ─────────────────────────────────────────
     const [lightningAnimFrame, setLightningAnimFrame] = useState(null);
     const LIGHTNING_ANIM_SEQUENCE = [
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_00.webp", fps:6 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_01.webp", fps:6 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_02.webp", fps:12 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_03.webp", fps:12 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_04.webp", fps:12 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_05.webp", fps:18 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_06.webp", fps:18 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_00.webp", fps:3 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_01.webp", fps:3 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_02.webp", fps:3 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_03.webp", fps:6 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_04.webp", fps:6 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_05.webp", fps:12 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_06.webp", fps:12 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_06.webp", fps:3 },
       { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
-      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:3 },
+      { url:"https://superapolon.github.io/Arcadia_Assets/Animation/enemyskill/LightningSlash/Eff_lightning_07.webp", fps:2 },
     ];
     const lightningTimerRef = useRef(null);
   
+    // ── ライトニングスラッシュ中オルガJump＋分身アニメーション ──────────────
+    // null | { phase: "show"|"clone"|"fadeout", cloneOpacity: number, centerOpacity: number }
+    const [lightningSlashAnim, setLightningSlashAnim] = useState(null);
+    const lightningSlashRafRef = useRef(null);
+
     const playLightningEffect = useCallback(() => {
       if (lightningTimerRef.current) return;
+
+      // ── フェーズ1: Olga_Jump を表示（即時表示）──
+      setLightningSlashAnim({ phase:"show", cloneOpacity:0, centerOpacity:1 });
+
+      // ── フェーズ2: 少し後に分身出現 (200ms後) ──
+      const CLONE_APPEAR_DELAY = 200;
+      // ── フェーズ3: 分身フェードイン (300ms) ──
+      const CLONE_FADEIN_DUR   = 300;
+      // ── フェーズ4: 全体フェードアウト (350ms) ──
+      const CLONE_FADEOUT_DUR  = 350;
+
       let frameIdx = 0;
       setLightningAnimFrame(0);
+
       const advance = () => {
         frameIdx++;
         if (frameIdx < LIGHTNING_ANIM_SEQUENCE.length) {
@@ -2043,10 +2060,46 @@ export default function ArcadiaCh2() {
           const ms = Math.round(1000 / LIGHTNING_ANIM_SEQUENCE[frameIdx].fps);
           lightningTimerRef.current = setTimeout(advance, ms);
         } else {
+          // ライトニングエフェクト終了 → 分身フェードアウト開始
           lightningTimerRef.current = null;
           setLightningAnimFrame(null);
+
+          // フェードアウト開始
+          let fadeStart = null;
+          const fadeOut = (ts) => {
+            if (!fadeStart) fadeStart = ts;
+            const pf = Math.min((ts - fadeStart) / CLONE_FADEOUT_DUR, 1);
+            setLightningSlashAnim({ phase:"fadeout", cloneOpacity: 0.5 * (1 - pf), centerOpacity: 1 - pf });
+            if (pf < 1) {
+              lightningSlashRafRef.current = requestAnimationFrame(fadeOut);
+            } else {
+              lightningSlashRafRef.current = null;
+              setLightningSlashAnim(null); // 完全終了 → スプライト復帰
+            }
+          };
+          lightningSlashRafRef.current = requestAnimationFrame(fadeOut);
         }
       };
+
+      // 分身フェードインを開始（ライトニングエフェクトと並行）
+      setTimeout(() => {
+        let cloneStart = null;
+        const fadeInClone = (ts) => {
+          if (!cloneStart) cloneStart = ts;
+          const p = Math.min((ts - cloneStart) / CLONE_FADEIN_DUR, 1);
+          setLightningSlashAnim(prev => {
+            if (!prev || prev.phase === "fadeout") return prev;
+            return { ...prev, phase:"clone", cloneOpacity: 0.5 * p };
+          });
+          if (p < 1) {
+            lightningSlashRafRef.current = requestAnimationFrame(fadeInClone);
+          } else {
+            lightningSlashRafRef.current = null;
+          }
+        };
+        lightningSlashRafRef.current = requestAnimationFrame(fadeInClone);
+      }, CLONE_APPEAR_DELAY);
+
       const ms = Math.round(1000 / LIGHTNING_ANIM_SEQUENCE[0].fps);
       lightningTimerRef.current = setTimeout(advance, ms);
     }, []);
@@ -4310,6 +4363,7 @@ export default function ArcadiaCh2() {
       // unavoidable：無条件でダメージあり（atk_allはbackstepアニメで別管理するためここでは除外）
       if (action === "unavoidable") return true;
       if (action === "atk_all") return false; // backstepアニメ側で制御するためplayOlgaAtkEffectを切る
+      if (action === "LightningSlash") return false; // LightningSlash専用アニメで制御するためplayOlgaAtkEffectを切る
       // counter：プレイヤーが atk を選んでいたら反撃ダメージあり（dodge/counter→無効）
       if (action === "counter") return lowestSpdCmd === "atk";
       // dodge：プレイヤーが counter を選んでいたら反撃ダメージあり
@@ -5815,6 +5869,82 @@ export default function ArcadiaCh2() {
                   </>
                 );
               })()}
+
+              {/* ── ライトニングスラッシュ：オルガJump表示＋分身エフェクト ── */}
+              {lightningSlashAnim !== null && (() => {
+                const olgaSlotIdx = multiEnemies ? multiEnemies.findIndex(e => e.type === "olga") : -1;
+                if (olgaSlotIdx < 0) return null;
+                const slotCount = multiEnemies.length;
+                const bossCount = multiEnemies.filter(e => e.def.isBoss).length;
+                const normalCount = slotCount - bossCount;
+                const totalFlex = bossCount * 2 + normalCount * 1;
+                const olgaFlex = (multiEnemies[olgaSlotIdx].def.isBoss) ? 2 : 1;
+                const olgaSlotWvw = enemyAreaW * olgaFlex / totalFlex;
+                let offsetVw = 0;
+                for (let i = 0; i < olgaSlotIdx; i++) {
+                  offsetVw += enemyAreaW * (multiEnemies[i].def.isBoss ? 2 : 1) / totalFlex;
+                }
+                const cx = offsetVw + olgaSlotWvw * 0.5;
+                const cy = isPortrait ? enemyAreaH * 0.5 : 50;
+                const animH = `${enemyAreaH * 0.99}vh`;
+                const animW = `${olgaSlotWvw}vw`;
+                const { cloneOpacity, centerOpacity } = lightningSlashAnim;
+                // 分身のオフセット（左右にずらす量 vw）
+                const CLONE_OFFSET_VW = olgaSlotWvw * 0.28;
+                return (
+                  <>
+                    {/* 左分身 */}
+                    <img
+                      src={OLGA_JUMP_URL}
+                      style={{
+                        position:"fixed",
+                        left:`${cx - CLONE_OFFSET_VW}vw`, top:`${cy}vh`,
+                        transform:"translate(-50%,-50%)",
+                        width:animW, height:animH,
+                        objectFit:"contain",
+                        opacity: cloneOpacity,
+                        pointerEvents:"none", zIndex:410,
+                        imageRendering:"auto",
+                        filter:"blur(1px) brightness(1.6) saturate(2) hue-rotate(200deg)",
+                        mixBlendMode:"screen",
+                      }}
+                      alt=""
+                    />
+                    {/* 右分身 */}
+                    <img
+                      src={OLGA_JUMP_URL}
+                      style={{
+                        position:"fixed",
+                        left:`${cx + CLONE_OFFSET_VW}vw`, top:`${cy}vh`,
+                        transform:"translate(-50%,-50%)",
+                        width:animW, height:animH,
+                        objectFit:"contain",
+                        opacity: cloneOpacity,
+                        pointerEvents:"none", zIndex:410,
+                        imageRendering:"auto",
+                        filter:"blur(1px) brightness(1.6) saturate(2) hue-rotate(200deg)",
+                        mixBlendMode:"screen",
+                      }}
+                      alt=""
+                    />
+                    {/* 中央本体（Olga_Jump） */}
+                    <img
+                      src={OLGA_JUMP_URL}
+                      style={{
+                        position:"fixed",
+                        left:`${cx}vw`, top:`${cy}vh`,
+                        transform:"translate(-50%,-50%)",
+                        width:animW, height:animH,
+                        objectFit:"contain",
+                        opacity: centerOpacity,
+                        pointerEvents:"none", zIndex:411,
+                        imageRendering:"auto",
+                      }}
+                      alt=""
+                    />
+                  </>
+                );
+              })()}
             </>
           );
         })()}
@@ -5979,10 +6109,10 @@ export default function ArcadiaCh2() {
                                 transform: (!me.defeated && btlAnimEnemy) ? "scale(1.07)" : "scale(1)",
                                 // オルガ攻撃アニメーション中・バックステップ中はスプライトを非表示
                                 // リターンフェードアウト時はジャンプ画像と逆相でクロスフェード
-                                opacity: (me.type === "olga" && (olgaAtkAnimFrame !== null || olgaJumpState !== null))
-                                  ? (olgaJumpState?.phase === "fadeout" ? 1 - (olgaJumpState.opacity ?? 0) : 0)
+                                opacity: (me.type === "olga" && (olgaAtkAnimFrame !== null || olgaJumpState !== null || lightningSlashAnim !== null))
+                                  ? (olgaJumpState?.phase === "fadeout" ? 1 - (olgaJumpState.opacity ?? 0) : lightningSlashAnim?.phase === "fadeout" ? 0 : 0)
                                   : 1,
-                                transition: (me.type === "olga" && olgaJumpState?.phase === "fadeout") ? "none" : (me.defeated ? "none" : "transform 0.1s"),
+                                transition: (me.type === "olga" && (olgaJumpState?.phase === "fadeout" || lightningSlashAnim !== null)) ? "none" : (me.defeated ? "none" : "transform 0.1s"),
                               }} />
                             : <div style={{
                                 fontSize: meIsBoss ? "clamp(64px,10vw,120px)" : "clamp(40px,6vw,80px)",
