@@ -2053,17 +2053,25 @@ export default function ArcadiaCh2() {
     // ── ステラフリッツエフェクト ─────────────────────────────────────────
     const [stellaAnimFrame, setStellaAnimFrame] = useState(null);
     // 0 = 静止表示フェーズ、1 = 回転フェーズ、null = 非表示
+    const [stellaFinalShaking, setStellaFinalShaking] = useState(false);
     const stellaTimerRef = useRef(null);
+    const stellaShakeTimerRef = useRef(null);
     
     const playStellaEffect = useCallback(() => {
       if (stellaTimerRef.current) return;
+      setStellaFinalShaking(false);
       // フェーズ0：静止表示（0.5秒）
       setStellaAnimFrame(0);
       stellaTimerRef.current = setTimeout(() => {
         // フェーズ1：回転開始（2.5秒）
         setStellaAnimFrame(1);
+        // 最終フレーム到達直前（2.0秒後）に強烈な画面振動開始
+        stellaShakeTimerRef.current = setTimeout(() => {
+          setStellaFinalShaking(true);
+        }, 2000);
         stellaTimerRef.current = setTimeout(() => {
           stellaTimerRef.current = null;
+          setStellaFinalShaking(false);
           setStellaAnimFrame(null);
         }, 2500);
       }, 500);
@@ -4543,6 +4551,29 @@ export default function ArcadiaCh2() {
       87%  { transform: rotateX(60deg); }
       100% { transform: rotateX(25deg); }
     }
+    @keyframes stellaFinalShake {
+      0%   { transform: translate(0px, 0px); }
+      5%   { transform: translate(-18px, -10px); }
+      10%  { transform: translate(18px, 10px); }
+      15%  { transform: translate(-16px, 12px); }
+      20%  { transform: translate(16px, -12px); }
+      25%  { transform: translate(-20px, 8px); }
+      30%  { transform: translate(20px, -8px); }
+      35%  { transform: translate(-14px, 14px); }
+      40%  { transform: translate(14px, -14px); }
+      45%  { transform: translate(-22px, 6px); }
+      50%  { transform: translate(22px, -6px); }
+      55%  { transform: translate(-18px, 10px); }
+      60%  { transform: translate(18px, -10px); }
+      65%  { transform: translate(-12px, 16px); }
+      70%  { transform: translate(12px, -16px); }
+      75%  { transform: translate(-20px, 8px); }
+      80%  { transform: translate(20px, -8px); }
+      85%  { transform: translate(-10px, 6px); }
+      90%  { transform: translate(10px, -6px); }
+      95%  { transform: translate(-5px, 3px); }
+      100% { transform: translate(0px, 0px); }
+    }
     `;
 
   // @@SECTION:RENDER_VICTORY
@@ -5411,7 +5442,9 @@ export default function ArcadiaCh2() {
       <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:battleBg,fontFamily:FONT_SERIF,userSelect:"none",overflow:"hidden",
         animation: lightningAnimFrame !== null
           ? "lightningShake 0.08s linear infinite"
-          : (showAtkAllAnim ? "dragonApproach 0.18s linear infinite" : "none"),
+          : stellaFinalShaking
+            ? "stellaFinalShake 0.10s linear infinite"
+            : (showAtkAllAnim ? "dragonApproach 0.18s linear infinite" : "none"),
       }}>
         <style>{keyframes}</style>
         {/* ── ドラゴン突進フラッシュ（末尾に白く大フラッシュ） ── */}
@@ -5587,6 +5620,16 @@ export default function ArcadiaCh2() {
                       opacity: stellaAnimFrame === 0 ? 1 : 0.6,
                       transition:"opacity 0.3s",
                     }} />
+                    {/* 最終フレーム：白フラッシュ（画面振動はルートdivで実施） */}
+                    {stellaFinalShaking && (
+                      <div style={{
+                        position:"fixed", left:0, top:0,
+                        width:"100vw", height:"100vh",
+                        pointerEvents:"none", zIndex:410,
+                        background:"radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.22) 0%, rgba(255,128,255,0.12) 40%, transparent 70%)",
+                        animation:"arcadiaBlnk 0.1s step-end infinite",
+                      }} />
+                    )}
                     {/* 画像：フェーズ0=静止、フェーズ1=高速回転＋Y/Z揺らぎ */}
                     {/* ラッパー：Y軸揺らぎ（stellaYWave）を担当 */}
                     <div style={{
